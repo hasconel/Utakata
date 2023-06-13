@@ -1,6 +1,4 @@
-"use client";
 import { Callout } from "@tremor/react";
-import { useEffect, useState } from "react";
 import {
   ExclamationCircleIcon,
   CheckCircleIcon,

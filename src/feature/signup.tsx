@@ -1,8 +1,6 @@
-import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "./api";
 import { fetchState } from "./hooks";
-import { useNavigate, useLocation } from "react-router-dom";
 import { AlertMessage } from "../contents/alert";
 import { AppwriteException, Models } from "appwrite";
 

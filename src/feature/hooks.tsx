@@ -1,70 +1,26 @@
-"use client";
 import { Models } from "appwrite";
-import { useLayoutEffect, useReducer } from "react";
 import api from "./api";
-export const fetchState = {
-  init: 0,
-  success: 1,
-  failure: 2,
-};
+import { QueryKey, useQuery, useQueryClient } from "react-query";
+import { Dispatch, SetStateAction } from "react";
 
-type fetch = readonly [
-  {
-    readonly user: Models.User<Models.Preferences> | null;
-    readonly isLoading: boolean;
-    readonly isError: boolean;
-  },
-  React.Dispatch<{
-    type: number;
-    payload?: Models.User<Models.Preferences>;
-  }>
-];
-export const useGetUser = (): fetch => {
-  const Reducer: React.Reducer<any, { type: number; payload?: any }> = (
-    state: any,
-    action: { type: number; payload?: any }
-  ) => {
-    switch (action.type) {
-      case fetchState.init:
-        return { ...state, isLoading: true, isError: false };
-      case fetchState.success:
-        return {
-          ...state,
-          isLoading: false,
-          isError: false,
-          user: action.payload,
-        };
-      case fetchState.failure:
-        return { ...state, isLoading: false, isError: true };
-      default:
-        throw new Error();
+export function useQstate<T>(
+  key: QueryKey,
+  initial?: T
+): [T, Dispatch<SetStateAction<T>>] {
+  const stateValue = useQuery<T>(key, {
+    enabled: false,
+    ...(initial !== undefined ? { initialData: initial } : {}),
+  }).data as T;
+  const queryClient = useQueryClient();
+  const stateSetter = (arg: ((arg: T) => void) | T): void => {
+    let newValue;
+    if (typeof arg === "function") {
+      const prevValue = queryClient.getQueryData<T>(key);
+      newValue = (arg as any)(prevValue);
+    } else {
+      newValue = arg;
     }
+    queryClient.setQueryData<T>(key, newValue);
   };
-
-  const [state, dispatch] = useReducer(Reducer, {
-    isLoading: false,
-    isError: true,
-  });
-
-  useLayoutEffect(() => {
-    let didCancel: Boolean = false;
-    const getUser = async () => {
-      try {
-        const account = await api.getAccount();
-        if (!didCancel) {
-          dispatch({ type: fetchState.success, payload: account });
-        }
-      } catch (e) {
-        if (!didCancel) {
-          dispatch({ type: fetchState.failure, payload: null });
-        }
-      }
-    };
-    getUser();
-    return () => {
-      didCancel = true;
-    };
-  }, []);
-
-  return [state, dispatch];
-};
+  return [stateValue, stateSetter];
+}

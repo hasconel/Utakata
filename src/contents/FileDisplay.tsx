@@ -1,5 +1,3 @@
-"use client";
-import React, { useState } from "react";
 import api from "../feature/api";
 import { Server } from "../feature/config";
 import { Models } from "appwrite";

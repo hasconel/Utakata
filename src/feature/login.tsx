@@ -1,8 +1,5 @@
-"use client";
-import { useState } from "react";
 import api from "./api";
 import { fetchState } from "./hooks";
-import { Link, useNavigate } from "react-router-dom";
 //import { useLocation } from "react-router-dom";
 import { AlertMessage } from "../contents/alert";
 import { Models } from "appwrite";

@@ -1,7 +1,5 @@
 import React from "react";
 import api from "../feature/api";
-import { useNavigate } from "react-router";
-import { fetchState } from "../feature/hooks";
 import { Button } from "@tremor/react";
 
 const LogoutButton = ({

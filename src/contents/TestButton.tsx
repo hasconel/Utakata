@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import api from "../feature/api";
 import { Server } from "../feature/config";
 import { Button, TextInput } from "@tremor/react";
