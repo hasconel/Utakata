@@ -3,14 +3,17 @@ import {
   ExclamationCircleIcon,
   CheckCircleIcon,
 } from "@heroicons/react/20/solid";
+import { useEffect, useState } from "react";
 
-export const AlertMessage = ({ message }: { message: string }) => {
+export const AlertMessage = 
+({ message }: { message: string }) => {
   const TIMEOUT = 5000;
   const [showalert, setShowAlert] = useState(true);
   useEffect(() => {
     let timeout = setTimeout(() => setShowAlert(false), TIMEOUT);
     return () => {
       clearTimeout(timeout);
+      setShowAlert(true);
     };
   }, []);
 
@@ -18,9 +21,11 @@ export const AlertMessage = ({ message }: { message: string }) => {
     <>
       {showalert && (
         <>
-          <Callout title={message} icon={ExclamationCircleIcon} color="rose">
-            {message}
-          </Callout>
+          <Callout
+            title={message}
+            icon={ExclamationCircleIcon}
+            color="rose"
+          ></Callout>
         </>
       )}
     </>

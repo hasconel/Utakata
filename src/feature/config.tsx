@@ -1,3 +1,4 @@
+import "dotenv/config";
 type Config = {
   endpoint: string | undefined;
   project: string | undefined;

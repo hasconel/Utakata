@@ -1,26 +1,13 @@
-import { Models } from "appwrite";
+"use client";
 import api from "./api";
-import { QueryKey, useQuery, useQueryClient } from "react-query";
-import { Dispatch, SetStateAction } from "react";
+import { useQuery } from "react-query";
 
-export function useQstate<T>(
-  key: QueryKey,
-  initial?: T
-): [T, Dispatch<SetStateAction<T>>] {
-  const stateValue = useQuery<T>(key, {
-    enabled: false,
-    ...(initial !== undefined ? { initialData: initial } : {}),
-  }).data as T;
-  const queryClient = useQueryClient();
-  const stateSetter = (arg: ((arg: T) => void) | T): void => {
-    let newValue;
-    if (typeof arg === "function") {
-      const prevValue = queryClient.getQueryData<T>(key);
-      newValue = (arg as any)(prevValue);
-    } else {
-      newValue = arg;
-    }
-    queryClient.setQueryData<T>(key, newValue);
-  };
-  return [stateValue, stateSetter];
-}
+export const getLoginUser = () => {
+  const { isLoading, isError, data, error } = useQuery("user", async () => {
+    try {
+      const LoginUser = await api.getAccount();
+      return LoginUser;
+    } catch {}
+  });
+  return { isLoading, isError, data, error };
+};
