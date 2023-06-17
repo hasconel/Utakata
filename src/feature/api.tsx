@@ -1,5 +1,4 @@
 import { Server } from "./config";
-import { v4 as uuidv4 } from "uuid";
 import {
   Client as Appwrite,
   Databases,
@@ -7,6 +6,9 @@ import {
   Storage,
   Models,
   ID,
+  Query,
+  Role,
+  Permission,
 } from "appwrite";
 
 interface Api {
@@ -16,10 +18,13 @@ interface Api {
     email: string,
     password: string,
     name: string
-  ) => Promise<{
-    User: Models.User<Models.Preferences>;
-    UserDoc: Models.Document;
-  }>;
+  ) => Promise<
+    | {
+        user: Models.User<Models.Preferences>;
+        doc: Models.Document;
+      }
+    | undefined
+  >;
   getAccount: () => Promise<Models.User<Models.Preferences>>;
   createSession: (email: string, password: string) => Promise<Models.Session>;
   deleteCurrentSession: () => Promise<{}>;
@@ -88,7 +93,7 @@ let api: Api = {
       typeof Server.endpoint === "string" &&
       typeof Server.project === "string"
     ) {
-//      console.log("api is exist");
+      console.log("api is exist");
       appwrite.setEndpoint(Server.endpoint).setProject(Server.project);
       const account: Account = new Account(appwrite);
       const database: Databases = new Databases(appwrite);
@@ -96,31 +101,58 @@ let api: Api = {
       api.sdk = { database, account, storage };
       return api.sdk;
     } else {
-//      console.log("api is not exist");
+      console.log("api is not exist");
       throw new Error();
     }
   },
   createAccount: async (email: string, password: string, name: string) => {
-    const uid = uuidv4();
     const data = JSON.stringify({ DisplayUID: name });
+    console.log("start");
     if (
       typeof Server.databaseID === "string" &&
       typeof Server.usercollectionID === "string"
     ) {
-      const User = await api
+      const UserData = await api
         .provider()
-        .account.create(uid, email, password, name);
-      const UserDoc = await api
-        .provider()
-        .database.createDocument(
-          Server.databaseID,
-          Server.usercollectionID,
-          uid,
-          data
-        );
-      return { User: User, UserDoc: UserDoc };
+        .database.listDocuments(Server.databaseID, Server.usercollectionID, [
+          Query.equal("DisplayUID", [name]),
+        ])
+        .then(async (res) => {
+          console.log(res);
+          if (res.documents.length === 0) {
+            const dat = await api
+              .provider()
+              .account.create(ID.unique(), email, password, name)
+              .then(async (user) => {
+                const current = await api.provider().account.get();
+                console.log(current);
+                if (
+                  typeof Server.databaseID === "string" &&
+                  typeof Server.usercollectionID === "string"
+                ) {
+                  const doc = await api
+                    .provider()
+                    .database.createDocument(
+                      Server.databaseID,
+                      Server.usercollectionID,
+                      user.$id,
+                      data,
+                      [
+                        Permission.read(Role.any()),
+                        Permission.update(Role.user(user.$id)),
+                      ]
+                    );
+                  return { user, doc };
+                }
+              });
+            return dat;
+          } else {
+            throw new Error("ユーザーIDが使われています");
+          }
+        });
+      return UserData;
     } else {
-      throw new Error();
+      throw new Error("コレクションIDが不正");
     }
   },
   getAccount: () => {

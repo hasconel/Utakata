@@ -9,12 +9,12 @@ import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-
 type FormValues = {
+  uname: string;
   email: string;
   password: string;
 };
-export default function LoginForm() {
+export default function SignUpForm() {
   const {
     register,
     handleSubmit,
@@ -23,20 +23,15 @@ export default function LoginForm() {
   } = useForm<FormValues>();
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
-
   const onSubmit = async (data: FormValues) => {
     console.log(data.email);
     try {
-      await api.createSession(data.email, data.password);
+      await api.createAccount(data.email, data.password, data.uname);
       getLoginUser();
-
       redirect("/");
     } catch (e: any) {
-      if (e?.response?.message) {
-        setLoginError(e.response.message);
-      } else {
-        setLoginError("error occurred!");
-      }
+      //  console.log(e.message);
+      setLoginError(e.message);
     }
   };
   return (
@@ -44,6 +39,17 @@ export default function LoginForm() {
       <Card className="max-w-lg mx-auto mt-8 gap-6">
         {LoginError && <AlertMessage message={LoginError} />}
         <form onSubmit={handleSubmit(onSubmit)}>
+          <TextInput
+            type="text"
+            placeholder="ユーザーID"
+            error={errors.uname?.type !== undefined}
+            errorMessage={errors.uname?.type}
+            className="mt-4"
+            {...register("uname", {
+              required: true,
+              pattern: /^[a-z0-9]{1}\w{6,31}$/i,
+            })}
+          />{" "}
           <TextInput
             type="text"
             placeholder="Email"
@@ -79,10 +85,10 @@ export default function LoginForm() {
             </i>
           </div>
           <Button type="submit" className="max-w-lg mt-4">
-            ログイン
+            登録
           </Button>
           <span className="ml-4 place-item-right -translate-y-0 ">
-            アカウントを持っていない方は<Link href="/signup">新規登録</Link>
+            アカウントを持っている方は<Link href="/login">ログイン</Link>
           </span>
         </form>
       </Card>

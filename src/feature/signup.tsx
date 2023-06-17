@@ -1,42 +1,27 @@
 import { Link } from "react-router-dom";
 import api from "./api";
-import { fetchState } from "./hooks";
+import { useState } from "react";
 import { AlertMessage } from "../contents/alert";
 import { AppwriteException, Models } from "appwrite";
 
 let M: string | null;
-const SignupPage: ({
-  dispatch,
-}: {
-  dispatch: React.Dispatch<{
-    type: number;
-    payload?: Models.User<Models.Preferences>;
-  }>;
-}) => JSX.Element = ({
-  dispatch,
-}: {
-  dispatch: React.Dispatch<{
-    type: number;
-    payload?: Models.User<Models.Preferences>;
-  }>;
-}) => {
-  const [email, setEmail] = useState("");
+const SignupPage: () => {
+  const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  let navigate = useNavigate();
-  let location = useLocation();
+  //let navigate = useNavigate();
+  //let location = useLocation();
   const [error, setError] = useState<string | null>(M);
 
-  let from = location.state?.from?.pathname || "/";
+  //let from = location.state?.from?.pathname || "/";
 
   const handleSignup = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    dispatch({ type: fetchState.init });
     try {
       const user = (await api.createAccount(email, password, username)).User;
       await api.createSession(email, password);
       dispatch({ type: fetchState.success, payload: user });
-      navigate(from, { replace: true });
+//      navigate(from, { replace: true });
     } catch (e: any) {
       if (typeof e.response.message == "string") {
         M = e.response.message;
