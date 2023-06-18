@@ -3,12 +3,11 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { Button, TextInput, Card, Flex, Metric } from "@tremor/react";
 import api from "@/feature/api";
-import { getLoginUser } from "@/feature/hooks";
 import { AlertMessage } from "@/contents/alert";
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type FormValues = {
   email: string;
@@ -23,19 +22,21 @@ export default function LoginForm() {
   } = useForm<FormValues>();
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
+  const router = useRouter();
 
   const onSubmit = async (data: FormValues) => {
     console.log(data.email);
     try {
+      await api.deleteCurrentSession();
+    } catch {}
+    try {
       await api.createSession(data.email, data.password);
-      getLoginUser();
-
-      redirect("/");
+      router.push("/");
     } catch (e: any) {
       if (e?.response?.message) {
         setLoginError(e.response.message);
       } else {
-        setLoginError("error occurred!");
+        setLoginError(e.message);
       }
     }
   };

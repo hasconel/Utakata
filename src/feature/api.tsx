@@ -50,6 +50,12 @@ interface Api {
     file: File,
     permissions?: string[]
   ) => Promise<Models.File>;
+  updateDocument: (
+    databaseID: string,
+    collectionID: string,
+    documentID: any,
+    data?: Omit<Document, keyof Document> | undefined
+  ) => Promise<Models.Document>;
   listFiles: (
     bucketID: string,
     queries?: string[],
@@ -124,8 +130,9 @@ let api: Api = {
               .provider()
               .account.create(ID.unique(), email, password, name)
               .then(async (user) => {
-                const current = await api.provider().account.get();
-                console.log(current);
+                await api
+                  .provider()
+                  .account.createEmailSession(email, password);
                 if (
                   typeof Server.databaseID === "string" &&
                   typeof Server.usercollectionID === "string"
@@ -206,6 +213,16 @@ let api: Api = {
     return api
       .provider()
       .storage.createFile(bucketID, fileID, file, permissions);
+  },
+  updateDocument: (
+    databaseID: string,
+    collectionID: string,
+    documentID,
+    data?: Omit<Models.Document, keyof Models.Document>
+  ) => {
+    return api
+      .provider()
+      .database.updateDocument(databaseID, collectionID, documentID, data);
   },
   listFiles: (bucketID: string, queries?: string[], search?: string) => {
     return api.provider().storage.listFiles(bucketID, queries, search);

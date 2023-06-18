@@ -3,12 +3,11 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { Button, TextInput, Card, Flex, Metric } from "@tremor/react";
 import api from "@/feature/api";
-import { getLoginUser } from "@/feature/hooks";
 import { AlertMessage } from "@/contents/alert";
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 type FormValues = {
   uname: string;
   email: string;
@@ -21,16 +20,16 @@ export default function SignUpForm() {
     watch,
     formState: { errors },
   } = useForm<FormValues>();
+  const router = useRouter();
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
   const onSubmit = async (data: FormValues) => {
-    console.log(data.email);
+    //console.log(data.email);
     try {
       await api.createAccount(data.email, data.password, data.uname);
-      getLoginUser();
-      redirect("/");
+      router.push("/");
     } catch (e: any) {
-      //  console.log(e.message);
+      // console.log(e.message);
       setLoginError(e.message);
     }
   };
@@ -47,7 +46,7 @@ export default function SignUpForm() {
             className="mt-4"
             {...register("uname", {
               required: true,
-              pattern: /^[a-z0-9]{1}\w{6,31}$/i,
+              pattern: /^[a-z0-9]{1}\w{4,31}$/i,
             })}
           />{" "}
           <TextInput

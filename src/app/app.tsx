@@ -18,10 +18,11 @@ const App = () => {
             <>
               <p>すごいカスのSNS</p>
               <Link href="/login">
-                <Button>Log In</Button>
+                <Button>ログイン</Button>
               </Link>
-
-              <Button>Sign Up</Button>
+              <Link href="/signup">
+                <Button>新規登録</Button>
+              </Link>
             </>
           )}
         </>
