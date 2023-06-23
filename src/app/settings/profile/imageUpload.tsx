@@ -68,6 +68,20 @@ const ProfileImageUpload = ({
     }
   };
 
+  const HandleEmailVerification = async () => {
+    try {
+      const res = await api
+        .provider()
+        .account.createVerification(
+          "http://localhost:3000/auth/emailverification/"
+        );
+      alert(`send email to ${uid.user.email}`);
+      console.log(res);
+    } catch (e) {
+      alert(e);
+    }
+  };
+
   const handleUploadFile = async (data: FormValues) => {
     setError("");
     let imageURL = undefined;
@@ -127,14 +141,14 @@ const ProfileImageUpload = ({
     <div>
       {" "}
       <form onSubmit={handleSubmit(handleUploadFile)}>
-        <div className="grid grid-cols-4  gap-4">
-          <span className=" aspect-square row-span-2 h-48  rounded  ">
+        <div className="grid grid-cols-1 sm:grid-cols-4 min-w-410 gap-4">
+          <span className="  aspect-square  row-span-2  rounded  ">
             {" "}
             <img
               src={previewUrl}
               alt="プレビュー"
-              className=" h-full w-full
-              object-cover rounded aspect-square object-center"
+              className="  
+              object-cover rounded aspect-square w-full object-center"
             />
           </span>
           <div className=" col-span-3 ">
@@ -193,7 +207,7 @@ const ProfileImageUpload = ({
             </p>
           </div>
           {error && (
-            <div className="col-start-1 col-end-6 ">
+            <div className="col-span-4 ">
               <AlertMessage message={error} />
             </div>
           )}
@@ -210,7 +224,7 @@ const ProfileImageUpload = ({
             }
           />
           <label
-            className="col-start-1 col-span-3"
+            className="col-span-2"
             htmlFor="file-input"
             ref={hiddenfileinput}
           >
@@ -237,14 +251,17 @@ const ProfileImageUpload = ({
           >
             選択解除
           </Button>
-          <Button type="submit" className="col-start-1 col-end-6 ">
+          <Button type="submit" className="col-span-3 ">
             アップロード
           </Button>
           <Link href={`/users/${uid.user.name}`}>
-            <Button type="button" className="col-start-1 col-end-6 ">
+            <Button type="button" className="col-span-3">
               プロフィール画面に戻る
             </Button>
           </Link>
+          <Button type="button" onClick={HandleEmailVerification}>
+            eメール認証
+          </Button>
         </div>
       </form>
     </div>
