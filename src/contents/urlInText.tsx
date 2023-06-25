@@ -53,8 +53,7 @@ const UrlInText = async ({ arg }: { arg: string }) => {
             console.log(`https://publish.twitter.com/oembed?url=${EncodeURI}`);
 
             const result = await fetch(
-              `https://publish.twitter.com/oembed?url=${EncodeURI}`,
-              { mode: "cors" }
+              `https://publish.twitter.com/oembed?url=${EncodeURI}`
             ).then((res) => res.json());
             console.log(result);
             console.log(`https://publish.twitter.com/oembed?url=${EncodeURI}`);
