@@ -1,10 +1,10 @@
-import { getLoginUser } from "@/feature/hooks";
+import { GetLoginUser } from "@/feature/hooks";
 import LoadingScreen from "@/contents/loading";
 import { redirect } from "next/navigation";
 import { Card, Grid } from "@tremor/react";
 import UserHome from "./userhome";
 const HomeSite = () => {
-  const { data, isLoading, isError, error } = getLoginUser();
+  const { data, isLoading, isError, error } = GetLoginUser();
   return (
     <>
       <Grid numItemsMd={1} numItemsLg={3} className="gap-4 mx-auto  mt-8">

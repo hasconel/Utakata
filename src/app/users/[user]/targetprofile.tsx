@@ -5,7 +5,8 @@ import { Server } from "@/feature/config";
 import { Button, Metric } from "@tremor/react";
 import Link from "next/link";
 import { useQuery } from "react-query";
-import Linkify from 'react-linkify';
+import Linkify from "react-linkify";
+import { AlertMessage } from "@/contents/alert";
 
 const TargetProfile = ({
   uname,
@@ -46,7 +47,9 @@ const TargetProfile = ({
       ) : (
         <>
           {isError ? (
-            <>エラー{error.message}</>
+            <>
+              <AlertMessage message="Error" />
+            </>
           ) : (
             <>
               {data && (

@@ -83,7 +83,8 @@ export default function LoginForm() {
             ログイン
           </Button>
           <span className="ml-4 place-item-right -translate-y-0 ">
-            アカウントを持っていない方は<Link href="/signup">新規登録</Link>
+            アカウントを持っていない方は
+            <Link href="/auth/signup">新規登録</Link>
           </span>
         </form>
       </Card>

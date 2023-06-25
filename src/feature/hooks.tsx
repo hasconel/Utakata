@@ -4,7 +4,7 @@ import { useQuery } from "react-query";
 import { Check, Server } from "./config";
 import { Query } from "appwrite";
 
-export const getLoginUser = () => {
+export const GetLoginUser = () => {
   const { isLoading, isError, data, error } = useQuery("user", async () => {
     try {
       if (
@@ -32,7 +32,7 @@ export const getLoginUser = () => {
   });
   return { isLoading, isError, data, error };
 };
-export const getProfileScreen = (target: string) => {
+export const GetProfileScreen = (target: string) => {
   const { isLoading, isError, data, error } = useQuery("target", async () => {
     try {
       const currentuser = await api.getAccount().catch(() => {

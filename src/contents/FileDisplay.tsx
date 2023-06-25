@@ -2,6 +2,7 @@ import api from "../feature/api";
 import { Server } from "../feature/config";
 import { Models } from "appwrite";
 import { Button } from "@tremor/react";
+import { useState } from "react";
 const TestButton = () => {
   const [file, setFile] = useState<string | null>(null);
   const Test = async (e: React.MouseEvent<HTMLButtonElement>) => {

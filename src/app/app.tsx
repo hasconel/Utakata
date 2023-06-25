@@ -1,9 +1,9 @@
 import LoadingScreen from "@/contents/loading";
-import { getLoginUser } from "@/feature/hooks";
+import { GetLoginUser } from "@/feature/hooks";
 import Link from "next/link";
 import { Button } from "@tremor/react";
 const App = () => {
-  const user = getLoginUser();
+  const user = GetLoginUser();
   //  const router = useRouter();
 
   return (
@@ -20,7 +20,7 @@ const App = () => {
               <Link href="/login">
                 <Button>ログイン</Button>
               </Link>
-              <Link href="/signup">
+              <Link href="/auth/signup">
                 <Button>新規登録</Button>
               </Link>
             </>

@@ -27,12 +27,14 @@
     "@types/uuid": "^9.0.2",
     "appwrite": "^11.0.0",
     "autoprefixer": "10.4.14",
+    "bcrypt": "^5.1.0",
     "dotenv": "^16.1.4",
     "dotenv-webpack": "^8.0.1",
     "eslint": "8.42.0",
     "eslint-config-next": "13.4.5",
     "linkifyjs": "^4.1.1",
     "next": "13.4.5",
+    "node-appwrite": "^9.0.0",
     "postcss": "8.4.24",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -47,6 +49,7 @@
     "uuid": "^9.0.0",
     "web-vitals": "^3.3.2",
     "webpack": "^5.86.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "xxhash-wasm": "^1.0.2"
   }
 }

@@ -7,6 +7,7 @@ type Config = {
   databaseID: string | undefined;
   bucketID: string | undefined;
   userThumbnailBucketID: string | undefined;
+  Key: string | undefined;
 };
 export const Server: Config = {
   endpoint: process.env.REACT_APP_ENDPOINT,
@@ -16,6 +17,7 @@ export const Server: Config = {
   databaseID: process.env.REACT_APP_DATABASE_ID,
   bucketID: process.env.REACT_APP_BUCKET_ID,
   userThumbnailBucketID: process.env.REACT_APP_USERTHUMBNAIL_BUCKET_ID,
+  Key: process.env.REACT_APP_APIKEY,
 };
 export const Check = () => {
   if (

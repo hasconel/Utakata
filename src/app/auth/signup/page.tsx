@@ -8,6 +8,7 @@ import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createHash } from "crypto";
 type FormValues = {
   uname: string;
   email: string;
@@ -23,11 +24,19 @@ export default function SignUpForm() {
   const router = useRouter();
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
+  const [succesMessage, setSuccesMessage] = useState("");
   const onSubmit = async (data: FormValues) => {
     //console.log(data.email);
     try {
       await api.createAccount(data.email, data.password, data.uname);
-      router.push("/");
+      await api
+        .provider()
+        .account.createVerification(
+          "http://localhost:3000/auth/emailverification/"
+        );
+      setSuccesMessage(
+        `\"${data.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
+      );
     } catch (e: any) {
       // console.log(e.message);
       setLoginError(e.message);
@@ -37,6 +46,11 @@ export default function SignUpForm() {
     <>
       <Card className="max-w-lg mx-auto mt-8 gap-6">
         {LoginError && <AlertMessage message={LoginError} />}
+        {succesMessage && (
+          <>
+            <div className="w-full  rounded bg-blue-500">{succesMessage}</div>
+          </>
+        )}
         <form onSubmit={handleSubmit(onSubmit)}>
           <TextInput
             type="text"

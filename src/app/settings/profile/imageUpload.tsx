@@ -27,15 +27,7 @@ const ProfileImageUpload = ({
   const [inputError, setInputError] = useState<string>(
     "w-full bg-transparent rounded border border-slate-300"
   );
-  const isError = (state: boolean) => {
-    if (state === true) {
-      return setInputError(
-        "w-full bg-transparent rounded border border-slate-300"
-      );
-    } else {
-      return "w-full bg-transparent rounded border border-rose";
-    }
-  };
+
   const router = useRouter();
   const {
     register,
@@ -90,23 +82,23 @@ const ProfileImageUpload = ({
       !(typeof selectedFile === "undefined") &&
       typeof Server.userThumbnailBucketID === "string"
     ) {
-      console.log(selectedFile);
       try {
-        const CreateStrage = await api.createStorage(
-          Server.userThumbnailBucketID,
-          ID.unique(),
-          selectedFile
-        );
+        const CreateStrage = await api
+          .createStorage(
+            Server.userThumbnailBucketID,
+            ID.unique(),
+            selectedFile
+          )
         imageURL = await api.getFilePreview(
           Server.userThumbnailBucketID,
           CreateStrage.$id,
           400,
           400
         );
-        router.refresh();
+//        router.refresh();
       } catch {
         (e: any) => {
-          if (e.response.message === "string") {
+          if (typeof e.response.message === "string") {
             setError(e.response.massage);
           }
           setError(e.message);
@@ -125,12 +117,28 @@ const ProfileImageUpload = ({
       typeof Server.databaseID === "string" &&
       typeof Server.usercollectionID == "string"
     ) {
-      await api.updateDocument(
-        Server.databaseID,
-        Server.usercollectionID,
-        uid.user.$id,
-        UploadData
-      );
+      if (!data.UserURL) {
+        const withoutURLdata = {
+          UserThumbnailURL: imageURL,
+          DisplayName: data.DisplayName,
+          ProfileBIO: data.ProfileBIO,
+        };
+        const UploadDataWithoutURL = JSON.stringify(withoutURLdata);
+        console.log("hoge");
+        await api.updateDocument(
+          Server.databaseID,
+          Server.usercollectionID,
+          uid.user.$id,
+          UploadDataWithoutURL
+        );
+      } else {
+        await api.updateDocument(
+          Server.databaseID,
+          Server.usercollectionID,
+          uid.user.$id,
+          UploadData
+        );
+      }
     } else {
       setError("サーバーにアクセスできませんでした");
       throw new Error("さーばーにあくせすできませんでした");
@@ -259,7 +267,11 @@ const ProfileImageUpload = ({
               プロフィール画面に戻る
             </Button>
           </Link>
-          <Button type="button" onClick={HandleEmailVerification}>
+          <Button
+            type="button"
+            onClick={HandleEmailVerification}
+            disabled={uid.user.emailVerification}
+          >
             eメール認証
           </Button>
         </div>

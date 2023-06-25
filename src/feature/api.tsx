@@ -113,7 +113,6 @@ let api: Api = {
   },
   createAccount: async (email: string, password: string, name: string) => {
     const data = JSON.stringify({ DisplayUID: name });
-    console.log("start");
     if (
       typeof Server.databaseID === "string" &&
       typeof Server.usercollectionID === "string"
@@ -166,7 +165,7 @@ let api: Api = {
     let account = api.provider().account;
     return account.get();
   },
-  createSession: (email: string, password: string) => {
+  createSession: async (email: string, password: string) => {
     return api.provider().account.createEmailSession(email, password);
   },
   deleteCurrentSession: () => {

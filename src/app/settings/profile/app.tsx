@@ -1,10 +1,10 @@
-import { getLoginUser } from "@/feature/hooks";
+import { GetLoginUser } from "@/feature/hooks";
 import LoadingScreen from "@/contents/loading";
 import { redirect } from "next/navigation";
 import { Card } from "@tremor/react";
 import ProfileImageUpload from "./imageUpload";
 const ProfileSetting = () => {
-  const { data, isLoading, isError, error } = getLoginUser();
+  const { data, isLoading, isError, error } = GetLoginUser();
   return (
     <>
       {isLoading ? (

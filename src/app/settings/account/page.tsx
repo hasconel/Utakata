@@ -1,15 +1,14 @@
 "use client";
 import { QueryClientProvider, QueryClient } from "react-query";
-import EmailVerify from "./app";
+import AccountSetting from "./app";
 const queryClient = new QueryClient();
-const Verification = () => {
+const settingsProfile = () => {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <span className="hidden">eメール認証画面</span>
-        <EmailVerify />
+        <AccountSetting />
       </QueryClientProvider>
     </>
   );
 };
-export default Verification;
+export default settingsProfile;

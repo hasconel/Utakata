@@ -1,11 +1,13 @@
 import LoadingScreen from "@/contents/loading";
-import { getProfileScreen } from "@/feature/hooks";
+import { GetProfileScreen } from "@/feature/hooks";
 import TargetProfile from "./targetprofile";
 import Link from "next/link";
 import { Button } from "@tremor/react";
+import { AlertMessage } from "@/contents/alert";
 
 const App = ({ username }: { username: string }) => {
-  const user = getProfileScreen(username);
+  const user = GetProfileScreen(username);
+  console.log(user.data?.current);
   return (
     <>
       {user.isLoading ? (
@@ -18,7 +20,22 @@ const App = ({ username }: { username: string }) => {
         <>
           {user.isError ? (
             <>
-              {user.error.message}{" "}
+              {user.error != null && (
+                <>
+                  {typeof user.error === "object" && (
+                    <>
+                      {"message" in user.error && (
+                        <>
+                          {typeof user.error.message === "string" && (
+                            <AlertMessage message={user.error.message} />
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
               <Link href="/">
                 <Button>ホームへ戻る</Button>
               </Link>
