@@ -99,7 +99,6 @@ let api: Api = {
       typeof Server.endpoint === "string" &&
       typeof Server.project === "string"
     ) {
-      console.log("api is exist");
       appwrite.setEndpoint(Server.endpoint).setProject(Server.project);
       const account: Account = new Account(appwrite);
       const database: Databases = new Databases(appwrite);
@@ -107,8 +106,7 @@ let api: Api = {
       api.sdk = { database, account, storage };
       return api.sdk;
     } else {
-      console.log("api is not exist");
-      throw new Error();
+      throw new Error("認証サーバーに接続できませんでした");
     }
   },
   createAccount: async (email: string, password: string, name: string) => {
@@ -158,7 +156,7 @@ let api: Api = {
         });
       return UserData;
     } else {
-      throw new Error("コレクションIDが不正");
+      throw new Error("認証サーバーへの接続に失敗しました");
     }
   },
   getAccount: () => {
