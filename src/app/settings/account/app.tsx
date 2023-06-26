@@ -282,8 +282,8 @@ const AccountSetting = () => {
         {data?.user.emailVerification ? (
           <>
             <div>
-              "{data?.user.email}
-              "を認証するためには下のボタンをクリックしてください
+              {`\"${data?.user.email}\"`}
+              を認証するためには下のボタンをクリックしてください
             </div>
             <button
               type="submit"
