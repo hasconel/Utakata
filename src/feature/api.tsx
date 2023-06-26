@@ -86,6 +86,7 @@ interface Api {
     background?: string,
     output?: "jpg" | "jpeg" | "png" | "gif" | "webp"
   ) => URL;
+  eMailVerification: () => Promise<Models.Token>;
 }
 
 let api: Api = {
@@ -258,6 +259,13 @@ let api: Api = {
         rotation,
         background,
         output
+      );
+  },
+  eMailVerification: () => {
+    return api
+      .provider()
+      .account.createVerification(
+        ` ${Server.deployPont}/auth/emailverification/`
       );
   },
 };

@@ -7,7 +7,6 @@ import { AlertMessage } from "@/contents/alert";
 
 const App = ({ username }: { username: string }) => {
   const user = GetProfileScreen(username);
-  console.log(user.data?.current);
   return (
     <>
       {user.isLoading ? (

@@ -8,15 +8,20 @@ import { useForm } from "react-hook-form";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import api from "@/feature/api";
 import { AlertMessage } from "@/contents/alert";
+import { Server } from "@/feature/config";
 
 const AccountSetting = () => {
   const [passwordHidden, setPasswordHidden] = useState(true);
-
   const { data, isLoading, isError, error } = GetLoginUser();
   const [emailModal, setEmailModal] = useState<boolean>(false);
   const [passwordModal, setPasswordModal] = useState<boolean>(false);
+  const [emailVerificationModal, setEmailVerificationModal] =
+    useState<boolean>(false);
   const [SuccessMessage, setSuccesMessage] = useState("");
-
+  const [emailErrorMessage, setEmailErrorMessage] = useState<string>("");
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState<string>("");
+  const [emailVerificationErrorMessage, setEmailVerificationErrorMessage] =
+    useState<string>("");
   type FormValues = {
     email: string;
     password: string;
@@ -28,24 +33,42 @@ const AccountSetting = () => {
     resetField,
     formState: { errors },
   } = useForm<FormValues>();
+  const setModal = (
+    target?: "emailModal" | "passwordModal" | "emailVerificationModal"
+  ) => {
+    setEmailModal(false);
+    setEmailVerificationModal(false);
+    setPasswordModal(false);
+    if (target != undefined) {
+      switch (target) {
+        case "emailModal":
+          setEmailModal(true);
+          break;
+        case "passwordModal":
+          setPasswordModal(true);
+          break;
+        case "emailVerificationModal":
+          setEmailVerificationModal(true);
+          break;
+        default:
+          break;
+      }
+    }
+  };
 
-  const [emailErrorMessage, setEmailErrorMessage] = useState<string>("");
-  const [passwordErrorMessage, setPasswordErrorMessage] = useState<string>("");
   const EmailUpdate = () => {
-    const handleEmailUpdate = async (data: FormValues) => {
+    const handleEmailUpdate = async (formdata: FormValues) => {
       try {
-        await api.provider().account.updateEmail(data.email, data.password);
         await api
           .provider()
-          .account.createVerification(
-            "http://localhost:3000/auth/emailverification/"
-          );
+          .account.updateEmail(formdata.email, formdata.password);
+        await api.eMailVerification();
         setSuccesMessage(
-          `\"${data.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
+          `\"${formdata.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
         );
         resetField("email");
         resetField("password");
-        setEmailModal(false);
+        setModal();
         setPasswordHidden(false);
       } catch (e) {
         if (typeof e === "object" && e != null) {
@@ -102,7 +125,7 @@ const AccountSetting = () => {
             <i
               onClick={() => setPasswordHidden(!passwordHidden)}
               aria-hidden="true"
-              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 h-5 w-5 place-items-left"
+              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 w-5 place-items-left"
             >
               {passwordHidden ? (
                 <>
@@ -131,8 +154,7 @@ const AccountSetting = () => {
           .account.updatePassword(data.newPassword, data.password);
         resetField("newPassword");
         resetField("password");
-        setEmailModal(false);
-        setPasswordModal(false);
+        setModal();
       } catch (e) {
         if (typeof e === "object" && e != null) {
           if (
@@ -151,7 +173,6 @@ const AccountSetting = () => {
         }
       }
     };
-
     return (
       <>
         {passwordErrorMessage && (
@@ -179,7 +200,7 @@ const AccountSetting = () => {
             <i
               onClick={() => setPasswordHidden(!passwordHidden)}
               aria-hidden="true"
-              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 h-5 w-5 place-items-left"
+              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 w-5 place-items-left"
             >
               {passwordHidden ? (
                 <>
@@ -203,7 +224,7 @@ const AccountSetting = () => {
             <i
               onClick={() => setPasswordHidden(!passwordHidden)}
               aria-hidden="true"
-              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 h-5 w-5 place-items-left"
+              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 w-5 place-items-left"
             >
               {passwordHidden ? (
                 <>
@@ -225,6 +246,63 @@ const AccountSetting = () => {
     );
   };
 
+  const EmailVerification = () => {
+    const HandleEmailVerification = async () => {
+      try {
+        await api.eMailVerification();
+        if (data) {
+          setSuccesMessage(
+            `\"${data.user.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
+          );
+        }
+        setModal();
+      } catch (e) {
+        if (typeof e === "object" && e != null) {
+          if (
+            "response" in e &&
+            typeof e.response === "object" &&
+            e.response != null
+          ) {
+            if (
+              "message" in e.response &&
+              e.response.message != null &&
+              typeof e.response.message === "string"
+            ) {
+              setPasswordErrorMessage(e.response.message);
+            }
+          }
+        }
+      }
+    };
+    return (
+      <>
+        {emailVerificationErrorMessage && (
+          <AlertMessage message={emailVerificationErrorMessage} />
+        )}
+        {data?.user.emailVerification ? (
+          <>
+            <div>
+              "{data?.user.email}
+              "を認証するためには下のボタンをクリックしてください
+            </div>
+            <button
+              type="submit"
+              className="bg-sky-800 rounded px-2 py-1 hover:bg-sky-400"
+              onClick={HandleEmailVerification}
+            >
+              認証メールを送信する
+            </button>
+          </>
+        ) : (
+          <>
+            {setEmailVerificationErrorMessage(
+              "メールアドレスは認証されています"
+            )}
+          </>
+        )}
+      </>
+    );
+  };
   return (
     <>
       {isLoading ? (
@@ -250,8 +328,7 @@ const AccountSetting = () => {
                     <button
                       className="w-full pl-4 py-2 rounded hover:bg-sky-900"
                       onClick={() => {
-                        setEmailModal(true);
-                        setPasswordModal(false);
+                        setModal("emailModal");
                       }}
                     >
                       <span className="pl-2">メールアドレスを変更する</span>
@@ -261,11 +338,22 @@ const AccountSetting = () => {
                     <button
                       className="w-full px-4 py-2 rounded hover:bg-sky-900"
                       onClick={() => {
-                        setEmailModal(false);
-                        setPasswordModal(true);
+                        setModal("passwordModal");
                       }}
                     >
                       パスワードを変更する
+                    </button>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 rounded hover:bg-sky-900"
+                      onClick={() => {
+                        setModal("emailVerificationModal");
+                      }}
+                      disabled={data.user.emailVerification}
+                    >
+                      eメール認証
                     </button>
                   </div>
                 </div>
@@ -279,6 +367,11 @@ const AccountSetting = () => {
                   SetBoolean={setPasswordModal}
                   contents={PasswordUpdate()}
                 />
+                <ModalWindow
+                  Boolean={emailVerificationModal}
+                  SetBoolean={setEmailVerificationModal}
+                  contents={EmailVerification()}
+                />
               </Card>
             </>
           ) : (
@@ -289,4 +382,5 @@ const AccountSetting = () => {
     </>
   );
 };
+
 export default AccountSetting;

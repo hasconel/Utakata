@@ -25,7 +25,6 @@ export default function LoginForm() {
   const router = useRouter();
 
   const onSubmit = async (data: FormValues) => {
-    console.log(data.email);
     try {
       await api.deleteCurrentSession();
     } catch {}
@@ -68,7 +67,7 @@ export default function LoginForm() {
             <i
               onClick={() => setPasswordHidden(!passwordHidden)}
               aria-hidden="true"
-              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 h-5 w-5 place-items-left"
+              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 w-5 place-items-left"
             >
               {passwordHidden ? (
                 <>

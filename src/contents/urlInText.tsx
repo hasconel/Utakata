@@ -1,40 +1,33 @@
-const UrlInText = async ({ arg }: { arg: string }) => {
+const UrlInText = ({ arg }: { arg: string }) => {
   if (arg == null) {
     console.log("null");
     return <></>;
   } else {
-    const ResultURLs = arg.match(
-      /https?:\/\/youtu\.be\/[\w!?/+\-_~;.,*&@#$%()'[\]]+/
+    const NiconicoURLs = arg.match(
+      /https?:\/\/*nicovideo\.jp\/watch\/sm[0-9]+/
     );
-    if (ResultURLs != null) {
-      const ResultPath = new URL(ResultURLs[0]).pathname;
+    if (NiconicoURLs != null) {
+      const ResultPath = NiconicoURLs[0].split("/watch/")[1];
       return (
         <>
           <iframe
-            width="560"
-            height="315"
-            src={`https://www.youtube.com/embed/${ResultPath}`}
-            title="YouTube video player"
+            className="w-full aspect-video"
+            src={`https://embed.nicovideo.jp/watch/${ResultPath}`}
+            title="Niconico video player"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           ></iframe>
         </>
       );
     } else {
-      const ResultURLs2 = arg.match(
-        /https?:\/\/(?:www\.youtube\.com\/|youtube\.com\/)[\w!?/+\-_~;.,*=&@#$%()'[\]]+/
-      );
-      if (ResultURLs2 != null) {
-        console.log(ResultURLs2);
-        const ResultPath0 = new URL(ResultURLs2[0]).searchParams;
-        console.log(ResultPath0);
-        const ResultPath1 = ResultPath0.get("v");
+      const ResultYouTubeURLs1 = arg.match(/https?:\/\/youtu\.be\/[\w]+/);
+      if (ResultYouTubeURLs1 != null) {
+        const ResultPath = new URL(ResultYouTubeURLs1[0]).pathname;
         return (
           <>
             <iframe
-              width="560"
-              height="315"
-              src={`https://www.youtube.com/embed/${ResultPath1}`}
+              className="w-full aspect-video"
+              src={`https://www.youtube.com/embed/${ResultPath}`}
               title="YouTube video player"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
@@ -42,45 +35,42 @@ const UrlInText = async ({ arg }: { arg: string }) => {
           </>
         );
       } else {
-        try {
-          console.log(arg);
+        const ResultYouTubeURLs2 = arg.match(
+          /https?:\/\/(?:*\.youtube\.com|youtube\.com)\/watch?v=[\w]+/
+        );
+        if (ResultYouTubeURLs2 != null) {
+          const ResultPath0 = new URL(ResultYouTubeURLs2[0]).searchParams;
+          const ResultPath1 = ResultPath0.get("v");
+          return (
+            <>
+              <iframe
+                className="w-full  aspect-video"
+                src={`https://www.youtube.com/embed/${ResultPath1}`}
+                title="YouTube video player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              ></iframe>
+            </>
+          );
+        } else {
           const TwitURLs = arg.match(
-            /https?:\/\/twitter.com\/[\w!?/+\-_~;.,*&@#$%()'[\]]+/
+            /https?:\/\/twitter\.com\/\w+\/status\/[1-9]{6,22}/
           );
           console.log(TwitURLs);
           if (TwitURLs != null) {
-            const EncodeURI = encodeURIComponent(TwitURLs[0]);
-            console.log(`https://publish.twitter.com/oembed?url=${EncodeURI}`);
-
-            const result = await fetch(
-              `https://publish.twitter.com/oembed?url=${EncodeURI}`
-            ).then((res) => res.json());
-            console.log(result);
-            console.log(`https://publish.twitter.com/oembed?url=${EncodeURI}`);
-            const htmlres = result.html.replace(
-              /\\u[0-9A-Fa-f]{4}/g,
-              (x: string, y: string) => {
-                return String.fromCharCode(parseInt(y, 16));
-              }
+            return (
+              <>
+                <blockquote className="twitter-tweet w-full">
+                  <a href={TwitURLs[0]}></a>
+                </blockquote>
+                <script
+                  async
+                  src="https://platform.twitter.com/widgets.js"
+                ></script>
+              </>
             );
-
-            const resJson = {
-              url: result.url,
-              title: result.title,
-              html: htmlres,
-              width: result.width,
-              height: result.height,
-              type: result.type,
-              cache_age: result.cache_age,
-              provider_name: result.provider_name,
-              provider_url: result.provider_url,
-              version: result.version,
-            };
-            const div = document.createElement("div");
-            div.innerHTML = resJson.html;
-            return <>{div}</>;
           }
-        } catch {}
+        }
       }
     }
   }

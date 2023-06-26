@@ -60,20 +60,6 @@ const ProfileImageUpload = ({
     }
   };
 
-  const HandleEmailVerification = async () => {
-    try {
-      const res = await api
-        .provider()
-        .account.createVerification(
-          "http://localhost:3000/auth/emailverification/"
-        );
-      alert(`send email to ${uid.user.email}`);
-      console.log(res);
-    } catch (e) {
-      alert(e);
-    }
-  };
-
   const handleUploadFile = async (data: FormValues) => {
     setError("");
     let imageURL = undefined;
@@ -267,13 +253,7 @@ const ProfileImageUpload = ({
               プロフィール画面に戻る
             </Button>
           </Link>
-          <Button
-            type="button"
-            onClick={HandleEmailVerification}
-            disabled={uid.user.emailVerification}
-          >
-            eメール認証
-          </Button>
+
         </div>
       </form>
     </div>
