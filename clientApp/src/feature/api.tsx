@@ -265,7 +265,7 @@ let api: Api = {
     return api
       .provider()
       .account.createVerification(
-        ` ${Server.deployPont}/auth/emailverification/`
+        ` ${Server.deployPont}auth/emailverification/`
       );
   },
 };

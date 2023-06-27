@@ -10,7 +10,7 @@ const GenqueStreamScreen = ({
 }) => {
   return (
     <>
-      <div className="max-width-full rounded border border-white">
+      <div className="w-full rounded border border-white">
         リアルタイムデータベースによるストリーミング建設予定地
       </div>
     </>

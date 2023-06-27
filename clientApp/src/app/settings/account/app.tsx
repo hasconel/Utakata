@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import api from "@/feature/api";
 import { AlertMessage } from "@/contents/alert";
-import { Server } from "@/feature/config";
 
 const AccountSetting = () => {
   const [passwordHidden, setPasswordHidden] = useState(true);
@@ -279,7 +278,7 @@ const AccountSetting = () => {
         {emailVerificationErrorMessage && (
           <AlertMessage message={emailVerificationErrorMessage} />
         )}
-        {data?.user.emailVerification ? (
+        {!data?.user.emailVerification ? (
           <>
             <div>
               {`\"${data?.user.email}\"`}
@@ -294,11 +293,7 @@ const AccountSetting = () => {
             </button>
           </>
         ) : (
-          <>
-            {setEmailVerificationErrorMessage(
-              "メールアドレスは認証されています"
-            )}
-          </>
+          <>メールアドレスはすでに認証されています</>
         )}
       </>
     );

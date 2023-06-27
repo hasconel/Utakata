@@ -4,7 +4,7 @@ const UrlInText = ({ arg }: { arg: string }) => {
     return <></>;
   } else {
     const NiconicoURLs = arg.match(
-      /https?:\/\/*nicovideo\.jp\/watch\/sm[0-9]+/
+      /https?:\/\/(\w+\.)?nicovideo\.jp\/watch\/sm[0-9]+/
     );
     if (NiconicoURLs != null) {
       const ResultPath = NiconicoURLs[0].split("/watch/")[1];
@@ -54,13 +54,13 @@ const UrlInText = ({ arg }: { arg: string }) => {
           );
         } else {
           const TwitURLs = arg.match(
-            /https?:\/\/twitter\.com\/\w+\/status\/[1-9]{6,22}/
+            /https?:\/\/twitter\.com\/\w+\/status\/[0-9]{6,22}/
           );
           console.log(TwitURLs);
           if (TwitURLs != null) {
             return (
               <>
-                <blockquote className="twitter-tweet w-full">
+                <blockquote data-theme="dark" className="twitter-tweet w-full">
                   <a href={TwitURLs[0]}></a>
                 </blockquote>
                 <script
