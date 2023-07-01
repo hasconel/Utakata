@@ -7,21 +7,13 @@ const HomeSite = () => {
   const { data, isLoading, isError, error } = GetLoginUser();
   return (
     <>
-      <Grid numItemsMd={1} numItemsLg={3} className="gap-4 mx-auto  mt-8">
+      <Card className="grid max-w-4xl col-start-2 mt-8 mx-auto gap-6">
         {isLoading ? (
           <LoadingScreen />
         ) : (
-          <>
-            {data ? (
-              <Card className="max-w-4xl col-start-2 mt-8 gap-6">
-                <UserHome uid={data} />
-              </Card>
-            ) : (
-              <>{redirect("/")} </>
-            )}
-          </>
+          <>{data ? <UserHome uid={data} /> : <>{redirect("/")} </>}</>
         )}
-      </Grid>{" "}
+      </Card>{" "}
     </>
   );
 };

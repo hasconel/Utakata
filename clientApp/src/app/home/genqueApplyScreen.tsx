@@ -36,8 +36,8 @@ const GenqueApplyScreen = ({
           .createDocument(Server.databaseID, Server.collectionID, UploadData)
           .catch((e) => console.log(e));
       }
+      setName("");
       setButtonLoading(false);
-      router.refresh();
     } catch {}
   };
   return (
