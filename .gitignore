@@ -18,6 +18,7 @@ clientApp/build
 # misc
 clientApp/.DS_Store
 clientApp/*.pem
+appwrite/
 
 # debug
 clientApp/npm-debug.log*

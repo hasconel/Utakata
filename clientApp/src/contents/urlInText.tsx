@@ -1,6 +1,5 @@
 const UrlInText = ({ arg }: { arg: string }) => {
   if (arg == null) {
-    console.log("null");
     return <></>;
   } else {
     const NiconicoURLs = arg.match(
@@ -56,7 +55,6 @@ const UrlInText = ({ arg }: { arg: string }) => {
           const TwitURLs = arg.match(
             /https?:\/\/twitter\.com\/\w+\/status\/[0-9]{6,22}/
           );
-          console.log(TwitURLs);
           if (TwitURLs != null) {
             return (
               <>
@@ -69,6 +67,8 @@ const UrlInText = ({ arg }: { arg: string }) => {
                 ></script>
               </>
             );
+          } else {
+            return <></>;
           }
         }
       }

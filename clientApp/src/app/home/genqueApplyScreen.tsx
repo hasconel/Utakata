@@ -1,6 +1,10 @@
-"use Client;";
+"use Client";
+import LoadingScreen from "@/contents/loading";
 import UrlInText from "@/contents/urlInText";
-import { Models } from "appwrite";
+import api from "@/feature/api";
+import { Server } from "@/feature/config";
+import { ID, Models } from "appwrite";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 const GenqueApplyScreen = ({
@@ -12,16 +16,28 @@ const GenqueApplyScreen = ({
   };
 }) => {
   const [name, setName] = useState("");
-  const [value, setValue] = useState<string>("");
   const [content, setContents] = useState(<></>);
+  const [buttonLoading, setButtonLoading] = useState<boolean>(false);
+  const router = useRouter();
   const handlesubmit = async (e: any) => {
     e.preventDefault();
+    setButtonLoading(true);
     try {
-      setValue(name);
       const content = await UrlInText({ arg: name });
       if (content != undefined) {
         setContents(content);
       }
+      if (Server.databaseID && Server.collectionID) {
+        const UploadData = JSON.stringify({
+          data: name,
+          createUserId: uid.user.$id,
+        });
+        await api
+          .createDocument(Server.databaseID, Server.collectionID, UploadData)
+          .catch((e) => console.log(e));
+      }
+      setButtonLoading(false);
+      router.refresh();
     } catch {}
   };
   return (
@@ -30,7 +46,7 @@ const GenqueApplyScreen = ({
       <>
         <div className="grid w-full">
           <div className="w-full rounded border border-white">
-            ツイート画面建設予定地
+            言及画面建設予定地
             <form method="post" onSubmit={handlesubmit}>
               <div className="w-11/12">
                 <textarea
@@ -45,12 +61,12 @@ const GenqueApplyScreen = ({
                 {" "}
                 <button
                   type="submit"
-                  className="bg-slate-800 mx-2 px-4  py-1 rounded hover:bg-slate-600"
+                  className="bg-slate-800 mx-2 px-4 w-20  py-1 rounded hover:bg-slate-600"
+                  disabled={buttonLoading}
                 >
-                  test
+                  {buttonLoading ? <LoadingScreen /> : <>投稿</>}
                 </button>
               </div>
-              <div>{value}</div>
               <div> {content && <>{content}</>}</div>
             </form>
           </div>

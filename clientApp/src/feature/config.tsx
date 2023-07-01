@@ -17,7 +17,7 @@ export const Server: Config = {
   bucketID: process.env.NEXT_PUBLIC_REACT_APP_BUCKET_ID,
   userThumbnailBucketID:
     process.env.NEXT_PUBLIC_REACT_APP_USERTHUMBNAIL_BUCKET_ID,
-  deployPont: process.env.KEY_PUBLIC_DEPLOYPOINT,
+  deployPont: process.env.NEXT_PUBLIC_KEY_PUBLIC_DEPLOYPOINT,
 };
 export const Check = () => {
   if (

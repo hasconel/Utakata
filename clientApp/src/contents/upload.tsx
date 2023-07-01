@@ -7,7 +7,7 @@ import { ID } from "appwrite";
 import { CloudArrowUpIcon } from "@heroicons/react/20/solid";
 import { Button } from "@tremor/react";
 
-const FileUploadPage: React.FC = () => {
+const FileUploadPage = () => {
   const hiddenFileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

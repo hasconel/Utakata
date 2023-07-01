@@ -12,8 +12,18 @@ import {
 } from "appwrite";
 
 interface Api {
-  sdk: { database: Databases; account: Account; storage: Storage } | null;
-  provider: () => { database: Databases; account: Account; storage: Storage };
+  sdk: {
+    database: Databases;
+    account: Account;
+    storage: Storage;
+    appwrite: Appwrite;
+  } | null;
+  provider: () => {
+    database: Databases;
+    account: Account;
+    storage: Storage;
+    appwrite: Appwrite;
+  };
   createAccount: (
     email: string,
     password: string,
@@ -87,6 +97,12 @@ interface Api {
     output?: "jpg" | "jpeg" | "png" | "gif" | "webp"
   ) => URL;
   eMailVerification: () => Promise<Models.Token>;
+  getDocument: (
+    databaseID: string,
+    collectionID: string,
+    documentID: string,
+    queries?: string[]
+  ) => Promise<Models.Document>;
 }
 
 let api: Api = {
@@ -104,7 +120,7 @@ let api: Api = {
       const account: Account = new Account(appwrite);
       const database: Databases = new Databases(appwrite);
       const storage: Storage = new Storage(appwrite);
-      api.sdk = { database, account, storage };
+      api.sdk = { database, account, storage, appwrite };
       return api.sdk;
     } else {
       throw new Error("認証サーバーに接続できませんでした");
@@ -191,7 +207,9 @@ let api: Api = {
     collectionID: string,
     queries?: string[]
   ) => {
-    return api.provider().database.listDocuments(databaseID, collectionID);
+    return api
+      .provider()
+      .database.listDocuments(databaseID, collectionID, queries);
   },
   deleteDocument: (
     databaseID: string,
@@ -267,6 +285,16 @@ let api: Api = {
       .account.createVerification(
         ` ${Server.deployPont}auth/emailverification/`
       );
+  },
+  getDocument: (
+    databaseID: string,
+    collectionID: string,
+    documentID: string,
+    queries?: string[]
+  ) => {
+    return api
+      .provider()
+      .database.getDocument(databaseID, collectionID, documentID, queries);
   },
 };
 export default api;

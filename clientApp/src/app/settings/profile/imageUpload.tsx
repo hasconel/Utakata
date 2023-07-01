@@ -9,6 +9,7 @@ import { ID, Models } from "appwrite";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import LoadingScreen from "@/contents/loading";
 
 type FormValues = {
   DisplayName: string;
@@ -43,7 +44,8 @@ const ProfileImageUpload = ({
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(
     uid.data.UserThumbnailURL
   );
-
+  const [buttonIsLoading, setButtonIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -61,6 +63,7 @@ const ProfileImageUpload = ({
   };
 
   const handleUploadFile = async (data: FormValues) => {
+    setButtonIsLoading(true);
     setError("");
     let imageURL = undefined;
     //ここから下は画像があったときだけ動かす
@@ -69,19 +72,19 @@ const ProfileImageUpload = ({
       typeof Server.userThumbnailBucketID === "string"
     ) {
       try {
-        const CreateStrage = await api
-          .createStorage(
-            Server.userThumbnailBucketID,
-            ID.unique(),
-            selectedFile
-          )
+        const CreateStrage = await api.createStorage(
+          Server.userThumbnailBucketID,
+          ID.unique(),
+          selectedFile
+        );
         imageURL = await api.getFilePreview(
           Server.userThumbnailBucketID,
           CreateStrage.$id,
           400,
           400
         );
-//        router.refresh();
+        setSuccessMessage("プロフィールを更新しました");
+        //        router.refresh();
       } catch {
         (e: any) => {
           if (typeof e.response.message === "string") {
@@ -110,7 +113,6 @@ const ProfileImageUpload = ({
           ProfileBIO: data.ProfileBIO,
         };
         const UploadDataWithoutURL = JSON.stringify(withoutURLdata);
-        console.log("hoge");
         await api.updateDocument(
           Server.databaseID,
           Server.usercollectionID,
@@ -129,6 +131,7 @@ const ProfileImageUpload = ({
       setError("サーバーにアクセスできませんでした");
       throw new Error("さーばーにあくせすできませんでした");
     }
+    setButtonIsLoading(false);
   };
 
   return (
@@ -136,7 +139,12 @@ const ProfileImageUpload = ({
       {" "}
       <form onSubmit={handleSubmit(handleUploadFile)}>
         <div className="grid grid-cols-1 sm:grid-cols-4 min-w-410 gap-4">
-          <span className="  aspect-square  row-span-2  rounded  ">
+          {{ successMessage } && (
+            <div className="col-span-4 bg-sky-700">
+              <>{successMessage}</>
+            </div>
+          )}
+          <div className="  aspect-square  row-span-2  rounded  ">
             {" "}
             <img
               src={previewUrl}
@@ -144,7 +152,7 @@ const ProfileImageUpload = ({
               className="  
               object-cover rounded aspect-square w-full object-center"
             />
-          </span>
+          </div>
           <div className=" col-span-3 ">
             <table className=" w-full inset-x-0 bottom-0">
               <tbody>
@@ -245,15 +253,18 @@ const ProfileImageUpload = ({
           >
             選択解除
           </Button>
-          <Button type="submit" className="col-span-3 ">
-            アップロード
+          <Button
+            type="submit"
+            className="col-span-3 "
+            disabled={buttonIsLoading}
+          >
+            {buttonIsLoading ? <LoadingScreen /> : <>アップロード</>}
           </Button>
           <Link href={`/users/${uid.user.name}`}>
             <Button type="button" className="col-span-3">
               プロフィール画面に戻る
             </Button>
           </Link>
-
         </div>
       </form>
     </div>

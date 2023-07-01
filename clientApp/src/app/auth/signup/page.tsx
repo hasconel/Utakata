@@ -9,6 +9,8 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createHash } from "crypto";
+import LoadingScreen from "@/contents/loading";
+import { Server } from "@/feature/config";
 type FormValues = {
   uname: string;
   email: string;
@@ -25,21 +27,24 @@ export default function SignUpForm() {
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
   const [succesMessage, setSuccesMessage] = useState("");
+  const [buttonIsLoading, setButtonIsLoading] = useState(false);
   const onSubmit = async (data: FormValues) => {
-    //console.log(data.email);
+    setButtonIsLoading(true);
     try {
       await api.createAccount(data.email, data.password, data.uname);
       await api
         .provider()
         .account.createVerification(
-          "http://localhost:3000/auth/emailverification/"
+          `${Server.deployPont}/auth/emailverification/`
         );
       setSuccesMessage(
         `\"${data.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
       );
+      setTimeout(() => setButtonIsLoading(false), 2000);
     } catch (e: any) {
       // console.log(e.message);
       setLoginError(e.message);
+      setButtonIsLoading(false);
     }
   };
   return (
@@ -97,8 +102,18 @@ export default function SignUpForm() {
               )}
             </i>
           </div>
-          <Button type="submit" className="max-w-lg mt-4">
-            登録
+          <Button
+            type="submit"
+            className="max-w-lg mt-4"
+            disabled={buttonIsLoading}
+          >
+            {buttonIsLoading ? (
+              <>
+                <LoadingScreen />
+              </>
+            ) : (
+              <>登録</>
+            )}
           </Button>
           <span className="ml-4 place-item-right -translate-y-0 ">
             アカウントを持っている方は<Link href="/login">ログイン</Link>

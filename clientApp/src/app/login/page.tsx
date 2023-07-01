@@ -8,6 +8,7 @@ import { useState } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import LoadingScreen from "@/contents/loading";
 
 type FormValues = {
   email: string;
@@ -23,8 +24,9 @@ export default function LoginForm() {
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
   const router = useRouter();
-
+  const [buttonIsLoading, setButtonIsLoading] = useState(false);
   const onSubmit = async (data: FormValues) => {
+    setButtonIsLoading(true);
     try {
       await api.deleteCurrentSession();
     } catch {}
@@ -38,6 +40,7 @@ export default function LoginForm() {
         setLoginError(e.message);
       }
     }
+    setButtonIsLoading(false);
   };
   return (
     <>
@@ -78,8 +81,18 @@ export default function LoginForm() {
               )}
             </i>
           </div>
-          <Button type="submit" className="max-w-lg mt-4">
-            ログイン
+          <Button
+            type="submit"
+            className="max-w-lg mt-4"
+            disabled={buttonIsLoading}
+          >
+            {buttonIsLoading ? (
+              <>
+                <LoadingScreen />
+              </>
+            ) : (
+              <>ログイン</>
+            )}
           </Button>
           <span className="ml-4 place-item-right -translate-y-0 ">
             アカウントを持っていない方は
