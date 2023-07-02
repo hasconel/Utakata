@@ -13,9 +13,8 @@ const Genque = ({
   UserDoc: Models.Document;
 }) => {
   if (data.createUserId != UserDoc.$id) return <></>;
-
   return (
-    <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border border-dark-tremor-content">
+    <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b border-dark-tremor-content">
       <div id="thumbnail" className=" w-12  row-span-2">
         <img
           src={UserDoc.UserThumbnailURL}

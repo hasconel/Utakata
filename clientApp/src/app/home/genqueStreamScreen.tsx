@@ -12,6 +12,7 @@ const GenqueStreamScreen = ({
   uid,
   ModalContentsFunc,
   setModalBoolean,
+  UserPost,
 }: {
   uid: {
     user: Models.User<Models.Preferences>;
@@ -19,9 +20,11 @@ const GenqueStreamScreen = ({
   };
   ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
   setModalBoolean: Dispatch<SetStateAction<boolean>>;
+  UserPost: Models.Document[];
 }) => {
   const { isLoading, isError, data, error } = GetGenqueStream();
-
+  const [StreamUserPost, setStreamUserPost] =
+    useState<Models.Document[]>(UserPost);
   const TestStream = () => {
     if (data != undefined) {
       const docArray: Models.Document[] = data.docs;
@@ -49,6 +52,7 @@ const GenqueStreamScreen = ({
                         Server.usercollectionID,
                         response.payload.createUserId
                       );
+                      setStreamUserPost([]);
                       userArray.push(newUserDoc);
                     }
                   };
@@ -80,12 +84,24 @@ const GenqueStreamScreen = ({
   };
   return (
     <>
-      <div className="w-full grid rounded border border-white">
+      <div className="w-full grid ">
         {/*<button onClick={clickModal}>モーダル</button> */}
         {isLoading ? (
           <LoadingScreen />
         ) : (
           <>
+            {StreamUserPost[0] && (
+              <>
+                {StreamUserPost.map((arg) => (
+                  <Genque
+                    data={arg}
+                    currentUserId={uid.user.$id}
+                    UserDoc={uid.data}
+                    key={arg.$id}
+                  />
+                ))}
+              </>
+            )}
             {TestStream().docArray.map((d) => {
               const UserDoc = TestStream().userArray.find(
                 (arg) => arg.$id === d.createUserId
@@ -100,7 +116,6 @@ const GenqueStreamScreen = ({
                 />
               );
             })}
-            <div className="bg-rose-300">hoge</div>
           </>
         )}
       </div>

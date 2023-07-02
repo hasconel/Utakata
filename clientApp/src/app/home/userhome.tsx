@@ -12,6 +12,7 @@ import { CloudArrowUpIcon } from "@heroicons/react/20/solid";
 import { useForm } from "react-hook-form";
 import { Server } from "@/feature/config";
 import api from "@/feature/api";
+import Genque from "@/contents/genque";
 type FormValues = {
   genque: string;
   Image: File[];
@@ -39,6 +40,8 @@ const UserHome = ({
   const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>();
   const [buttonIsLoading, setButtonIsLoading] = useState<boolean>(false);
+  const UserPost: Models.Document[] = [];
+  const [StreamPost, setStreamPost] = useState<Models.Document[]>([]);
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -59,7 +62,6 @@ const UserHome = ({
     setError("");
     let imageURL: URL | undefined = undefined;
     //ここから下は画像があったときだけ動かす
-    console.log(selectedFile);
     if (selectedFile != undefined && typeof Server.bucketID === "string") {
       try {
         const CreateStrage = await api.createStorage(
@@ -67,7 +69,6 @@ const UserHome = ({
           ID.unique(),
           selectedFile
         );
-        console.log(CreateStrage);
         imageURL = await api.getFilePreview(
           Server.bucketID,
           CreateStrage.$id,
@@ -84,7 +85,7 @@ const UserHome = ({
           setError(e.message);
         };
       }
-    } else console.log("hoge");
+    }
     //ここから上は画像があったときだけ動かす
     try {
       const PreUploadData = {
@@ -93,16 +94,17 @@ const UserHome = ({
         MediaURL: imageURL,
       };
       const UploadData = JSON.stringify(PreUploadData);
-      console.log(UploadData);
       if (
         typeof Server.databaseID === "string" &&
         typeof Server.collectionID == "string"
       ) {
-        await api.createDocument(
+        const createData = await api.createDocument(
           Server.databaseID,
           Server.collectionID,
           UploadData
         );
+        UserPost.unshift(createData);
+        setStreamPost(UserPost);
       } else {
         setError("サーバーにアクセスできませんでした");
         throw new Error("さーばーにあくせすできませんでした");
@@ -186,11 +188,14 @@ const UserHome = ({
           </Button>
         </div>
       </form>
-      <GenqueStreamScreen
-        uid={uid}
-        ModalContentsFunc={setModalWindow}
-        setModalBoolean={setIsModal}
-      />
+      <div className="border border-white rounded p-1">
+        <GenqueStreamScreen
+          uid={uid}
+          ModalContentsFunc={setModalWindow}
+          setModalBoolean={setIsModal}
+          UserPost={StreamPost}
+        />
+      </div>
       <ModalWindow
         contents={modalWindow}
         Boolean={isModal}
