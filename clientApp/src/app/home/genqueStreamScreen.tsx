@@ -6,14 +6,19 @@ import { Server } from "@/feature/config";
 import { GetGenqueStream } from "@/feature/hooks";
 import { TypeCheck } from "@/feature/typecheck";
 import { Models } from "appwrite";
+import { Dispatch, SetStateAction } from "react";
 
 const GenqueStreamScreen = ({
   uid,
+  ModalContentsFunc,
+  setModalBoolean,
 }: {
   uid: {
     user: Models.User<Models.Preferences>;
     data: Models.Document;
   };
+  ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
+  setModalBoolean: Dispatch<SetStateAction<boolean>>;
 }) => {
   const { isLoading, isError, data, error } = GetGenqueStream();
   const TestStream = () => {
@@ -68,9 +73,14 @@ const GenqueStreamScreen = ({
       return { docArray: nullDocArray, userArray: nullDocArray };
     }
   };
+  const clickModal = () => {
+    setModalBoolean(true);
+    ModalContentsFunc(<>やったね</>);
+  };
   return (
     <>
       <div className="w-full grid rounded border border-white">
+        {/*<button onClick={clickModal}>モーダル</button> */}
         {isLoading ? (
           <LoadingScreen />
         ) : (

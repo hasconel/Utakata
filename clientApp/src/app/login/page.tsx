@@ -32,7 +32,7 @@ export default function LoginForm() {
     } catch {}
     try {
       await api.createSession(data.email, data.password);
-      router.push("/");
+      router.push("/home");
     } catch (e: any) {
       if (e?.response?.message) {
         setLoginError(e.response.message);

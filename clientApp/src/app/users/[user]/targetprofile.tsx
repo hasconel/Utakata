@@ -54,8 +54,8 @@ const TargetProfile = ({
             <>
               {data && (
                 <>
-                  <div className="grid  grid-cols-4 grid-flow-row-dense gap-4 ">
-                    <div className="aspect-square h-48  rounded  row-span-2 ">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 min-w-410 gap-4">
+                    <div className="aspect-square min-w-fit min-h-48  rounded  row-span-2 ">
                       <img
                         className="w-full object-cover rounded aspect-square object-center	"
                         src={data.UserThumbnailURL}

@@ -138,13 +138,13 @@ const ProfileImageUpload = ({
     <div>
       {" "}
       <form onSubmit={handleSubmit(handleUploadFile)}>
-        <div className="grid grid-cols-1 sm:grid-cols-4 min-w-410 gap-4">
+        <div className="grid sm:grid-cols-4 min-w-410 gap-4">
           {{ successMessage } && (
-            <div className="col-span-4 bg-sky-700">
+            <div className=" bg-sky-700">
               <>{successMessage}</>
             </div>
           )}
-          <div className="  aspect-square  row-span-2  rounded  ">
+          <div className="col-start-1 aspect-square  row-span-2 rounded  ">
             {" "}
             <img
               src={previewUrl}
@@ -153,7 +153,7 @@ const ProfileImageUpload = ({
               object-cover rounded aspect-square w-full object-center"
             />
           </div>
-          <div className=" col-span-3 ">
+          <div className="sm:col-span-3 grid grid-cols-[350px_repeat(1,minmax(0,1fr))] ">
             <table className=" w-full inset-x-0 bottom-0">
               <tbody>
                 <tr>
@@ -176,7 +176,7 @@ const ProfileImageUpload = ({
               </tbody>
             </table>
           </div>
-          <div className="col-span-3 ">
+          <div className="sm:col-span-3 ">
             <p>
               <span className="text-sm">プロフィール</span>
               <textarea
@@ -209,7 +209,7 @@ const ProfileImageUpload = ({
             </p>
           </div>
           {error && (
-            <div className="col-span-4 ">
+            <div className=" ">
               <AlertMessage message={error} />
             </div>
           )}
@@ -226,25 +226,22 @@ const ProfileImageUpload = ({
             }
           />
           <label
-            className="col-span-2"
+            className="sm:col-span-3"
             htmlFor="file-input"
             ref={hiddenfileinput}
           >
-            <span>
-              {" "}
-              <Button
-                className="w-full"
-                type="button"
-                icon={CloudArrowUpIcon}
-                id="file-input"
-                onClick={handleFileClick}
-              >
-                ファイルを選択
-              </Button>
-            </span>
+            <Button
+              className="w-full"
+              type="button"
+              icon={CloudArrowUpIcon}
+              id="file-input"
+              onClick={handleFileClick}
+            >
+              ファイルを選択
+            </Button>
           </label>
           <Button
-            className="col-span-2 "
+            className=""
             disabled={!Boolean(selectedFile)}
             onClick={() => {
               setPreviewUrl(uid.data.UserThumbnailURL);
@@ -255,13 +252,13 @@ const ProfileImageUpload = ({
           </Button>
           <Button
             type="submit"
-            className="col-span-3 "
+            className="sm:col-span-2"
             disabled={buttonIsLoading}
           >
             {buttonIsLoading ? <LoadingScreen /> : <>アップロード</>}
           </Button>
-          <Link href={`/users/${uid.user.name}`}>
-            <Button type="button" className="col-span-3">
+          <Link href={`/users/${uid.user.name}`} className="sm:col-span-2">
+            <Button type="button" className="w-full">
               プロフィール画面に戻る
             </Button>
           </Link>

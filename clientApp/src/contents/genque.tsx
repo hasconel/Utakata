@@ -31,11 +31,14 @@ const Genque = ({
         <span id="DisplayName" className="">
           {UserDoc.DisplayName}
         </span>
-        <span id="DisplayUid" className="fill-dark-tremor-content-subtle">
+        <span id="DisplayUid" className="text-slate-500">
           @{UserDoc.DisplayUID}
         </span>
       </Link>
-      <div id="data" className="col-start-2 row-start-2 col-span-11">
+      <div
+        id="data"
+        className="break-words col-start-2 row-start-2 col-span-11"
+      >
         {data.data}
         {data.mediaURL ? (
           <div id="mediaURL">5</div>
