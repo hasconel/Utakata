@@ -111,14 +111,12 @@ const TargetProfile = ({
                     ) : (
                       <>
                         {TargetGenqueList.data?.docs.map((d) => (
-                          <>
-                            <Genque
-                              key={d.$id}
-                              data={d}
-                              currentUserId={currentData}
-                              UserDoc={data.TargetProfile}
-                            />
-                          </>
+                          <Genque
+                            key={d.$id}
+                            data={d}
+                            currentUserId={currentData}
+                            UserDoc={data.TargetProfile}
+                          />
                         ))}
                       </>
                     )}
