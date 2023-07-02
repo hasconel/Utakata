@@ -19,7 +19,7 @@ const UrlInText = ({ arg }: { arg: string }) => {
         </>
       );
     } else {
-      const ResultYouTubeURLs1 = arg.match(/https?:\/\/youtu\.be\/[\w]+/);
+      const ResultYouTubeURLs1 = arg.match(/https?:\/\/youtu\.be\/[\w-]+/);
       if (ResultYouTubeURLs1 != null) {
         const ResultPath = new URL(ResultYouTubeURLs1[0]).pathname;
         return (
@@ -35,7 +35,7 @@ const UrlInText = ({ arg }: { arg: string }) => {
         );
       } else {
         const ResultYouTubeURLs2 = arg.match(
-          /https?:\/\/(?:[/w]+\.youtube\.com|youtube\.com)\/watch\?v=[\w]+/
+          /https?:\/\/(?:[/w]+\.youtube\.com|youtube\.com)\/watch\?v=[\w-]+/
         );
         if (ResultYouTubeURLs2 != null) {
           const ResultPath0 = new URL(ResultYouTubeURLs2[0]).searchParams;

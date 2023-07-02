@@ -8,6 +8,7 @@ import Linkify from "react-linkify";
 import { AlertMessage } from "@/contents/alert";
 import { Query } from "appwrite";
 import Genque from "@/contents/genque";
+import { GetGenqueStream } from "@/feature/hooks";
 
 const TargetProfile = ({
   uname,
@@ -18,6 +19,9 @@ const TargetProfile = ({
   current: boolean;
   currentData: string;
 }) => {
+  const TargetGenqueList = GetGenqueStream([
+    Query.equal("createUserId", [uname]),
+  ]);
   const { isLoading, isError, data, error } = useQuery(
     "TargetDoc",
     async () => {
@@ -38,12 +42,7 @@ const TargetProfile = ({
               Server.usercollectionID,
               uname
             );
-          const TargetDoc = await api.listDocuments(
-            Server.databaseID,
-            Server.collectionID,
-            [Query.equal("createUserId", [uname])]
-          );
-          return { TargetProfile: Target, TargetGenque: TargetDoc.documents };
+          return { TargetProfile: Target };
         }
       } catch {}
     }
@@ -107,16 +106,22 @@ const TargetProfile = ({
                     </>
                   </div>
                   <div>
-                    {data.TargetGenque.map((d) => (
+                    {TargetGenqueList.isLoading ? (
+                      <LoadingScreen />
+                    ) : (
                       <>
-                        <Genque
-                          key={d.$id}
-                          data={d}
-                          currentUserId={currentData}
-                          UserDoc={data.TargetProfile}
-                        />
+                        {TargetGenqueList.data?.docs.map((d) => (
+                          <>
+                            <Genque
+                              key={d.$id}
+                              data={d}
+                              currentUserId={currentData}
+                              UserDoc={data.TargetProfile}
+                            />
+                          </>
+                        ))}
                       </>
-                    ))}
+                    )}
                   </div>
                 </>
               )}

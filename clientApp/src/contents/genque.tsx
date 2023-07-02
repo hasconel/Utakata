@@ -40,8 +40,16 @@ const Genque = ({
         className="break-words col-start-2 row-start-2 col-span-11"
       >
         {data.data}
-        {data.mediaURL ? (
-          <div id="mediaURL">5</div>
+        {data.MediaURL ? (
+          <div id="mediaURL" className="aspect-video w-full">
+            <img
+              src={data.MediaURL}
+              alt="media"
+              width={300}
+              height={300}
+              className="content-center"
+            />
+          </div>
         ) : (
           <div id="ex">
             <UrlInText arg={data.data} />

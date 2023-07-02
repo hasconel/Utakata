@@ -5,7 +5,7 @@ import { Server } from "./config";
 import { Models, Query } from "appwrite";
 import { Temporal } from "temporal-polyfill";
 
-export const GetGenqueStream = () => {
+export const GetGenqueStream = (queries?: string[]) => {
   const request: XMLHttpRequest = new XMLHttpRequest();
   const { isLoading, isError, data, error } = useQuery("genque", async () => {
     try {
@@ -34,6 +34,11 @@ export const GetGenqueStream = () => {
             }
           };
         });
+        let PostQueries = [
+          Query.greaterThan("$createdAt", date),
+          Query.orderDesc(`$createdAt`),
+        ];
+        if (queries != undefined) PostQueries = PostQueries.concat(queries);
         const initstream = await api.listDocuments(
           Server.databaseID,
           Server.collectionID,

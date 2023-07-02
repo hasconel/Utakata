@@ -1,7 +1,8 @@
+"use client";
 import { GetLoginUser } from "@/feature/hooks";
 import LoadingScreen from "@/contents/loading";
 import { redirect } from "next/navigation";
-import { Card, Grid } from "@tremor/react";
+import { Card } from "@tremor/react";
 import UserHome from "./userhome";
 const HomeSite = () => {
   const { data, isLoading, isError, error } = GetLoginUser();

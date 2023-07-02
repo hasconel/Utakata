@@ -140,7 +140,7 @@ const ProfileImageUpload = ({
       <form onSubmit={handleSubmit(handleUploadFile)}>
         <div className="grid sm:grid-cols-4 min-w-410 gap-4">
           {{ successMessage } && (
-            <div className=" bg-sky-700">
+            <div className="sm:col-span-4 bg-sky-700">
               <>{successMessage}</>
             </div>
           )}
