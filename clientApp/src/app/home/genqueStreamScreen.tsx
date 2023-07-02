@@ -6,7 +6,7 @@ import { Server } from "@/feature/config";
 import { GetGenqueStream } from "@/feature/hooks";
 import { TypeCheck } from "@/feature/typecheck";
 import { Models } from "appwrite";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
 const GenqueStreamScreen = ({
   uid,
@@ -21,6 +21,7 @@ const GenqueStreamScreen = ({
   setModalBoolean: Dispatch<SetStateAction<boolean>>;
 }) => {
   const { isLoading, isError, data, error } = GetGenqueStream();
+
   const TestStream = () => {
     if (data != undefined) {
       const docArray: Models.Document[] = data.docs;
@@ -99,6 +100,7 @@ const GenqueStreamScreen = ({
                 />
               );
             })}
+            <div className="bg-rose-300">hoge</div>
           </>
         )}
       </div>
