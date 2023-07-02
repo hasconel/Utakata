@@ -31,6 +31,7 @@ export default function SignUpForm() {
   const onSubmit = async (data: FormValues) => {
     setButtonIsLoading(true);
     try {
+      console.log(Server.deployPont);
       await api.createAccount(data.email, data.password, data.uname);
       await api
         .provider()

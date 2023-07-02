@@ -1,5 +1,4 @@
 import LoadingScreen from "@/contents/loading";
-import UrlInText from "@/contents/urlInText";
 import api from "@/feature/api";
 import { Server } from "@/feature/config";
 import { Button, Metric } from "@tremor/react";
@@ -7,13 +6,17 @@ import Link from "next/link";
 import { useQuery } from "react-query";
 import Linkify from "react-linkify";
 import { AlertMessage } from "@/contents/alert";
+import { Query } from "appwrite";
+import Genque from "@/contents/genque";
 
 const TargetProfile = ({
   uname,
   current,
+  currentData,
 }: {
   uname: string;
   current: boolean;
+  currentData: string;
 }) => {
   const { isLoading, isError, data, error } = useQuery(
     "TargetDoc",
@@ -35,11 +38,17 @@ const TargetProfile = ({
               Server.usercollectionID,
               uname
             );
-          return Target;
+          const TargetDoc = await api.listDocuments(
+            Server.databaseID,
+            Server.collectionID,
+            [Query.equal("createUserId", [uname])]
+          );
+          return { TargetProfile: Target, TargetGenque: TargetDoc.documents };
         }
       } catch {}
     }
   );
+
   return (
     <>
       {isLoading ? (
@@ -58,22 +67,24 @@ const TargetProfile = ({
                     <div className="aspect-square min-w-fit min-h-48  rounded  row-span-2 ">
                       <img
                         className="w-full object-cover rounded aspect-square object-center	"
-                        src={data.UserThumbnailURL}
+                        src={data.TargetProfile.UserThumbnailURL}
                         alt="thumbnail"
                         height="300"
                       />
                     </div>
                     <div className="col-span-3 ">
-                      <Metric>{data.DisplayName}</Metric>
-                      <p>@{data.DisplayUID}</p>
+                      <Metric>{data.TargetProfile.DisplayName}</Metric>
+                      <p>@{data.TargetProfile.DisplayUID}</p>
                     </div>
                     <div className="col-span-3 ">
                       <p>
-                        <Linkify>{data.ProfileBIO}</Linkify>
+                        <Linkify>{data.TargetProfile.ProfileBIO}</Linkify>
                       </p>
                       <p>
-                        {data.UserURL && (
-                          <Link href={data.UserURL}>{data.UserURL}</Link>
+                        {data.TargetProfile.UserURL && (
+                          <Link href={data.TargetProfile.UserURL}>
+                            {data.TargetProfile.UserURL}
+                          </Link>
                         )}
                       </p>
                     </div>
@@ -95,8 +106,18 @@ const TargetProfile = ({
                       )}
                     </>
                   </div>
-
-                  <br />
+                  <div>
+                    {data.TargetGenque.map((d) => (
+                      <>
+                        <Genque
+                          key={d.$id}
+                          data={d}
+                          currentUserId={currentData}
+                          UserDoc={data.TargetProfile}
+                        />
+                      </>
+                    ))}
+                  </div>
                 </>
               )}
             </>

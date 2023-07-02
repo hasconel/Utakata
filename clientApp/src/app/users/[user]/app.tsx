@@ -47,6 +47,7 @@ const App = ({ username }: { username: string }) => {
                   <TargetProfile
                     uname={user.data?.username}
                     current={user.data.isCurrentUser}
+                    currentData={user.data.current.$id}
                   />
                 )}
               </>
