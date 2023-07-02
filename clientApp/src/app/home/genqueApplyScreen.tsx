@@ -46,7 +46,6 @@ const GenqueApplyScreen = ({
       <>
         <div className="grid w-full">
           <div className="w-full rounded border border-white">
-            言及画面建設予定地
             <form method="post" onSubmit={handlesubmit}>
               <div className="w-11/12">
                 <textarea

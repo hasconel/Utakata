@@ -1,10 +1,11 @@
 import LoadingScreen from "@/contents/loading";
 import { GetLoginUser } from "@/feature/hooks";
 import Link from "next/link";
-import { Button } from "@tremor/react";
+import { Button, Metric } from "@tremor/react";
+import { useRouter } from "next/navigation";
 const App = () => {
   const user = GetLoginUser();
-  //  const router = useRouter();
+  const router = useRouter();
 
   return (
     <div className="mx-auto mt-4">
@@ -13,10 +14,20 @@ const App = () => {
       ) : (
         <>
           {user.data ? (
-            <>welcome!</>
+            <>
+              welcome!{" "}
+              <button
+                className="p-2 m-1 bg-slate-700 hover:bg-slate-500"
+                onClick={() => router.push("/home")}
+              >
+                ホームへ移動する
+              </button>
+            </>
           ) : (
             <>
-              <p>すごいカスのSNS</p>
+              <p>
+                <Metric>Utakata</Metric>
+              </p>
               <Link href="/login">
                 <Button>ログイン</Button>
               </Link>
