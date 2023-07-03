@@ -1,35 +1,40 @@
 "use client";
 import { ID, Models } from "appwrite";
 import GenqueStreamScreen from "./genqueStreamScreen";
-import GenqueApplyScreen from "./genqueApplyScreen";
 import { useRef, useState } from "react";
 import ModalWindow from "@/contents/modal";
 import { AlertMessage } from "@/contents/alert";
 import { Button } from "@tremor/react";
 import LoadingScreen from "@/contents/loading";
-import Link from "next/link";
-import { CloudArrowUpIcon } from "@heroicons/react/20/solid";
+import {
+  CloudArrowUpIcon,
+  DocumentMinusIcon,
+  DocumentPlusIcon,
+} from "@heroicons/react/20/solid";
 import { useForm } from "react-hook-form";
 import { Server } from "@/feature/config";
 import api from "@/feature/api";
-import Genque from "@/contents/genque";
 type FormValues = {
   genque: string;
   Image: File[];
 };
 const UserHome = ({
   uid,
+  Time,
 }: {
   uid: {
     user: Models.User<Models.Preferences>;
     data: Models.Document;
   };
+  Time?: string;
 }) => {
+  //console.log(Time);
   const [isModal, setIsModal] = useState<boolean>(false);
   const [modalWindow, setModalWindow] = useState<JSX.Element>(<></>);
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormValues>();
   const hiddenfileinput = useRef<HTMLLabelElement>(null);
@@ -110,6 +115,7 @@ const UserHome = ({
         throw new Error("さーばーにあくせすできませんでした");
       }
     } catch {}
+    reset();
     setButtonIsLoading(false);
   };
   return (
@@ -125,7 +131,6 @@ const UserHome = ({
           <div className="col-span-6 ">
             <textarea
               autoComplete="off"
-              defaultValue={uid.data.ProfileBIO}
               className="w-full h-full bg-transparent rounded border border-slate-700"
               {...register("genque", {
                 required: true,
@@ -144,12 +149,12 @@ const UserHome = ({
           )}
           <Button
             type="submit"
-            className="col-span-3"
+            className="col-span-3 h-9"
             disabled={buttonIsLoading}
           >
             {buttonIsLoading ? <LoadingScreen /> : <>投稿</>}
           </Button>
-          <div className="col-span-2">
+          <div className="col-span-2  h-9">
             <input
               className="hidden"
               type="file"
@@ -165,26 +170,27 @@ const UserHome = ({
             <label className="" htmlFor="file-input" ref={hiddenfileinput}>
               <Button
                 className="w-full"
+                icon={DocumentPlusIcon}
                 type="button"
-                icon={CloudArrowUpIcon}
                 color="gray"
                 id="file-input"
                 onClick={handleFileClick}
               >
-                ファイルを選択
+                <div className="hidden sm:block">ファイルを選択</div>
               </Button>
             </label>
           </div>
           <Button
-            className="col-span-1"
+            className="col-span-1  h-9"
             disabled={!Boolean(selectedFile)}
+            icon={DocumentMinusIcon}
             onClick={() => {
               setPreviewUrl(uid.data.UserThumbnailURL);
               setSelectedFile(undefined);
             }}
             color="gray"
           >
-            選択解除
+            <div className="hidden sm:block">解除</div>
           </Button>
         </div>
       </form>
@@ -194,6 +200,7 @@ const UserHome = ({
           ModalContentsFunc={setModalWindow}
           setModalBoolean={setIsModal}
           UserPost={StreamPost}
+          Time={Time}
         />
       </div>
       <ModalWindow

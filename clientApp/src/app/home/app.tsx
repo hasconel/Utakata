@@ -4,7 +4,7 @@ import LoadingScreen from "@/contents/loading";
 import { redirect } from "next/navigation";
 import { Card } from "@tremor/react";
 import UserHome from "./userhome";
-const HomeSite = () => {
+const HomeSite = ({ Time }: { Time?: string }) => {
   const { data, isLoading, isError, error } = GetLoginUser();
   return (
     <>
@@ -12,7 +12,9 @@ const HomeSite = () => {
         {isLoading ? (
           <LoadingScreen />
         ) : (
-          <>{data ? <UserHome uid={data} /> : <>{redirect("/")} </>}</>
+          <>
+            {data ? <UserHome uid={data} Time={Time} /> : <>{redirect("/")} </>}
+          </>
         )}
       </Card>{" "}
     </>

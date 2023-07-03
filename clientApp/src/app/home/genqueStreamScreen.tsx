@@ -5,7 +5,8 @@ import api from "@/feature/api";
 import { Server } from "@/feature/config";
 import { GetGenqueStream } from "@/feature/hooks";
 import { TypeCheck } from "@/feature/typecheck";
-import { Models } from "appwrite";
+import { Models, Query } from "appwrite";
+import Link from "next/link";
 import { Dispatch, SetStateAction, useState } from "react";
 
 const GenqueStreamScreen = ({
@@ -13,6 +14,7 @@ const GenqueStreamScreen = ({
   ModalContentsFunc,
   setModalBoolean,
   UserPost,
+  Time,
 }: {
   uid: {
     user: Models.User<Models.Preferences>;
@@ -21,8 +23,14 @@ const GenqueStreamScreen = ({
   ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
   setModalBoolean: Dispatch<SetStateAction<boolean>>;
   UserPost: Models.Document[];
+  Time?: string;
 }) => {
-  const { isLoading, isError, data, error } = GetGenqueStream();
+  const QueryTime: string[] = [];
+  if (Time) {
+    QueryTime.push(Query.lessThan("$createdAt", Time));
+  }
+  const { isLoading, isError, data, error } = GetGenqueStream(QueryTime);
+  const PastIsLoading: boolean | undefined = false;
   const [StreamUserPost, setStreamUserPost] =
     useState<Models.Document[]>(UserPost);
   const TestStream = () => {
@@ -72,12 +80,14 @@ const GenqueStreamScreen = ({
             }
           }
         );
+
       return { docArray: docArray, userArray: userArray };
     } else {
       const nullDocArray: Models.Document[] = [];
       return { docArray: nullDocArray, userArray: nullDocArray };
     }
   };
+  const [streamLastTime, setStreamLastTime] = useState<string>("");
   const clickModal = () => {
     setModalBoolean(true);
     ModalContentsFunc(<>やったね</>);
@@ -86,38 +96,112 @@ const GenqueStreamScreen = ({
     <>
       <div className="w-full grid ">
         {/*<button onClick={clickModal}>モーダル</button> */}
-        {isLoading ? (
-          <LoadingScreen />
-        ) : (
-          <>
-            {StreamUserPost[0] && (
-              <>
-                {StreamUserPost.map((arg) => (
-                  <Genque
-                    data={arg}
-                    currentUserId={uid.user.$id}
-                    UserDoc={uid.data}
-                    key={arg.$id}
-                  />
-                ))}
-              </>
-            )}
-            {TestStream().docArray.map((d) => {
-              const UserDoc = TestStream().userArray.find(
-                (arg) => arg.$id === d.createUserId
-              );
-              if (UserDoc === undefined) return <span key={d.$id}></span>;
-              return (
-                <Genque
-                  data={d}
-                  currentUserId={uid.user.$id}
-                  UserDoc={UserDoc}
-                  key={d.$id}
-                />
-              );
-            })}
-          </>
-        )}
+        <>
+          {isLoading ? (
+            <LoadingScreen />
+          ) : (
+            <>
+              {Time ? (
+                <>
+                  {data && (
+                    <>
+                      <Link
+                        href={`/home`}
+                        className="text-center border-b border-dark-tremor-content hover:bg-slate-700"
+                      >
+                        最新に戻る
+                      </Link>
+                      {data.docs.map((d) => {
+                        const UserDoc = data.userList.find(
+                          (arg) => arg.$id === d.createUserId
+                        );
+                        if (UserDoc === undefined) {
+                          return <span key={d.$id}></span>;
+                        } else;
+                        {
+                          return (
+                            <Genque
+                              data={d}
+                              currentUserId={uid.user.$id}
+                              UserDoc={UserDoc}
+                              key={d.$id}
+                            />
+                          );
+                        }
+                      })}
+                      {!(data.docs.length < 25) && (
+                        <>
+                          <Link
+                            href={`/home/${encodeURIComponent(
+                              TestStream().docArray[
+                                TestStream().docArray.length - 1
+                              ].$createdAt
+                            )}`}
+                            className="text-center hover:bg-slate-700"
+                          >
+                            古いつぶやき
+                          </Link>
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {
+                    <>
+                      {StreamUserPost[0] && (
+                        <>
+                          {StreamUserPost.map((arg) => (
+                            <Genque
+                              data={arg}
+                              currentUserId={uid.user.$id}
+                              UserDoc={uid.data}
+                              key={arg.$id}
+                            />
+                          ))}
+                        </>
+                      )}
+                      {TestStream().docArray.map((d) => {
+                        const UserDoc = TestStream().userArray.find(
+                          (arg) => arg.$id === d.createUserId
+                        );
+                        if (UserDoc === undefined) {
+                          return <span key={d.$id}></span>;
+                        } else;
+                        {
+                          return (
+                            <Genque
+                              data={d}
+                              currentUserId={uid.user.$id}
+                              UserDoc={UserDoc}
+                              key={d.$id}
+                            />
+                          );
+                        }
+                      })}
+
+                      {!(TestStream().docArray.length < 25) && (
+                        <>
+                          <Link
+                            className="text-center hover:bg-slate-700 "
+                            href={`/home/${encodeURIComponent(
+                              TestStream().docArray[
+                                TestStream().docArray.length - 1
+                              ].$createdAt
+                            )}`}
+                          >
+                            より古いつぶやき
+                          </Link>
+                        </>
+                      )}
+                    </>
+                  }
+                </>
+              )}
+            </>
+          )}
+        </>
       </div>
     </>
   );

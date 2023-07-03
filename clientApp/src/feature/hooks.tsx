@@ -61,10 +61,15 @@ export const GetGenqueStream = (queries?: string[]) => {
             [Query.equal("$id", UserList0)]
           );
           //console.log(UserList);
-          return { docs: initstream.documents, userList: UserList.documents };
+          return {
+            docs: initstream.documents,
+            userList: UserList.documents,
+            lastTime:
+              initstream.documents[initstream.documents.length - 1].$createdAt,
+          };
         } else {
           const NullList: Models.Document[] = [];
-          return { docs: NullList, userList: NullList };
+          return { docs: NullList, userList: NullList, lastTime: "" };
         }
       }
     } catch (e) {
