@@ -39,13 +39,13 @@ export const GetGenqueStream = (queries?: string[]) => {
           Query.orderDesc("$createdAt"),
         ];
         if (queries != undefined) PostQueries = PostQueries.concat(queries);
-        console.log(PostQueries);
+        //console.log(PostQueries);
         const initstream = await api.listDocuments(
           Server.databaseID,
           Server.collectionID,
           PostQueries
         );
-        console.log(initstream);
+        //console.log(initstream);
         if (initstream != undefined) {
           const UserList0: string[] = Array.from(
             new Set(
@@ -54,7 +54,7 @@ export const GetGenqueStream = (queries?: string[]) => {
               })
             )
           ).filter((ag) => ag != null);
-          console.log(UserList0);
+          //console.log(UserList0);
           const UserList = await api.listDocuments(
             Server.databaseID,
             Server.usercollectionID,
