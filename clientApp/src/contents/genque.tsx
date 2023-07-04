@@ -2,16 +2,41 @@ import { Models } from "appwrite";
 import UrlInText from "./urlInText";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Temporal } from "temporal-polyfill";
 
 const Genque = ({
   data,
   currentUserId,
   UserDoc,
+  absTime,
 }: {
   data: Models.Document;
   currentUserId: string;
   UserDoc: Models.Document;
+  absTime?: boolean;
 }) => {
+  const NowTime = Temporal.Now;
+  const TempPostTime = Temporal.Instant.from(data.$createdAt);
+  const [Time, setTime] = useState<string>(
+    `${TempPostTime.toZonedDateTimeISO(
+      NowTime.zonedDateTimeISO().timeZone
+    ).toLocaleString()}`
+  );
+  useEffect(() => {
+    if (!absTime) {
+      setTime(
+        `${TempPostTime.until(NowTime.instant(), {
+          largestUnit: "hour",
+          smallestUnit: "minutes",
+        })
+          .toLocaleString()
+          .replace("PT", "")
+          .replace("H", "時間")
+          .replace("M", "分")}前`
+      );
+    }
+  }, []);
   if (data.createUserId != UserDoc.$id) return <></>;
   return (
     <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b border-dark-tremor-content">
@@ -56,7 +81,7 @@ const Genque = ({
         )}
       </div>
       <div id="CreateTime" className="col-span-5">
-        {data.$createdAt}
+        {Time}
       </div>
       {Boolean(data.GoodUserId.length) && (
         <div id="goodUsers" className="">

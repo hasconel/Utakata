@@ -9,6 +9,7 @@ import { AlertMessage } from "@/contents/alert";
 import { Query } from "appwrite";
 import Genque from "@/contents/genque";
 import { GetGenqueStream } from "@/feature/hooks";
+import { useState } from "react";
 
 const TargetProfile = ({
   uname,
@@ -19,9 +20,10 @@ const TargetProfile = ({
   current: boolean;
   currentData: string;
 }) => {
-  const TargetGenqueList = GetGenqueStream([
+  const [QueryData, setQueryData] = useState([
     Query.equal("createUserId", [uname]),
   ]);
+  const TargetGenqueList = GetGenqueStream(QueryData);
   const { isLoading, isError, data, error } = useQuery(
     "TargetDoc",
     async () => {
@@ -118,6 +120,31 @@ const TargetProfile = ({
                             UserDoc={data.TargetProfile}
                           />
                         ))}
+                        {TargetGenqueList.data?.docs.length && (
+                          <>
+                            {!(TargetGenqueList.data.docs.length < 25) && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    if (TargetGenqueList.data)
+                                      setQueryData([
+                                        Query.equal("createUserId", [uname]),
+                                        Query.lessThan(
+                                          "$createdAt",
+                                          TargetGenqueList.data?.docs[
+                                            TargetGenqueList.data.docs.length -
+                                              1
+                                          ].$createdAt
+                                        ),
+                                      ]);
+                                  }}
+                                >
+                                  より古いつぶやき
+                                </button>
+                              </>
+                            )}
+                          </>
+                        )}
                       </>
                     )}
                   </div>

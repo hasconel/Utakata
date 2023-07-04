@@ -30,64 +30,85 @@ const GenqueStreamScreen = ({
     QueryTime.push(Query.lessThan("$createdAt", Time));
   }
   const { isLoading, isError, data, error } = GetGenqueStream(QueryTime);
-  const PastIsLoading: boolean | undefined = false;
+  const [StreamPostList, setStreamPostList] = useState<Models.Document[]>([]);
+  const [StreamPostUserList, setStreamPostUserList] = useState<
+    Models.Document[]
+  >([]);
   const [StreamUserPost, setStreamUserPost] =
     useState<Models.Document[]>(UserPost);
-  const TestStream = () => {
-    if (data != undefined) {
-      const docArray: Models.Document[] = data.docs;
-      const userArray: Models.Document[] = data.userList;
-      api
-        .provider()
-        .appwrite.subscribe(
-          `databases.${Server.databaseID}.collections.${Server.collectionID}.documents`,
-          (response) => {
-            if (
-              response.events.includes(
-                "databases.*.collections.*.documents.*.create"
-              )
-            ) {
-              if (TypeCheck.isDocument(response.payload)) {
-                if (!userArray.includes(response.payload.createUserId)) {
-                  async () => {
-                    if (
-                      Server.databaseID != undefined &&
-                      Server.usercollectionID != undefined &&
-                      TypeCheck.isDocument(response.payload)
-                    ) {
-                      const newUserDoc = await api.getDocument(
-                        Server.databaseID,
-                        Server.usercollectionID,
-                        response.payload.createUserId
-                      );
-                      setStreamUserPost([]);
-                      userArray.push(newUserDoc);
-                    }
-                  };
-                }
+  api
+    .provider()
+    .appwrite.subscribe(
+      `databases.${Server.databaseID}.collections.${Server.collectionID}.documents`,
+      (response) => {
+        if (
+          response.events.includes(
+            "databases.*.collections.*.documents.*.create"
+          )
+        ) {
+          if (TypeCheck.isDocument(response.payload)) {
+            //console.log(response.payload);
+            if (!StreamPostList[0]) {
+              setStreamPostList([response.payload]);
+              async () => {
                 if (
-                  !docArray.map((d) => {
+                  TypeCheck.isDocument(response.payload) &&
+                  Server.databaseID &&
+                  Server.usercollectionID
+                ) {
+                  const NewUserDoc = await api.getDocument(
+                    Server.databaseID,
+                    Server.usercollectionID,
+                    response.payload.createdUserId
+                  );
+                  setStreamPostUserList([NewUserDoc]);
+                }
+              };
+            } else {
+              if (
+                StreamPostList.every((d) => {
+                  if (TypeCheck.isDocument(response.payload)) {
+                    d.$id != response.payload.$id;
+                  } else {
+                    return false;
+                  }
+                })
+              ) {
+                if (
+                  !StreamPostUserList.every((d) => {
                     if (TypeCheck.isDocument(response.payload)) {
-                      return d.$id === response.payload.$id;
+                      d.createdUserId === response.payload.createdUserId;
                     } else {
-                      return true;
+                      true;
                     }
                   })
                 ) {
-                  docArray.push(response.payload);
+                  async () => {
+                    if (
+                      TypeCheck.isDocument(response.payload) &&
+                      Server.databaseID &&
+                      Server.usercollectionID
+                    ) {
+                      const NewUserDoc = await api.getDocument(
+                        Server.databaseID,
+                        Server.usercollectionID,
+                        response.payload.createdUserId
+                      );
+                      setStreamPostUserList([
+                        NewUserDoc,
+                        ...StreamPostUserList,
+                      ]);
+                    }
+                  };
                 }
+                setStreamPostList([response.payload, ...StreamPostList]);
               }
             }
           }
-        );
+        }
+      }
+    );
 
-      return { docArray: docArray, userArray: userArray };
-    } else {
-      const nullDocArray: Models.Document[] = [];
-      return { docArray: nullDocArray, userArray: nullDocArray };
-    }
-  };
-  const [streamLastTime, setStreamLastTime] = useState<string>("");
   const clickModal = () => {
     setModalBoolean(true);
     ModalContentsFunc(<>やったね</>);
@@ -101,104 +122,67 @@ const GenqueStreamScreen = ({
             <LoadingScreen />
           ) : (
             <>
-              {Time ? (
-                <>
-                  {data && (
-                    <>
+              <>
+                {data && (
+                  <>
+                    {Time ? (
                       <Link
                         href={`/home`}
                         className="text-center border-b border-dark-tremor-content hover:bg-slate-700"
                       >
                         最新に戻る
                       </Link>
-                      {data.docs.map((d) => {
-                        const UserDoc = data.userList.find(
-                          (arg) => arg.$id === d.createUserId
-                        );
-                        if (UserDoc === undefined) {
-                          return <span key={d.$id}></span>;
-                        } else;
-                        {
-                          return (
-                            <Genque
-                              data={d}
-                              currentUserId={uid.user.$id}
-                              UserDoc={UserDoc}
-                              key={d.$id}
-                            />
+                    ) : (
+                      <>
+                        {StreamPostList.map((d) => {
+                          const UserDoc = data.userList.find(
+                            (arg) => arg.$id === d.createdUserId
                           );
-                        }
-                      })}
-                      {!(data.docs.length < 25) && (
-                        <>
-                          <Link
-                            href={`/home/${encodeURIComponent(
-                              TestStream().docArray[
-                                TestStream().docArray.length - 1
-                              ].$createdAt
-                            )}`}
-                            className="text-center hover:bg-slate-700"
-                          >
-                            古いつぶやき
-                          </Link>
-                        </>
-                      )}
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {
-                    <>
-                      {StreamUserPost[0] && (
-                        <>
-                          {StreamUserPost.map((arg) => (
-                            <Genque
-                              data={arg}
-                              currentUserId={uid.user.$id}
-                              UserDoc={uid.data}
-                              key={arg.$id}
-                            />
-                          ))}
-                        </>
-                      )}
-                      {TestStream().docArray.map((d) => {
-                        const UserDoc = TestStream().userArray.find(
-                          (arg) => arg.$id === d.createUserId
+                          if (UserDoc)
+                            return (
+                              <Genque
+                                data={d}
+                                currentUserId={uid.user.$id}
+                                UserDoc={UserDoc}
+                                key={d.$id}
+                              />
+                            );
+                        })}
+                      </>
+                    )}
+                    {data.docs.map((d) => {
+                      const UserDoc = data.userList.find(
+                        (arg) => arg.$id === d.createUserId
+                      );
+                      if (UserDoc === undefined) {
+                        return <span key={d.$id}></span>;
+                      } else;
+                      {
+                        return (
+                          <Genque
+                            data={d}
+                            currentUserId={uid.user.$id}
+                            UserDoc={UserDoc}
+                            key={d.$id}
+                          />
                         );
-                        if (UserDoc === undefined) {
-                          return <span key={d.$id}></span>;
-                        } else;
-                        {
-                          return (
-                            <Genque
-                              data={d}
-                              currentUserId={uid.user.$id}
-                              UserDoc={UserDoc}
-                              key={d.$id}
-                            />
-                          );
-                        }
-                      })}
-
-                      {!(TestStream().docArray.length < 25) && (
-                        <>
-                          <Link
-                            className="text-center hover:bg-slate-700 "
-                            href={`/home/${encodeURIComponent(
-                              TestStream().docArray[
-                                TestStream().docArray.length - 1
-                              ].$createdAt
-                            )}`}
-                          >
-                            より古いつぶやき
-                          </Link>
-                        </>
-                      )}
-                    </>
-                  }
-                </>
-              )}
+                      }
+                    })}
+                    {!(data.docs.length < 25) && (
+                      <>
+                        <Link
+                          href={`/home/${encodeURIComponent(
+                            data.docs[data.docs.length - 1].$createdAt
+                          )}`}
+                          className="text-center hover:bg-slate-700"
+                        >
+                          古いつぶやき
+                        </Link>
+                      </>
+                    )}
+                  </>
+                )}
+              </>
             </>
           )}
         </>
