@@ -2,7 +2,7 @@ import { Models } from "appwrite";
 import UrlInText from "./urlInText";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 
 const Genque = ({
@@ -10,11 +10,15 @@ const Genque = ({
   currentUserId,
   UserDoc,
   absTime,
+  ModalContentsFunc,
+  setModalBoolean,
 }: {
   data: Models.Document;
   currentUserId: string;
   UserDoc: Models.Document;
   absTime?: boolean;
+  ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
+  setModalBoolean: Dispatch<SetStateAction<boolean>>;
 }) => {
   const NowTime = Temporal.Now;
   const TempPostTime = Temporal.Instant.from(data.$createdAt);
@@ -37,15 +41,20 @@ const Genque = ({
       );
     }
   }, []);
+  const clickModal = (contents: JSX.Element) => {
+    setModalBoolean(true);
+    ModalContentsFunc(contents);
+  };
   if (data.createUserId != UserDoc.$id) return <></>;
   return (
     <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b border-dark-tremor-content">
-      <div id="thumbnail" className=" w-12  row-span-2">
+      <div id="thumbnail" className=" w-12  row-span-2 ">
         <img
           src={UserDoc.UserThumbnailURL}
           alt={UserDoc.DisplayName}
           width={48}
           height={48}
+          className="rounded aspect-square"
         />
       </div>
       <Link
@@ -65,13 +74,20 @@ const Genque = ({
       >
         {data.data}
         {data.MediaURL ? (
-          <div id="mediaURL" className="aspect-video w-full">
+          <div id="mediaURL" className="">
             <img
               src={data.MediaURL}
               alt="media"
               width={300}
               height={300}
-              className="content-center"
+              className="object-cover aspect-video w-full"
+              onClick={() => {
+                clickModal(
+                  <>
+                    <img src={data.MediaURL} />
+                  </>
+                );
+              }}
             />
           </div>
         ) : (

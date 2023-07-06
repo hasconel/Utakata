@@ -47,23 +47,30 @@ const GenqueStreamScreen = ({
           )
         ) {
           if (TypeCheck.isDocument(response.payload)) {
-            //console.log(response.payload);
-            if (!StreamPostList[0]) {
-              setStreamPostList([response.payload]);
-              async () => {
-                if (
-                  TypeCheck.isDocument(response.payload) &&
-                  Server.databaseID &&
-                  Server.usercollectionID
-                ) {
-                  const NewUserDoc = await api.getDocument(
+            if (
+              !StreamPostUserList[0] ||
+              StreamPostUserList.every((arg) => {
+                if (TypeCheck.isDocument(response.payload)) {
+                  arg.$id != response.payload.createUserId;
+                } else {
+                  false;
+                }
+              })
+            ) {
+              if (Server.databaseID && Server.usercollectionID) {
+                api
+                  .getDocument(
                     Server.databaseID,
                     Server.usercollectionID,
-                    response.payload.createdUserId
-                  );
-                  setStreamPostUserList([NewUserDoc]);
-                }
-              };
+                    response.payload.createUserId
+                  )
+                  .then((res) => {
+                    setStreamPostUserList([res, ...StreamPostUserList]);
+                  });
+              }
+            }
+            if (!StreamPostList[0]) {
+              setStreamPostList([response.payload]);
             } else {
               if (
                 StreamPostList.every((d) => {
@@ -74,33 +81,6 @@ const GenqueStreamScreen = ({
                   }
                 })
               ) {
-                if (
-                  !StreamPostUserList.every((d) => {
-                    if (TypeCheck.isDocument(response.payload)) {
-                      d.createdUserId === response.payload.createdUserId;
-                    } else {
-                      true;
-                    }
-                  })
-                ) {
-                  async () => {
-                    if (
-                      TypeCheck.isDocument(response.payload) &&
-                      Server.databaseID &&
-                      Server.usercollectionID
-                    ) {
-                      const NewUserDoc = await api.getDocument(
-                        Server.databaseID,
-                        Server.usercollectionID,
-                        response.payload.createdUserId
-                      );
-                      setStreamPostUserList([
-                        NewUserDoc,
-                        ...StreamPostUserList,
-                      ]);
-                    }
-                  };
-                }
                 setStreamPostList([response.payload, ...StreamPostList]);
               }
             }
@@ -108,7 +88,6 @@ const GenqueStreamScreen = ({
         }
       }
     );
-
   const clickModal = () => {
     setModalBoolean(true);
     ModalContentsFunc(<>やったね</>);
@@ -126,48 +105,78 @@ const GenqueStreamScreen = ({
                 {data && (
                   <>
                     {Time ? (
-                      <Link
-                        href={`/home`}
-                        className="text-center border-b border-dark-tremor-content hover:bg-slate-700"
-                      >
-                        最新に戻る
-                      </Link>
-                    ) : (
                       <>
-                        {StreamPostList.map((d) => {
+                        <Link
+                          href={`/home`}
+                          className="text-center border-b border-dark-tremor-content hover:bg-slate-700"
+                        >
+                          最新に戻る
+                        </Link>
+                        {data.docs.map((d) => {
                           const UserDoc = data.userList.find(
-                            (arg) => arg.$id === d.createdUserId
+                            (arg) => arg.$id === d.createUserId
                           );
-                          if (UserDoc)
+                          if (UserDoc === undefined) {
+                            return <span key={d.$id}></span>;
+                          } else;
+                          {
                             return (
                               <Genque
                                 data={d}
                                 currentUserId={uid.user.$id}
                                 UserDoc={UserDoc}
+                                setModalBoolean={setModalBoolean}
+                                ModalContentsFunc={ModalContentsFunc}
                                 key={d.$id}
                               />
                             );
+                          }
                         })}
                       </>
+                    ) : (
+                      <>
+                        {StreamPostList.map((d) => {
+                          const UserDoc = StreamPostUserList.find(
+                            (arg) => arg.$id === d.createUserId
+                          );
+                          if (
+                            UserDoc &&
+                            data.docs.every((datadoc) => datadoc.$id != d.$id)
+                          ) {
+                            return (
+                              <Genque
+                                data={d}
+                                currentUserId={uid.user.$id}
+                                UserDoc={UserDoc}
+                                setModalBoolean={setModalBoolean}
+                                ModalContentsFunc={ModalContentsFunc}
+                                key={d.$id}
+                              />
+                            );
+                          } else {
+                          }
+                        })}
+                        <>
+                          {data.docs.map((d) => {
+                            const UserDataDoc = data.userList.find(
+                              (arg) => arg.$id === d.createUserId
+                            );
+                            if (UserDataDoc) {
+                              return (
+                                <Genque
+                                  data={d}
+                                  currentUserId={uid.user.$id}
+                                  UserDoc={UserDataDoc}
+                                  key={d.$id}
+                                  setModalBoolean={setModalBoolean}
+                                  ModalContentsFunc={ModalContentsFunc}
+                                />
+                              );
+                            }
+                          })}
+                        </>
+                      </>
                     )}
-                    {data.docs.map((d) => {
-                      const UserDoc = data.userList.find(
-                        (arg) => arg.$id === d.createUserId
-                      );
-                      if (UserDoc === undefined) {
-                        return <span key={d.$id}></span>;
-                      } else;
-                      {
-                        return (
-                          <Genque
-                            data={d}
-                            currentUserId={uid.user.$id}
-                            UserDoc={UserDoc}
-                            key={d.$id}
-                          />
-                        );
-                      }
-                    })}
                     {!(data.docs.length < 25) && (
                       <>
                         <Link

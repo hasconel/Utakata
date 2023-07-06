@@ -10,6 +10,7 @@ import {
   CloudArrowUpIcon,
   DocumentMinusIcon,
   DocumentPlusIcon,
+  XCircleIcon,
 } from "@heroicons/react/20/solid";
 import { useForm } from "react-hook-form";
 import { Server } from "@/feature/config";
@@ -127,8 +128,8 @@ const UserHome = ({
         </div>
       )}
       <form onSubmit={handleSubmit(handleGenque)}>
-        <div className="grid grid-cols-6 gap-2 border border-white rounded p-2">
-          <div className="col-span-6 ">
+        <div className="grid grid-cols-5 gap-2 border border-white rounded p-2">
+          <div className="col-span-5 ">
             <textarea
               autoComplete="off"
               className="w-full h-full bg-transparent rounded border border-slate-700"
@@ -138,13 +139,26 @@ const UserHome = ({
             />
           </div>
           {selectedFile && (
-            <div className="col-span-6">
-              <img
-                src={previewUrl}
-                alt="プレビュー"
-                className="  
-              object-cover rounded w-80 object-center"
-              />
+            <div className="col-span-5 ">
+              <div className="relative bg-slate-800 rounded-xl p-3">
+                <img
+                  src={previewUrl}
+                  alt="プレビュー"
+                  className="  
+              object-cover rounded w-48 h-48 object-center"
+                />
+                <button
+                  className="absolute top-1 right-1 w-10 h-10 rounded-full"
+                  disabled={!Boolean(selectedFile)}
+                  onClick={() => {
+                    setPreviewUrl(uid.data.UserThumbnailURL);
+                    setSelectedFile(undefined);
+                  }}
+                >
+                  <XCircleIcon />
+                  <div className="hidden">解除</div>
+                </button>
+              </div>
             </div>
           )}
           <Button
@@ -180,18 +194,6 @@ const UserHome = ({
               </Button>
             </label>
           </div>
-          <Button
-            className="col-span-1  h-9"
-            disabled={!Boolean(selectedFile)}
-            icon={DocumentMinusIcon}
-            onClick={() => {
-              setPreviewUrl(uid.data.UserThumbnailURL);
-              setSelectedFile(undefined);
-            }}
-            color="gray"
-          >
-            <div className="hidden sm:block">解除</div>
-          </Button>
         </div>
       </form>
       <div className="border border-white rounded p-1">
@@ -207,6 +209,7 @@ const UserHome = ({
         contents={modalWindow}
         Boolean={isModal}
         SetBoolean={setIsModal}
+        fullcontents={true}
       />
     </>
   );
