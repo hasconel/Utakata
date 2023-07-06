@@ -5,14 +5,14 @@ type Modal = {
   Boolean: boolean;
   SetBoolean: Dispatch<SetStateAction<boolean>>;
   contents: JSX.Element;
-  fullcontents?: boolean;
+  fullContents?: boolean;
 };
 const ModalWindow = (modal: Modal) => {
   return (
     <>
       {modal.Boolean && (
         <>
-          {modal.fullcontents === true ? (
+          {modal.fullContents === true ? (
             <div
               className="fixed mx-12 mt-5 rounded content-center mix-blend-normal  bg-slate-700 z-40 "
               onClick={(e) => {

@@ -6,19 +6,23 @@ import Link from "next/link";
 import { useQuery } from "react-query";
 import Linkify from "react-linkify";
 import { AlertMessage } from "@/contents/alert";
-import { Query } from "appwrite";
+import { Models, Query } from "appwrite";
 import Genque from "@/contents/genque";
 import { GetGenqueStream } from "@/feature/hooks";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 
 const TargetProfile = ({
   uname,
   current,
   currentData,
+  ModalContentsFunc,
+  setModalBoolean,
 }: {
   uname: string;
   current: boolean;
   currentData: string;
+  ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
+  setModalBoolean: Dispatch<SetStateAction<boolean>>;
 }) => {
   const [QueryData, setQueryData] = useState([
     Query.equal("createUserId", [uname]),
@@ -49,7 +53,6 @@ const TargetProfile = ({
       } catch {}
     }
   );
-
   return (
     <>
       {isLoading ? (
@@ -112,14 +115,33 @@ const TargetProfile = ({
                       <LoadingScreen />
                     ) : (
                       <>
-                        {TargetGenqueList.data?.docs.map((d) => (
-                          <Genque
-                            key={d.$id}
-                            data={d}
-                            currentUserId={currentData}
-                            UserDoc={data.TargetProfile}
-                          />
-                        ))}
+                        {TargetGenqueList.data && (
+                          <>
+                            {TargetGenqueList.data.docs.map((d) => {
+                              if (TargetGenqueList.data) {
+                                const UserDoc =
+                                  TargetGenqueList.data.userList.find(
+                                    (arg) => arg.$id === d.createUserId
+                                  );
+                                if (UserDoc === undefined) {
+                                  return <span key={d.$id}></span>;
+                                } else;
+                                {
+                                  return (
+                                    <Genque
+                                      data={d}
+                                      currentUserId={currentData}
+                                      UserDoc={UserDoc}
+                                      setModalBoolean={setModalBoolean}
+                                      ModalContentsFunc={ModalContentsFunc}
+                                      key={d.$id}
+                                    />
+                                  );
+                                }
+                              }
+                            })}
+                          </>
+                        )}
                         {TargetGenqueList.data?.docs.length && (
                           <>
                             {!(TargetGenqueList.data.docs.length < 25) && (

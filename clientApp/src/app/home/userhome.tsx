@@ -209,7 +209,7 @@ const UserHome = ({
         contents={modalWindow}
         Boolean={isModal}
         SetBoolean={setIsModal}
-        fullcontents={true}
+        fullContents={true}
       />
     </>
   );

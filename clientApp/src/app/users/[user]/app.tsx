@@ -4,9 +4,14 @@ import TargetProfile from "./targetprofile";
 import Link from "next/link";
 import { Button } from "@tremor/react";
 import { AlertMessage } from "@/contents/alert";
+import ModalWindow from "@/contents/modal";
+import { useState } from "react";
 
 const App = ({ username }: { username: string }) => {
   const user = GetProfileScreen(username);
+  const [isModal, setIsModal] = useState<boolean>(false);
+  const [modalWindow, setModalWindow] = useState<JSX.Element>(<></>);
+
   return (
     <>
       {user.isLoading ? (
@@ -45,6 +50,8 @@ const App = ({ username }: { username: string }) => {
               <>
                 {user.data?.username && (
                   <TargetProfile
+                    ModalContentsFunc={setModalWindow}
+                    setModalBoolean={setIsModal}
                     uname={user.data?.username}
                     current={user.data.isCurrentUser}
                     currentData={user.data.current.$id}
@@ -55,6 +62,12 @@ const App = ({ username }: { username: string }) => {
           )}
         </>
       )}
+      <ModalWindow
+        contents={modalWindow}
+        Boolean={isModal}
+        SetBoolean={setIsModal}
+        fullContents={false}
+      />
     </>
   );
 };

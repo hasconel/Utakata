@@ -82,9 +82,10 @@ const Genque = ({
               height={300}
               className="object-cover aspect-video w-full"
               onClick={() => {
+                console.log(data.MediaURL);
                 clickModal(
                   <>
-                    <img src={data.MediaURL} />
+                    <img src={data.MediaURL} className="w-400" />
                   </>
                 );
               }}
