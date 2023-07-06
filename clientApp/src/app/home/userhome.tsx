@@ -184,7 +184,7 @@ const UserHome = ({
             <label className="" htmlFor="file-input" ref={hiddenfileinput}>
               <Button
                 className="w-full"
-                icon={DocumentPlusIcon}
+                icon={CloudArrowUpIcon}
                 type="button"
                 color="gray"
                 id="file-input"
