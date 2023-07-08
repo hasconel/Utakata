@@ -75,11 +75,7 @@ const UserHome = ({
           ID.unique(),
           selectedFile
         );
-        imageURL = await api.getFilePreview(
-          Server.bucketID,
-          CreateStrage.$id,
-          400
-        );
+        imageURL = await api.getFilePreview(Server.bucketID, CreateStrage.$id);
         console.log(imageURL);
         //        router.refresh();
       } catch {
@@ -117,6 +113,7 @@ const UserHome = ({
       }
     } catch {}
     reset();
+    setSelectedFile(undefined);
     setButtonIsLoading(false);
   };
   return (
@@ -151,7 +148,6 @@ const UserHome = ({
                   className="absolute top-1 right-1 w-10 h-10 rounded-full"
                   disabled={!Boolean(selectedFile)}
                   onClick={() => {
-                    setPreviewUrl(uid.data.UserThumbnailURL);
                     setSelectedFile(undefined);
                   }}
                 >

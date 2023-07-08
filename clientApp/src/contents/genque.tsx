@@ -1,9 +1,9 @@
 import { Models } from "appwrite";
 import UrlInText from "./urlInText";
-import Image from "next/image";
 import Link from "next/link";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Temporal } from "temporal-polyfill";
+import Image from "next/image";
 
 const Genque = ({
   data,
@@ -49,7 +49,7 @@ const Genque = ({
   return (
     <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b border-dark-tremor-content">
       <div id="thumbnail" className=" w-12  row-span-2 ">
-        <img
+        <Image
           src={UserDoc.UserThumbnailURL}
           alt={UserDoc.DisplayName}
           width={48}
@@ -75,18 +75,22 @@ const Genque = ({
         {data.data}
         {data.MediaURL ? (
           <div id="mediaURL" className="">
-            <img
+            <Image
               src={data.MediaURL}
               alt="media"
               width={300}
               height={300}
-              className="object-cover aspect-video w-full"
+              className="object-cover aspect-video  w-full"
               onClick={() => {
                 console.log(data.MediaURL);
                 clickModal(
-                  <>
-                    <img src={data.MediaURL} className="w-400" />
-                  </>
+                  <Image
+                    src={data.MediaURL}
+                    alt="image"
+                    width={900}
+                    height={900}
+                    className="object-contain max-h-[90vh] w-fit "
+                  />
                 );
               }}
             />

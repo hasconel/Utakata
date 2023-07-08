@@ -14,6 +14,12 @@ const App = ({ username }: { username: string }) => {
 
   return (
     <>
+      <ModalWindow
+        contents={modalWindow}
+        Boolean={isModal}
+        SetBoolean={setIsModal}
+        fullContents={true}
+      />
       {user.isLoading ? (
         <>
           <div className="flex justify-center">
@@ -62,12 +68,6 @@ const App = ({ username }: { username: string }) => {
           )}
         </>
       )}
-      <ModalWindow
-        contents={modalWindow}
-        Boolean={isModal}
-        SetBoolean={setIsModal}
-        fullContents={false}
-      />
     </>
   );
 };

@@ -69,21 +69,7 @@ const GenqueStreamScreen = ({
                   });
               }
             }
-            if (!StreamPostList[0]) {
-              setStreamPostList([response.payload]);
-            } else {
-              if (
-                StreamPostList.every((d) => {
-                  if (TypeCheck.isDocument(response.payload)) {
-                    d.$id != response.payload.$id;
-                  } else {
-                    return false;
-                  }
-                })
-              ) {
-                setStreamPostList([response.payload, ...StreamPostList]);
-              }
-            }
+            setStreamPostList([response.payload, ...StreamPostList]);
           }
         }
       }
