@@ -94,6 +94,7 @@ const UserHome = ({
         data: data.genque,
         createUserId: uid.user.$id,
         MediaURL: imageURL,
+        deleted: false,
       };
       const UploadData = JSON.stringify(PreUploadData);
       if (

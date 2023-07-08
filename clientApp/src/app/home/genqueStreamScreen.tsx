@@ -25,7 +25,7 @@ const GenqueStreamScreen = ({
   UserPost: Models.Document[];
   Time?: string;
 }) => {
-  const QueryTime: string[] = [];
+  const QueryTime: string[] = [Query.notEqual("deleted", [true])];
   if (Time) {
     QueryTime.push(Query.lessThan("$createdAt", Time));
   }

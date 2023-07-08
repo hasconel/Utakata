@@ -18,10 +18,10 @@ const ModalWindow = (modal: Modal) => {
           >
             {modal.fullContents === true ? (
               <div
+                className="fixed flex content-center justify-center  items-center  min-h-5 overflow-hidden overscroll-none mix-blend-normal z-40 "
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
-                className="fixed rounded content-center border border-black max-h-[90%] min-h-5 overflow-hidden overscroll-none max-w-[90%] mix-blend-normal bg-slate-700 z-40 "
               >
                 {modal.contents}
               </div>
