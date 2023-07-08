@@ -49,7 +49,7 @@ const Genque = ({
   return (
     <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b border-dark-tremor-content">
       <div id="thumbnail" className=" w-12  row-span-2 ">
-        <Image
+        <img
           src={UserDoc.UserThumbnailURL}
           alt={UserDoc.DisplayName}
           width={48}
@@ -75,7 +75,7 @@ const Genque = ({
         {data.data}
         {data.MediaURL ? (
           <div id="mediaURL" className="">
-            <Image
+            <img
               src={data.MediaURL}
               alt="media"
               width={300}
@@ -84,7 +84,7 @@ const Genque = ({
               onClick={() => {
                 console.log(data.MediaURL);
                 clickModal(
-                  <Image
+                  <img
                     src={data.MediaURL}
                     alt="image"
                     width={900}
