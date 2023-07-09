@@ -5,6 +5,7 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import Image from "next/image";
 import { TrashIcon } from "@heroicons/react/20/solid";
+import { TrashIcon as OutLineTrashIcon } from "@heroicons/react/24/outline";
 import { Card } from "@tremor/react";
 import api from "@/feature/api";
 import { Server } from "@/feature/config";
@@ -144,7 +145,7 @@ const Genque = ({
             className="hover:bg-rose-600 rounded-full w-8 "
             onClick={() => {
               clickModal(
-                <div className=" rounded-md w-full bg-slate-900 p-8">
+                <div className=" rounded-md w-full max-w-3xl bg-slate-900 p-8">
                   {SuccessMessage && (
                     <div className={MessageError}>{SuccessMessage}</div>
                   )}
@@ -183,11 +184,11 @@ const Genque = ({
           </button>
         </div>
       )}
-      {Boolean(data.GoodUserId.length) && (
+      {/*{Boolean(data.GoodUserId.length) && (
         <div id="goodUsers" className="">
           {data.GoodUserId.length}
         </div>
-      )}{" "}
+      )}*/}{" "}
     </div>
   );
 };
