@@ -33,7 +33,7 @@ const Header = () => {
                       className="grid sm:grid-cols-[18px_130px] h-6 bottom-0 mt-3 gap-2 hover:bg-slate-700 overflow-hidden bg-slate-800 rounded-full px-2"
                       onClick={() => setUserStatusMenu(true)}
                     >
-                      <Image
+                      <img
                         alt="User"
                         src={HeaderLoginUser.data.data.UserThumbnailURL}
                         height={48}
@@ -48,11 +48,11 @@ const Header = () => {
                     {userStatusMenu && (
                       <>
                         <div
-                          className="absolute -bottom w-40 py-2 rounded-md end-0 z-40 bg-slate-700"
+                          className="absolute -bottom w-40 py-2 mt-1 rounded-md end-0 z-40 bg-slate-800"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            className="hover:bg-slate-600 w-full text-left px-2 border-b border-slate-300"
+                            className="hover:bg-slate-700 w-full text-left px-2 border-b border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
                               if (HeaderLoginUser.data)
@@ -64,7 +64,7 @@ const Header = () => {
                             プロフィール
                           </button>
                           <button
-                            className="hover:bg-slate-600 w-full text-left px-2 border-b border-slate-300"
+                            className="hover:bg-slate-700 w-full text-left px-2 border-b border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
                               if (HeaderLoginUser.data)
@@ -74,7 +74,7 @@ const Header = () => {
                             アカウント設定
                           </button>
                           <button
-                            className="hover:bg-slate-600 w-full text-left px-2 border-b border-slate-300"
+                            className="hover:bg-slate-700 w-full text-left px-2  border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
                               setModalBoolean(true);
@@ -135,7 +135,7 @@ const Header = () => {
             </>
           }
         />
-        <div className="flex justify-center items-center">
+        <div className="flex justify-center items-center bg-gradient-to-r from-slate-800 to-sky-900">
           <div className="grid grid-cols-2 gap-4 p-2 w-screen max-w-7xl">
             <div className="flex justify-start content-center">
               <Link href={"/home"}>
