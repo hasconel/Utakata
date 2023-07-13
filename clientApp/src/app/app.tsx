@@ -8,14 +8,14 @@ const App = () => {
   const router = useRouter();
 
   return (
-    <div className="mx-auto mt-4">
+    <div className="flex justify-center items-center">
       {user.isLoading ? (
         <LoadingScreen />
       ) : (
         <>
           {user.data ? (
             <>
-              welcome!{" "}
+              welcome to Utakata!
               <button
                 className="p-2 m-1 bg-slate-700 hover:bg-slate-500"
                 onClick={() => router.push("/home")}
@@ -25,15 +25,19 @@ const App = () => {
             </>
           ) : (
             <>
-              <p>
-                <Metric>Utakata</Metric>
-              </p>
-              <Link href="/login">
-                <Button>ログイン</Button>
-              </Link>
-              <Link href="/auth/signup">
-                <Button>新規登録</Button>
-              </Link>
+              <div>Utakataにようこそ！</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Link href="/login">
+                    <Button>ログイン</Button>
+                  </Link>
+                </div>
+                <div>
+                  <Link href="/auth/signup">
+                    <Button>新規登録</Button>
+                  </Link>
+                </div>
+              </div>
             </>
           )}
         </>

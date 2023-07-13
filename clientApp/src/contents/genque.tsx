@@ -79,7 +79,7 @@ const Genque = ({
   if (data.createUserId != UserDoc.$id) return <></>;
   if (data.deleted) return <></>;
   return (
-    <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b border-dark-tremor-content">
+    <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b mt-1 border-dark-tremor-content">
       <div id="thumbnail" className=" w-12  row-span-2 ">
         <img
           src={UserDoc.UserThumbnailURL}
@@ -188,7 +188,7 @@ const Genque = ({
         <div id="goodUsers" className="">
           {data.GoodUserId.length}
         </div>
-      )}*/}{" "}
+      )}*/}
     </div>
   );
 };

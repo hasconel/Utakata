@@ -27,7 +27,6 @@ clientApp/yarn-error.log*
 
 # local env files
 clientApp/.env*.local
-clientApp/next.config.js
 
 # vercel
 clientApp/.vercel

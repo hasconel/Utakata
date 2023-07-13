@@ -9,7 +9,7 @@ const UserPage0 = ({ params }: { params: { user: string } }) => {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <Card className="max-w-4xl mx-auto mt-8 gap-6">
+        <Card className="max-w-4xl mx-auto mt-4 gap-6">
           <App username={params.user} />
         </Card>
 

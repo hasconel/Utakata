@@ -83,7 +83,7 @@ export default function LoginForm() {
           </div>
           <Button
             type="submit"
-            className="max-w-lg mt-4"
+            className="max-w-lg mt-4 w-24"
             disabled={buttonIsLoading}
           >
             {buttonIsLoading ? (
