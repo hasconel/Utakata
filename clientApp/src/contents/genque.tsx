@@ -142,7 +142,7 @@ const Genque = ({
       {UserDoc.$id === currentUserId && (
         <div>
           <button
-            className="hover:bg-rose-600 rounded-full w-8 "
+            className="hover:bg-rose-600 rounded-full w-8 hover:text-white"
             onClick={() => {
               clickModal(
                 <div className=" rounded-md w-full max-w-3xl bg-slate-900 p-8">

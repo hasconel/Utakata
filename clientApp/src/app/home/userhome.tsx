@@ -126,7 +126,7 @@ const UserHome = ({
         </div>
       )}
       <form onSubmit={handleSubmit(handleGenque)}>
-        <div className="grid grid-cols-5 gap-2 border border-white rounded p-2">
+        <div className="grid grid-cols-5 gap-2 border border-slate-300 rounded p-2">
           <div className="col-span-5 ">
             <textarea
               autoComplete="off"
@@ -193,7 +193,7 @@ const UserHome = ({
           </div>
         </div>
       </form>
-      <div className="border border-white rounded p-1">
+      <div className="border border-slate-300 rounded p-1">
         <GenqueStreamScreen
           uid={uid}
           ModalContentsFunc={setModalWindow}

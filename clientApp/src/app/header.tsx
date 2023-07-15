@@ -30,7 +30,7 @@ const Header = () => {
                 <div>
                   <div className="relative">
                     <button
-                      className="grid sm:grid-cols-[18px_130px] h-6 bottom-0 mt-3 gap-2 hover:bg-slate-700 overflow-hidden bg-slate-800 rounded-full px-2"
+                      className="grid sm:grid-cols-[36px_130px] h-8 bottom-0 mt-1 gap-2 hover:bg-slate-500 overflow-hidden dark:bg-slate-800 bg-slate-300 rounded-full px-2"
                       onClick={() => setUserStatusMenu(true)}
                     >
                       <img
@@ -38,9 +38,9 @@ const Header = () => {
                         src={HeaderLoginUser.data.data.UserThumbnailURL}
                         height={48}
                         width={48}
-                        className="my-auto h-4 w-4 rounded-full aspect-square"
+                        className="my-auto h-8 w-8 rounded-full aspect-square"
                       />
-                      <span className="text-left hidden sm:block">
+                      <span className="text-left hidden my-auto sm:block text-xl">
                         {HeaderLoginUser.data.data.DisplayUID}
                       </span>
                     </button>
@@ -48,11 +48,11 @@ const Header = () => {
                     {userStatusMenu && (
                       <>
                         <div
-                          className="absolute -bottom w-40 py-2 mt-1 rounded-md end-0 z-40 bg-slate-800"
+                          className="absolute -bottom w-40 py-2 mt-1 rounded-md end-2 z-40 bg-slate-300 dark:bg-slate-800"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            className="hover:bg-slate-700 w-full text-left px-2 border-b border-slate-400"
+                            className="hover:bg-slate-500 w-full text-left px-4 py-2 border-b border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
                               if (HeaderLoginUser.data)
@@ -64,7 +64,7 @@ const Header = () => {
                             プロフィール
                           </button>
                           <button
-                            className="hover:bg-slate-700 w-full text-left px-2 border-b border-slate-400"
+                            className="hover:bg-slate-500 w-full text-left px-4 py-2 border-b border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
                               if (HeaderLoginUser.data)
@@ -74,7 +74,7 @@ const Header = () => {
                             アカウント設定
                           </button>
                           <button
-                            className="hover:bg-slate-700 w-full text-left px-2  border-slate-400"
+                            className="hover:bg-slate-500 w-full text-left px-4 py-2 border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
                               setModalBoolean(true);
@@ -113,7 +113,7 @@ const Header = () => {
               <div className="grid grid-cols-2 gap-6 pr-8">
                 <div>
                   <button
-                    className="w-full m-4 bg-rose-900 hover:bg-rose-600 py-1 px-4 rounded-md"
+                    className="w-full m-4 bg-rose-900 hover:bg-rose-600 text-white py-1 px-4 rounded-md"
                     onClick={() => {
                       api.deleteCurrentSession();
                       setModalBoolean(false);
@@ -125,7 +125,7 @@ const Header = () => {
                 </div>
                 <div>
                   <button
-                    className="w-full m-4 bg-slate-700 hover:bg-slate-600 py-1 px-4 rounded-md"
+                    className="w-full m-4 bg-slate-700 hover:bg-slate-600 py-1 text-white px-4 rounded-md"
                     onClick={() => setModalBoolean(false)}
                   >
                     Utakataにとどまる
@@ -139,7 +139,7 @@ const Header = () => {
           <div className="grid grid-cols-2 gap-4 p-2 w-screen max-w-7xl">
             <div className="flex justify-start content-center">
               <Link href={"/home"}>
-                <Metric>Utakata</Metric>
+                <Metric className="text-neutral-100">Utakata</Metric>
               </Link>
             </div>
             <div className="flex justify-end content-end">
