@@ -145,12 +145,12 @@ const Genque = ({
             className="hover:bg-rose-600 rounded-full w-8 hover:text-white"
             onClick={() => {
               clickModal(
-                <div className=" rounded-md w-full max-w-3xl bg-slate-900 p-8">
+                <div className=" rounded-md w-full max-w-3xl dark:bg-slate-900 p-8 bg-slate-50">
                   {SuccessMessage && (
                     <div className={MessageError}>{SuccessMessage}</div>
                   )}
                   <div className="w-96">このつぶやきを削除しますか？</div>
-                  <figure className="max-w-full mx-2 mt-2 mb-6 p-4 rounded-md bg-slate-700">
+                  <figure className="max-w-full mx-2 mt-2 mb-6 p-4 rounded-md dark:bg-slate-700 bg-slate-200">
                     <blockquote>{data.data}</blockquote>
                     <figcaption className="text-right italic text-gray-400">
                       ―{UserDoc.DisplayName}
@@ -160,7 +160,7 @@ const Genque = ({
                     {" "}
                     <div className="flex content-center justify-center  items-center">
                       <button
-                        className="bg-slate-800 hover:bg-rose-800 rounded py-2 w-28"
+                        className="dark:bg-slate-800 bg-slate-400 hover:bg-rose-800 rounded py-2 w-28"
                         onClick={DeletGenque}
                       >
                         削除する
@@ -168,7 +168,7 @@ const Genque = ({
                     </div>
                     <div className="flex content-center justify-center  items-center">
                       <button
-                        className="bg-slate-800 hover:bg-slate-600 rounded py-2 w-28"
+                        className="dark:bg-slate-800 bg-slate-400 hover:bg-slate-600 rounded py-2 w-28"
                         onClick={() => setModalBoolean(false)}
                         disabled={buttonLoading}
                       >

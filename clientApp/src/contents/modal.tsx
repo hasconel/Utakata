@@ -22,12 +22,13 @@ const ModalWindow = (modal: Modal) => {
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
+                onScroll={() => modal.SetBoolean(false)}
               >
                 {modal.contents}
               </div>
             ) : (
               <Card
-                className="fixed max-w-xl mx-auto mt-5 px-4 py-4 rounded mix-blend-normal dark:bg-slate-700 z-40 "
+                className="fixed max-w-xl mx-auto mt-5 px-4 py-4 rounded mix-blend-normal dark:bg-slate-900 z-40 "
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
