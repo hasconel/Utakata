@@ -8,8 +8,9 @@ import Linkify from "react-linkify";
 import { AlertMessage } from "@/contents/alert";
 import { Models, Query } from "appwrite";
 import Genque from "@/contents/genque";
-import { GetGenqueStream } from "@/feature/hooks";
+import { GetGenqueStream, GetLoginUser } from "@/feature/hooks";
 import { Dispatch, SetStateAction, useState } from "react";
+import MuteButton from "@/contents/muteButton";
 
 const TargetProfile = ({
   uname,
@@ -27,7 +28,7 @@ const TargetProfile = ({
   const [QueryData, setQueryData] = useState([
     Query.equal("createUserId", [uname]),
   ]);
-
+  const currentUserData = GetLoginUser();
   const TargetGenqueList = GetGenqueStream(QueryData);
   const { isLoading, isError, data, error } = useQuery(
     "TargetDoc",
@@ -98,14 +99,25 @@ const TargetProfile = ({
                         <>
                           <span className="col-span-2">
                             <Link href={"/settings/profile"}>
-                              <Button>プロフィールを編集</Button>
+                              <button className="rounded-md text-center w-full h-full p-2 bg-sky-700 text-white hover:bg-sky-600">
+                                プロフィールを編集
+                              </button>
                             </Link>
                           </span>
                         </>
                       ) : (
                         <>
                           <span className="col-span-2">
-                            <Button>フォロー</Button>
+                            {currentUserData.data && (
+                              <MuteButton
+                                className="rounded-md text-center p-2 w-full h-full"
+                                targetUser={data.TargetProfile.$id}
+                                currentUserId={currentData}
+                                UserMuteList={
+                                  currentUserData.data.data.MuteUserId
+                                }
+                              />
+                            )}
                           </span>
                         </>
                       )}

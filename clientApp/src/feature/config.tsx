@@ -3,6 +3,7 @@ type Config = {
   project: string | undefined;
   collectionID: string | undefined;
   usercollectionID: string | undefined;
+  subCollectionID: string | undefined;
   databaseID: string | undefined;
   bucketID: string | undefined;
   userThumbnailBucketID: string | undefined;
@@ -13,6 +14,7 @@ export const Server: Config = {
   project: process.env.NEXT_PUBLIC_REACT_APP_PROJECT,
   collectionID: process.env.NEXT_PUBLIC_REACT_APP_COLLECTION_ID,
   usercollectionID: process.env.NEXT_PUBLIC_REACT_APP_USERCOLLECTION_ID,
+  subCollectionID: process.env.NEXT_PUBLIC_REACT_APP_SUBCOLLECTION_ID,
   databaseID: process.env.NEXT_PUBLIC_REACT_APP_DATABASE_ID,
   bucketID: process.env.NEXT_PUBLIC_REACT_APP_BUCKET_ID,
   userThumbnailBucketID:

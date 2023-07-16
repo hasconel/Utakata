@@ -100,7 +100,8 @@ const UserHome = ({
       const UploadData = JSON.stringify(PreUploadData);
       if (
         typeof Server.databaseID === "string" &&
-        typeof Server.collectionID == "string"
+        typeof Server.collectionID == "string"&&
+        typeof Server.subCollectionID == "string"
       ) {
         const createData = await api.createDocument(
           Server.databaseID,
@@ -109,6 +110,14 @@ const UserHome = ({
         );
         UserPost.unshift(createData);
         setStreamPost(UserPost);
+        await api
+          .provider()
+          .database.createDocument(
+            Server.databaseID,
+            Server.subCollectionID,
+            createData.$id,
+            { GoodedUsers: [] }
+          );
       } else {
         setError("サーバーにアクセスできませんでした");
         throw new Error("さーばーにあくせすできませんでした");
@@ -200,7 +209,7 @@ const UserHome = ({
           ModalContentsFunc={setModalWindow}
           setModalBoolean={setIsModal}
           UserPost={StreamPost}
-          Time={Time}          
+          Time={Time}
         />
       </div>
       <ModalWindow

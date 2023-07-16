@@ -7,7 +7,7 @@ import { Temporal } from "temporal-polyfill";
 
 export const GetGenqueStream = (queries?: string[]) => {
   const request: XMLHttpRequest = new XMLHttpRequest();
-  const { isLoading, isError, data, error } = useQuery("genque", async () => {
+  const { isLoading, isError, data, error } = useQuery("genques", async () => {
     try {
       if (
         Server.databaseID != undefined &&
@@ -79,7 +79,26 @@ export const GetGenqueStream = (queries?: string[]) => {
   });
   return { isLoading, isError, data, error };
 };
-
+export const GetSingleGenque = (arg: string) => {
+  const { isLoading, isError, data, error } = useQuery(arg, async () => {
+    if (Server.databaseID && Server.collectionID && Server.usercollectionID) {
+      const Doc = await api.getDocument(
+        Server.databaseID,
+        Server.collectionID,
+        arg
+      );
+      const User = await api.getDocument(
+        Server.databaseID,
+        Server.usercollectionID,
+        Doc.createUserId
+      );
+      return { User, Doc };
+    } else {
+      throw new Error("サーバーとの接続に失敗");
+    }
+  });
+  return { isLoading, isError, data, error };
+};
 export const GetLoginUser = () => {
   const { isLoading, isError, data, error } = useQuery("user", async () => {
     try {

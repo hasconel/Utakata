@@ -30,7 +30,7 @@ const GenqueStreamScreen = ({
     (user: string) => user != uid.user.$id
   );
   if (newMuteUserId[0]) {
-    QueryTime.push(Query.notEqual("createUserId", newMuteUserId));
+    newMuteUserId.map((d) => QueryTime.push(Query.notEqual("createUserId", d)));
   }
   if (Time) {
     QueryTime.push(Query.lessThan("$createdAt", Time));

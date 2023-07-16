@@ -74,6 +74,16 @@ const Header = () => {
                             アカウント設定
                           </button>
                           <button
+                            className="hover:bg-slate-500 w-full text-left px-4 py-2 border-b border-slate-400"
+                            onClick={() => {
+                              setUserStatusMenu(false);
+                              if (HeaderLoginUser.data)
+                                router.push(`/settings/mute`);
+                            }}
+                          >
+                            ミュート設定
+                          </button>
+                          <button
                             className="hover:bg-slate-500 w-full text-left px-4 py-2 border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
