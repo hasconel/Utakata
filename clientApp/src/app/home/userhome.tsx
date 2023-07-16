@@ -1,4 +1,5 @@
 "use client";
+//・レス機能 ・検索機能 ・ミュート機能 ・GOOD機能 ・粒内改行 ・利用規約 ・githubのreadme
 import { ID, Models } from "appwrite";
 import GenqueStreamScreen from "./genqueStreamScreen";
 import { useRef, useState } from "react";
@@ -199,7 +200,7 @@ const UserHome = ({
           ModalContentsFunc={setModalWindow}
           setModalBoolean={setIsModal}
           UserPost={StreamPost}
-          Time={Time}
+          Time={Time}          
         />
       </div>
       <ModalWindow

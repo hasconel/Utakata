@@ -35,6 +35,7 @@ export const GetGenqueStream = (queries?: string[]) => {
           };
         });
         let PostQueries = [
+          Query.notEqual("deleted", [true]),
           Query.greaterThan("$createdAt", date),
           Query.orderDesc("$createdAt"),
         ];

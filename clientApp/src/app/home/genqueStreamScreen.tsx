@@ -25,7 +25,13 @@ const GenqueStreamScreen = ({
   UserPost: Models.Document[];
   Time?: string;
 }) => {
-  const QueryTime: string[] = [Query.notEqual("deleted", [true])];
+  const QueryTime: string[] = [];
+  const newMuteUserId: string[] = uid.data.MuteUserId.filter((user: string) => {
+    user != uid.user.$id;
+  });
+  if (newMuteUserId[0]) {
+    QueryTime.push(Query.notEqual("createUserId", newMuteUserId));
+  }
   if (Time) {
     QueryTime.push(Query.lessThan("$createdAt", Time));
   }

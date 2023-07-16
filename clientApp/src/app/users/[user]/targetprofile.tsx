@@ -26,7 +26,6 @@ const TargetProfile = ({
 }) => {
   const [QueryData, setQueryData] = useState([
     Query.equal("createUserId", [uname]),
-    Query.notEqual("deleted", [true]),
   ]);
 
   const TargetGenqueList = GetGenqueStream(QueryData);
