@@ -20,14 +20,14 @@ const ReplaceJSX = (
           {separate.map((d) => {
             count += 1;
             return (
-              <>
+              <span key={count}>
                 {limit ? (
                   <>{count < limit && <>{replaceto}</>}</>
                 ) : (
                   <>{replaceto}</>
                 )}
                 {d}
-              </>
+              </span>
             );
           })}
         </>

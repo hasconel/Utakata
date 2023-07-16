@@ -22,7 +22,6 @@ const ModalWindow = (modal: Modal) => {
                 onClick={(e) => {
                   e.stopPropagation();
                 }}
-                onScroll={() => modal.SetBoolean(false)}
               >
                 {modal.contents}
               </div>

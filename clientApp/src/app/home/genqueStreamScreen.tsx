@@ -26,9 +26,9 @@ const GenqueStreamScreen = ({
   Time?: string;
 }) => {
   const QueryTime: string[] = [];
-  const newMuteUserId: string[] = uid.data.MuteUserId.filter((user: string) => {
-    user != uid.user.$id;
-  });
+  const newMuteUserId: string[] = uid.data.MuteUserId.filter(
+    (user: string) => user != uid.user.$id
+  );
   if (newMuteUserId[0]) {
     QueryTime.push(Query.notEqual("createUserId", newMuteUserId));
   }
