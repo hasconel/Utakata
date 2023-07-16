@@ -4,7 +4,7 @@ const ReplaceJSX = (
   replaceto: JSX.Element,
   limit?: number
 ) => {
-  const separate = target.split(separator, limit);
+  const separate = target.split(separator);
   const check = separate.length;
   if (check === 1) {
     return <>{target}</>;
@@ -13,15 +13,23 @@ const ReplaceJSX = (
     if (result0 === undefined) {
       return <>{target}</>;
     } else {
+      let count = 0;
       return (
         <>
           {result0}
-          {separate.map((d) => (
-            <>
-              {replaceto}
-              {d}
-            </>
-          ))}
+          {separate.map((d) => {
+            count += 1;
+            return (
+              <>
+                {limit ? (
+                  <>{count < limit && <>{replaceto}</>}</>
+                ) : (
+                  <>{replaceto}</>
+                )}
+                {d}
+              </>
+            );
+          })}
         </>
       );
     }

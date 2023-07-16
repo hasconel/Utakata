@@ -9,6 +9,7 @@ import { TrashIcon as OutLineTrashIcon } from "@heroicons/react/24/outline";
 import { Card } from "@tremor/react";
 import api from "@/feature/api";
 import { Server } from "@/feature/config";
+import ReplaceJSX from "@/feature/replaceJSX";
 
 const Genque = ({
   data,
@@ -25,12 +26,7 @@ const Genque = ({
   ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
   setModalBoolean: Dispatch<SetStateAction<boolean>>;
 }) => {
-  const BrData = () => {
-    const br: JSX.Element = data.data.replace("\n", (match: string) => {
-      return `${<br />}`;
-    });
-    return br;
-  };
+  const BrData = ReplaceJSX(data.data, "\n", <br />, 5);
   const [SuccessMessage, setSuccessMessage] = useState<string>("");
   const [MessageError, setMessageError] = useState<string>(
     "bg-sky-800 w-full rounded py-2 px-6 "
@@ -110,7 +106,7 @@ const Genque = ({
         id="data"
         className="break-words col-start-2 row-start-2 col-span-11"
       >
-        <BrData />
+        {BrData}
         {data.MediaURL ? (
           <div id="mediaURL">
             <img
