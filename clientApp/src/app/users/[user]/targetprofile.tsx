@@ -138,14 +138,18 @@ const TargetProfile = ({
                                 } else;
                                 {
                                   return (
-                                    <Genque
-                                      data={d}
-                                      currentUserId={currentData}
-                                      UserDoc={UserDoc}
-                                      setModalBoolean={setModalBoolean}
-                                      ModalContentsFunc={ModalContentsFunc}
+                                    <div
                                       key={d.$id}
-                                    />
+                                      className=" border-b  border-dark-tremor-content"
+                                    >
+                                      <Genque
+                                        data={d}
+                                        currentUserId={currentData}
+                                        UserDoc={UserDoc}
+                                        setModalBoolean={setModalBoolean}
+                                        ModalContentsFunc={ModalContentsFunc}
+                                      />
+                                    </div>
                                   );
                                 }
                               }

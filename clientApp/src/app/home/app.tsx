@@ -8,7 +8,7 @@ const HomeSite = ({ Time }: { Time?: string }) => {
   const { data, isLoading, isError, error } = GetLoginUser();
   return (
     <>
-      <Card className="grid max-w-4xl col-start-2 mt-4 mx-auto gap-6">
+      <Card className="grid max-w-4xl col-start-2 mt-4 min-w-min mx-auto gap-6">
         {isLoading ? (
           <LoadingScreen />
         ) : (

@@ -113,14 +113,18 @@ const GenqueStreamScreen = ({
                           } else;
                           {
                             return (
-                              <Genque
-                                data={d}
-                                currentUserId={uid.user.$id}
-                                UserDoc={UserDoc}
-                                setModalBoolean={setModalBoolean}
-                                ModalContentsFunc={ModalContentsFunc}
+                              <div
                                 key={d.$id}
-                              />
+                                className=" border-b  border-dark-tremor-content"
+                              >
+                                <Genque
+                                  data={d}
+                                  currentUserId={uid.user.$id}
+                                  UserDoc={UserDoc}
+                                  setModalBoolean={setModalBoolean}
+                                  ModalContentsFunc={ModalContentsFunc}
+                                />
+                              </div>
                             );
                           }
                         })}
@@ -136,14 +140,18 @@ const GenqueStreamScreen = ({
                             data.docs.every((datadoc) => datadoc.$id != d.$id)
                           ) {
                             return (
-                              <Genque
-                                data={d}
-                                currentUserId={uid.user.$id}
-                                UserDoc={UserDoc}
-                                setModalBoolean={setModalBoolean}
-                                ModalContentsFunc={ModalContentsFunc}
+                              <div
                                 key={d.$id}
-                              />
+                                className=" border-b  border-dark-tremor-content"
+                              >
+                                <Genque
+                                  data={d}
+                                  currentUserId={uid.user.$id}
+                                  UserDoc={UserDoc}
+                                  setModalBoolean={setModalBoolean}
+                                  ModalContentsFunc={ModalContentsFunc}
+                                />
+                              </div>
                             );
                           } else {
                           }
@@ -155,14 +163,19 @@ const GenqueStreamScreen = ({
                             );
                             if (UserDataDoc) {
                               return (
-                                <Genque
-                                  data={d}
-                                  currentUserId={uid.user.$id}
-                                  UserDoc={UserDataDoc}
+                                <div
                                   key={d.$id}
-                                  setModalBoolean={setModalBoolean}
-                                  ModalContentsFunc={ModalContentsFunc}
-                                />
+                                  className=" border-b  border-dark-tremor-content"
+                                >
+                                  <Genque
+                                    data={d}
+                                    currentUserId={uid.user.$id}
+                                    UserDoc={UserDataDoc}
+                                    key={d.$id}
+                                    setModalBoolean={setModalBoolean}
+                                    ModalContentsFunc={ModalContentsFunc}
+                                  />
+                                </div>
                               );
                             }
                           })}

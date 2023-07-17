@@ -110,13 +110,15 @@ const App = ({ postId }: { postId: string }) => {
         ) : (
           <>
             {LoginUser.data && Triger.data ? (
-              <Genque
-                ModalContentsFunc={setModalWindow}
-                setModalBoolean={setIsModal}
-                currentUserId={LoginUser.data.user.$id}
-                UserDoc={Triger.data.User}
-                data={Triger.data.Doc}
-              />
+              <div className=" border-b  border-dark-tremor-content">
+                <Genque
+                  ModalContentsFunc={setModalWindow}
+                  setModalBoolean={setIsModal}
+                  currentUserId={LoginUser.data.user.$id}
+                  UserDoc={Triger.data.User}
+                  data={Triger.data.Doc}
+                />
+              </div>
             ) : (
               <>存在しないつぶやき</>
             )}
@@ -169,14 +171,18 @@ const App = ({ postId }: { postId: string }) => {
                       );
                       if (UserDataDoc && LoginUser.data) {
                         return (
-                          <Genque
-                            data={d}
-                            currentUserId={LoginUser.data.user.$id}
-                            UserDoc={UserDataDoc}
+                          <div
                             key={d.$id}
-                            ModalContentsFunc={setModalWindow}
-                            setModalBoolean={setIsModal}
-                          />
+                            className=" border-t  border-dark-tremor-content"
+                          >
+                            <Genque
+                              data={d}
+                              currentUserId={LoginUser.data.user.$id}
+                              UserDoc={UserDataDoc}
+                              ModalContentsFunc={setModalWindow}
+                              setModalBoolean={setIsModal}
+                            />
+                          </div>
                         );
                       }
                     }

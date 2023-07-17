@@ -112,34 +112,48 @@ const Genque = ({
     setGoodButtonLoading(true);
     if (Server.databaseID && Server.subCollectionID) {
       try {
-        const GoodList: string[] = await api
-          .getDocument(Server.databaseID, Server.subCollectionID, data.$id)
-          .then((d) => {
-            return d.GoodedUsers;
-          });
-        if (GoodList.includes(currentUserId)) {
-          const newList = GoodList.filter((d) => d != currentUserId);
-          const newGoodUsers = await api.updateDocument(
-            Server.databaseID,
-            Server.subCollectionID,
-            data.$id,
-            { GoodedUsers: newList }
+        const GoodList = await api.getDocument(
+          Server.databaseID,
+          Server.subCollectionID,
+          data.$id
+        );
+        if (GoodList.GoodedUsers.includes(currentUserId)) {
+          const newList = GoodList.GoodedUsers.filter(
+            (d: string) => d != currentUserId
           );
-          setGoodCount(newGoodUsers.GoodedUsers.length);
+          const newGoodUsers = await api
+            .updateDocument(
+              Server.databaseID,
+              Server.subCollectionID,
+              data.$id,
+              { GoodedUsers: newList }
+            )
+            .catch((e) => console.log(e));
+          if (newGoodUsers) {
+            setGoodCount(newGoodUsers.GoodedUsers.length);
+          }
           setGoodIcon(<OutLineHandThumbUpIcon className="h-4 " />);
           setCurrentUserGood(false);
         } else {
-          const newGoodUsers = await api.updateDocument(
-            Server.databaseID,
-            Server.subCollectionID,
-            data.$id,
-            { GoodedUsers: [currentUserId, ...GoodList] }
-          );
-          setGoodCount(newGoodUsers.GoodedUsers.length);
+          const newGoodUsers = await api
+            .updateDocument(
+              Server.databaseID,
+              Server.subCollectionID,
+              data.$id,
+              {
+                GoodedUsers: [currentUserId, ...GoodList.GoodedUsers],
+              }
+            )
+            .catch((e) => console.log(e));
+          if (newGoodUsers) {
+            setGoodCount(newGoodUsers.GoodedUsers.length);
+          }
           setGoodIcon(<HandThumbUpIcon className="h-4 " />);
           setCurrentUserGood(true);
         }
-      } catch {}
+      } catch {
+        (e: any) => console.log(e);
+      }
     }
     setGoodButtonLoading(false);
   };
@@ -245,7 +259,7 @@ const Genque = ({
   if (data.createUserId != UserDoc.$id) return <></>;
   if (data.deleted) return <></>;
   return (
-    <div className="grid grid-cols-[50px_100px_repeat(3,minmax(40px,1fr))_repeat(6,minmax(0,1fr))_100px] border-b mt-1 border-dark-tremor-content">
+    <div className="grid grid-cols-[50px_100px_repeat(3,minmax(40px,1fr))_repeat(6,minmax(0,1fr))_100px] mt-1 bg-transparent">
       <div id="thumbnail" className=" w-12  row-span-2 col-span-1 row-start-1">
         <img
           src={UserDoc.UserThumbnailURL}
@@ -302,7 +316,10 @@ const Genque = ({
           </div>
         )}
       </div>
-      <div id="CreateTime" className="col-span-2 row-start-3 h-5 overflow-hidden">
+      <div
+        id="CreateTime"
+        className="col-span-2 row-start-3 h-5 overflow-hidden"
+      >
         {TempPostTime.toZonedDateTimeISO(
           NowTime.zonedDateTimeISO().timeZone
         ).toLocaleString()}
