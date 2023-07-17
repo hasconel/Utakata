@@ -53,16 +53,20 @@ const Genque = ({
   const NowTime = Temporal.Now;
   const TempPostTime = Temporal.Instant.from(data.$createdAt);
   const [goodCount, setGoodCount] = useState(0);
-  let ListOfGoodUsers: string[] = [];
+  const [ListOfGoodUsers, setListOfGoodUsers] = useState<string[]>([]);
   const GetGoodInfo = () => {
     if (Server.databaseID && Server.subCollectionID) {
       api
         .getDocument(Server.databaseID, Server.subCollectionID, data.$id)
         .then((d) => {
-          ListOfGoodUsers = d.GoodedUsers;
+          setListOfGoodUsers(d.GoodedUsers);
+          setGoodCount(d.GoodedUsers.length);
+          setCurrentUserGood(d.GoodedUsers.includes(currentUserId));
+          if (d.GoodedUsers.includes(currentUserId))
+            setGoodIcon(<HandThumbUpIcon className="h-4 " />);
         })
         .catch(() => {
-          ListOfGoodUsers = [];
+          setListOfGoodUsers([]);
         });
     }
   };
