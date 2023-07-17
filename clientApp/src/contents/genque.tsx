@@ -245,8 +245,8 @@ const Genque = ({
   if (data.createUserId != UserDoc.$id) return <></>;
   if (data.deleted) return <></>;
   return (
-    <div className="grid grid-cols-[50px_repeat(11,minmax(0,1fr))] border-b mt-1 border-dark-tremor-content">
-      <div id="thumbnail" className=" w-12  row-span-2 ">
+    <div className="grid grid-cols-[50px_100px_repeat(3,minmax(40px,1fr))_repeat(6,minmax(0,1fr))_100px] border-b mt-1 border-dark-tremor-content">
+      <div id="thumbnail" className=" w-12  row-span-2 col-span-1 row-start-1">
         <img
           src={UserDoc.UserThumbnailURL}
           alt={UserDoc.DisplayName}
@@ -255,7 +255,7 @@ const Genque = ({
           className="rounded aspect-square"
         />
       </div>
-      <div className="row-start-1 col-start-2 col-span-8">
+      <div className="row-start-1 col-start-2 col-span-10">
         <Link href={`/users/${UserDoc.DisplayUID}`}>
           <span id="DisplayName" className="">
             {UserDoc.DisplayName}
@@ -265,7 +265,7 @@ const Genque = ({
           </span>
         </Link>
       </div>
-      <div className="col-span-3 text-right">
+      <div className="text-right">
         <Link href={`/posts/${data.$id}`}>{Time}</Link>
       </div>
       <div
@@ -302,7 +302,7 @@ const Genque = ({
           </div>
         )}
       </div>
-      <div id="CreateTime" className="col-span-4 row-start-3">
+      <div id="CreateTime" className="col-span-2 row-start-3 h-5 overflow-hidden">
         {TempPostTime.toZonedDateTimeISO(
           NowTime.zonedDateTimeISO().timeZone
         ).toLocaleString()}
