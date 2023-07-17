@@ -30,31 +30,28 @@ const TargetProfile = ({
   ]);
   const currentUserData = GetLoginUser();
   const TargetGenqueList = GetGenqueStream(QueryData);
-  const { isLoading, isError, data, error } = useQuery(
-    "TargetDoc",
-    async () => {
-      try {
-        if (
-          typeof Server.endpoint === "string" &&
-          typeof Server.project === "string" &&
-          typeof Server.collectionID === "string" &&
-          typeof Server.usercollectionID === "string" &&
-          typeof Server.databaseID === "string" &&
-          typeof Server.bucketID === "string" &&
-          typeof Server.userThumbnailBucketID === "string"
-        ) {
-          const Target = await api
-            .provider()
-            .database.getDocument(
-              Server.databaseID,
-              Server.usercollectionID,
-              uname
-            );
-          return { TargetProfile: Target };
-        }
-      } catch {}
-    }
-  );
+  const { isLoading, isError, data, error } = useQuery(uname, async () => {
+    try {
+      if (
+        typeof Server.endpoint === "string" &&
+        typeof Server.project === "string" &&
+        typeof Server.collectionID === "string" &&
+        typeof Server.usercollectionID === "string" &&
+        typeof Server.databaseID === "string" &&
+        typeof Server.bucketID === "string" &&
+        typeof Server.userThumbnailBucketID === "string"
+      ) {
+        const Target = await api
+          .provider()
+          .database.getDocument(
+            Server.databaseID,
+            Server.usercollectionID,
+            uname
+          );
+        return { TargetProfile: Target };
+      }
+    } catch {}
+  });
   return (
     <>
       {isLoading ? (

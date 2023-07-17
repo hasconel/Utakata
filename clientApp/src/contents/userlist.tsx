@@ -38,7 +38,13 @@ const ListOfUser = ({ target }: { target: string }) => {
   }, []);
   return (
     <>
-          <div className="grid grid-cols-[48px_1fr] grid-rows-2 h-12 gap-2 overflow-hidden">
+      <div className="w-full grid grid-cols-[48px_1fr] grid-rows-2 h-12 gap-2 overflow-hidden">
+        {DisplayUID === "" ? (
+          <div className="col-span-2 flex items-center justify-center">
+            <LoadingScreen />
+          </div>
+        ) : (
+          <>
             <div className="row-span-2 col-start-1">
               <img
                 src={imageURL}
@@ -48,15 +54,12 @@ const ListOfUser = ({ target }: { target: string }) => {
             </div>
             <div className="col-start-2 row-start-1">
               <span>{DisplayName}</span>
-              <span className="text-gray-500">
-                {DisplayUID}
-              </span>
+              <span className="text-gray-500">{DisplayUID}</span>
             </div>
-            <div className="col-start-2 row-start-2">
-              {ProfileBIO}
-            </div>
-          </div>
-        
+            <div className="col-start-2 row-start-2">{ProfileBIO}</div>
+          </>
+        )}
+      </div>
     </>
   );
 };

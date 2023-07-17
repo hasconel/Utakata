@@ -28,12 +28,14 @@ const App = () => {
                     </div>{" "}
                     <div className="col-start-2">
                       {User.data && (
-                        <MuteButton
-                          className="w-full h-full rounded"
-                          targetUser={d}
-                          currentUserId={User.data.user.$id}
-                          UserMuteList={User.data.data.MuteUserId}
-                        />
+                        <>
+                          <MuteButton
+                            className="w-full h-full rounded"
+                            targetUser={d}
+                            currentUserId={User.data.user.$id}
+                            UserMuteList={User.data.data.MuteUserId}
+                          />
+                        </>
                       )}
                     </div>
                   </div>

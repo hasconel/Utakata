@@ -73,26 +73,51 @@ export const GetGenqueStream = (queries?: string[]) => {
           return { docs: NullList, userList: NullList, lastTime: "" };
         }
       }
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
   });
   return { isLoading, isError, data, error };
 };
 export const GetSingleGenque = (arg: string) => {
+  const request: XMLHttpRequest = new XMLHttpRequest();
   const { isLoading, isError, data, error } = useQuery(arg, async () => {
     if (Server.databaseID && Server.collectionID && Server.usercollectionID) {
+      const date: string = await new Promise((resolve, reject) => {
+        request.open("HEAD", window.location.href, true);
+        request.send(null);
+        request.onreadystatechange = () => {
+          if (request.readyState === 4 && request.status !== 0) {
+            const ServerDate = request.getResponseHeader("Date");
+            const ServerDate2 = new Date();
+            const ServerDate3 = ServerDate2.toISOString();
+            if (ServerDate != null) {
+              const serverTime0 = Temporal.Instant.from(ServerDate3);
+              const serverTime = Temporal.Instant.from(
+                serverTime0.add({ hours: -12 })
+              ).toString();
+              return resolve(serverTime);
+            } else throw new Error("通信に失敗しました");
+          } else if (request.readyState === 4 && request.status === 0) {
+            return reject("通信に失敗しました");
+          }
+        };
+      });
       const Doc = await api.getDocument(
         Server.databaseID,
         Server.collectionID,
-        arg
+        arg,
+        [
+          Query.notEqual("deleted", [true]),
+          Query.greaterThan("$createdAt", date),
+        ]
       );
       const User = await api.getDocument(
         Server.databaseID,
         Server.usercollectionID,
         Doc.createUserId
       );
-      return { User, Doc };
+      if (Doc.$createdAt > date && Doc.deleted != true) {
+        return { User, Doc };
+      }
     } else {
       throw new Error("サーバーとの接続に失敗");
     }
