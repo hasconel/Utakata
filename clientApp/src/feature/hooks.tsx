@@ -6,29 +6,9 @@ import { Models, Query } from "appwrite";
 import { Temporal } from "temporal-polyfill";
 
 export const GetRankingList = () => {
-  const request = new XMLHttpRequest();
   const { isLoading, isError, data, error } = useQuery("rank", async () => {
     if (Server.databaseID && Server.subCollectionID) {
-      const date: string = await new Promise((resolve, reject) => {
-        request.open("HEAD", window.location.href, true);
-        request.send(null);
-        request.onreadystatechange = () => {
-          if (request.readyState === 4 && request.status !== 0) {
-            const ServerDate = request.getResponseHeader("Date");
-            const ServerDate2 = new Date();
-            const ServerDate3 = ServerDate2.toISOString();
-            if (ServerDate != null) {
-              const serverTime0 = Temporal.Instant.from(ServerDate3);
-              const serverTime = Temporal.Instant.from(
-                serverTime0.add({ hours: -12 })
-              ).toString();
-              return resolve(serverTime);
-            } else throw new Error("通信に失敗しました");
-          } else if (request.readyState === 4 && request.status === 0) {
-            return reject("通信に失敗しました");
-          }
-        };
-      });
+      const date = Temporal.Now.instant().add({ hours: -12 }).toString();
       const Doc = await api.listDocuments(
         Server.databaseID,
         Server.subCollectionID,
