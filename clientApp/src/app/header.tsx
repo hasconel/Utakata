@@ -3,8 +3,8 @@ import LoadingScreen from "@/contents/loading";
 import ModalWindow from "@/contents/modal";
 import api from "@/feature/api";
 import { GetLoginUser } from "@/feature/hooks";
+import { FireIcon } from "@heroicons/react/20/solid";
 import { Metric } from "@tremor/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,7 +15,17 @@ const Header = () => {
   const [modalBoolean, setModalBoolean] = useState(false);
   const [userStatusMenu, setUserStatusMenu] = useState(false);
   const router = useRouter();
-  const Hoge = () => {
+  const MainManu = () => {
+    return (
+      <Link href={"/ranking"}>
+        <button className="grid md:grid-cols-[24px_70px] mx-3 h-8 bottom-0 mt-1 gap-2 hover:bg-slate-500 overflow-hidden dark:bg-slate-800 bg-slate-300 rounded-full px-2">
+          <FireIcon className="my-auto h-6" />
+          <span className="text-left hidden my-auto md:block">Ranking</span>
+        </button>
+      </Link>
+    );
+  };
+  const AccountIcon = () => {
     const HeaderLoginUser = GetLoginUser();
     return (
       <>
@@ -154,7 +164,8 @@ const Header = () => {
             </div>
             <div className="flex justify-end content-end">
               {" "}
-              <Hoge />
+              <MainManu />
+              <AccountIcon />
             </div>
           </div>
         </div>

@@ -13,7 +13,6 @@ const GenqueStreamScreen = ({
   uid,
   ModalContentsFunc,
   setModalBoolean,
-  UserPost,
   Time,
 }: {
   uid: {
@@ -22,7 +21,6 @@ const GenqueStreamScreen = ({
   };
   ModalContentsFunc: Dispatch<SetStateAction<JSX.Element>>;
   setModalBoolean: Dispatch<SetStateAction<boolean>>;
-  UserPost: Models.Document[];
   Time?: string;
 }) => {
   const QueryTime: string[] = [];
@@ -40,8 +38,6 @@ const GenqueStreamScreen = ({
   const [StreamPostUserList, setStreamPostUserList] = useState<
     Models.Document[]
   >([]);
-  const [StreamUserPost, setStreamUserPost] =
-    useState<Models.Document[]>(UserPost);
   api
     .provider()
     .appwrite.subscribe(

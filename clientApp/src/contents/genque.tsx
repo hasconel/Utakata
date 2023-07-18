@@ -4,16 +4,11 @@ import Link from "next/link";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import Image from "next/image";
+import { HandThumbUpIcon } from "@heroicons/react/20/solid";
 import {
   NoSymbolIcon,
-  SpeakerXMarkIcon,
-  TrashIcon,
-  HandThumbUpIcon,
-  ChatBubbleOvalLeftEllipsisIcon,
   ChatBubbleOvalLeftIcon,
-} from "@heroicons/react/20/solid";
-import {
-  TrashIcon as OutLineTrashIcon,
+  TrashIcon,
   HandThumbUpIcon as OutLineHandThumbUpIcon,
 } from "@heroicons/react/24/outline";
 import { Card } from "@tremor/react";
@@ -25,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { ErrorMessage } from "@hookform/error-message";
 import { GetSingleGenque } from "@/feature/hooks";
+import HandleGenque from "./handleGenque";
 
 const Genque = ({
   data,
@@ -128,7 +124,7 @@ const Genque = ({
               data.$id,
               { GoodedUsers: newList }
             )
-            .catch((e) => console.log(e));
+            .catch();
           if (newGoodUsers) {
             setGoodCount(newGoodUsers.GoodedUsers.length);
           }
@@ -144,16 +140,14 @@ const Genque = ({
                 GoodedUsers: [currentUserId, ...GoodList.GoodedUsers],
               }
             )
-            .catch((e) => console.log(e));
+            .catch();
           if (newGoodUsers) {
             setGoodCount(newGoodUsers.GoodedUsers.length);
           }
           setGoodIcon(<HandThumbUpIcon className="h-4 " />);
           setCurrentUserGood(true);
         }
-      } catch {
-        (e: any) => console.log(e);
-      }
+      } catch {}
     }
     setGoodButtonLoading(false);
   };
@@ -259,8 +253,11 @@ const Genque = ({
   if (data.createUserId != UserDoc.$id) return <></>;
   if (data.deleted) return <></>;
   return (
-    <div className="grid grid-cols-[50px_100px_repeat(3,minmax(40px,1fr))_repeat(6,minmax(0,1fr))_100px] mt-1 bg-transparent">
-      <div id="thumbnail" className=" w-12  row-span-2 col-span-1 row-start-1">
+    <div className="grid grid-cols-[50px_1fr] mt-1 bg-transparent">
+      <div
+        id="thumbnail"
+        className="col-start-1  row-span-2 col-span-1 row-start-1"
+      >
         <img
           src={UserDoc.UserThumbnailURL}
           alt={UserDoc.DisplayName}
@@ -269,165 +266,177 @@ const Genque = ({
           className="rounded aspect-square"
         />
       </div>
-      <div className="row-start-1 col-start-2 col-span-10">
-        <Link href={`/users/${UserDoc.DisplayUID}`}>
-          <span id="DisplayName" className="">
-            {UserDoc.DisplayName}
-          </span>
-          <span id="DisplayUid" className="text-slate-500">
-            @{UserDoc.DisplayUID}
-          </span>
-        </Link>
+      <div className="row-start-1 col-start-2 col-span-1 w-full grid grid-cols-[1fr_120px]">
+        <div className="row-start-1 col-start-1 col-span-10">
+          <Link href={`/users/${UserDoc.DisplayUID}`}>
+            <span id="DisplayName" className="">
+              {UserDoc.DisplayName}
+            </span>
+            <span id="DisplayUid" className="text-slate-500">
+              @{UserDoc.DisplayUID}
+            </span>
+          </Link>
+        </div>
+        <div className="row-start-1 col-start-2 col-span-1 text-right">
+          <Link href={`/posts/${data.$id}`}>{Time}</Link>
+        </div>
       </div>
-      <div className="text-right">
-        <Link href={`/posts/${data.$id}`}>{Time}</Link>
-      </div>
-      <div
-        id="data"
-        className="break-words col-start-2 row-start-2 col-span-11"
-      >
+      <div id="data" className="break-words col-start-2 row-start-2 col-span-1">
         {BrData}
         {data.MediaURL ? (
-          <div id="mediaURL">
-            <img
-              src={data.MediaURL}
-              alt="media"
-              width={300}
-              height={300}
-              className="object-cover aspect-video  w-full"
-              onClick={() => {
-                clickModal(
-                  <div className="max-h-[90%] min-h-5 rounded w-full  bg-slate-700 ">
-                    <img
-                      src={data.MediaURL}
-                      alt="image"
-                      width={900}
-                      height={900}
-                      className="object-contain max-h-[90vh] w-fit "
-                    />
-                  </div>
-                );
-              }}
-            />
-          </div>
+          <>
+            <div id="mediaURL">
+              {data.MediaURLtype === "video" ? (
+                <>
+                  <video controls src={data.MediaURL} />
+                </>
+              ) : (
+                <>
+                  {data.MediaURLtype === "audio" ? (
+                    <>
+                      <audio controls src={data.MediaURL} />
+                    </>
+                  ) : (
+                    <>
+                      <img
+                        src={data.MediaURL}
+                        alt="media"
+                        width={300}
+                        height={300}
+                        className="object-cover aspect-video  w-full"
+                        onClick={() => {
+                          clickModal(
+                            <div className="max-h-[90%] min-h-5 rounded w-full  bg-slate-700 ">
+                              <img
+                                src={data.MediaURL}
+                                alt="image"
+                                width={900}
+                                height={900}
+                                className="object-contain max-h-[90vh] w-fit "
+                              />
+                            </div>
+                          );
+                        }}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </>
         ) : (
           <div id="ex">
             <UrlInText arg={data.data} />
           </div>
         )}
       </div>
-      <div
-        id="CreateTime"
-        className="col-span-2 row-start-3 h-5 overflow-hidden"
-      >
-        {TempPostTime.toZonedDateTimeISO(
-          NowTime.zonedDateTimeISO().timeZone
-        ).toLocaleString()}
-      </div>
-      <div>
-        <button
-          className="rounded-full flex items-center justify-center px-2 h-4 hover:bg-sky-600 hover:text-white"
-          onClick={() => handleGood()}
-          onMouseOver={() => {
-            if (currentUserGood) {
-              setGoodIcon(<OutLineHandThumbUpIcon className="h-4 " />);
-            } else {
-              setGoodIcon(<HandThumbUpIcon className="h-4 " />);
-            }
-          }}
-          onMouseLeave={() => {
-            if (currentUserGood) {
-              setGoodIcon(<HandThumbUpIcon className="h-4 " />);
-            } else {
-              setGoodIcon(<OutLineHandThumbUpIcon className="h-4 " />);
-            }
-          }}
-          disabled={goodButtonLoading}
+      <div className="row-start-3 col-start-1 col-span-2 grid grid-cols-[minmax(0,160px)_repeat(3,minmax(0,50px))_1fr]">
+        <div
+          id="CreateTime"
+          className="col-span-1 col-start-1 row-start-1 h-5 overflow-hidden"
         >
-          {GoodIcon}
-          {goodCount > 0 && goodCount}
-        </button>
-      </div>
-      <div>
-        {UserDoc.$id === currentUserId ? (
+          {TempPostTime.toZonedDateTimeISO(
+            NowTime.zonedDateTimeISO().timeZone
+          ).toLocaleString()}
+        </div>
+
+        <div className="col-start-2">
           <button
-            className="hover:bg-rose-600 rounded-full w-8 hover:text-white"
-            onClick={() => handleDelete()}
+            className="rounded-full flex items-center justify-center px-2 h-4 hover:bg-sky-600 hover:text-white"
+            onClick={() => handleGood()}
+            onMouseOver={() => {
+              if (currentUserGood) {
+                setGoodIcon(<OutLineHandThumbUpIcon className="h-4 " />);
+              } else {
+                setGoodIcon(<HandThumbUpIcon className="h-4 " />);
+              }
+            }}
+            onMouseLeave={() => {
+              if (currentUserGood) {
+                setGoodIcon(<HandThumbUpIcon className="h-4 " />);
+              } else {
+                setGoodIcon(<OutLineHandThumbUpIcon className="h-4 " />);
+              }
+            }}
+            disabled={goodButtonLoading}
           >
-            <TrashIcon className="h-4 mx-auto" />
+            {GoodIcon}
+            {goodCount > 0 && goodCount}
           </button>
-        ) : (
-          <button
-            className="hover:bg-rose-600 rounded-full w-8 hover:text-white"
-            onClick={() => {
-              clickModal(
-                <div className=" rounded-md w-full max-w-3xl dark:bg-slate-900 p-8 bg-slate-50">
-                  <div className="w-96">このユーザーをミュートしますか？</div>
-                  <figure className="max-w-full mx-2 mt-2 mb-6 p-4 rounded-md dark:bg-slate-700 bg-slate-200">
-                    <ListOfUser target={UserDoc.$id} />
-                  </figure>
-                  <div className="grid grid-cols-2">
-                    {" "}
-                    <div className="flex content-center justify-center  items-center">
-                      <button
-                        className="dark:bg-slate-800 bg-slate-400 hover:bg-rose-800 rounded py-2 w-32"
-                        onClick={() => MuteUser()}
-                      >
-                        ミュートする
-                      </button>
-                    </div>
-                    <div className="flex content-center justify-center  items-center">
-                      <button
-                        className="dark:bg-slate-800 bg-slate-400 hover:bg-slate-600 rounded py-2 w-32"
-                        onClick={() => setModalBoolean(false)}
-                        disabled={buttonLoading}
-                      >
-                        ミュートしない
-                      </button>
+        </div>
+
+        <div className="col-start-3">
+          {UserDoc.$id === currentUserId ? (
+            <button
+              className="hover:bg-rose-600 rounded-full w-8 hover:text-white"
+              onClick={() => handleDelete()}
+            >
+              <TrashIcon className="h-4 mx-auto" />
+            </button>
+          ) : (
+            <button
+              className="hover:bg-rose-600 rounded-full w-8 hover:text-white"
+              onClick={() => {
+                clickModal(
+                  <div className=" rounded-md w-full max-w-3xl dark:bg-slate-900 p-8 bg-slate-50">
+                    <div className="w-96">このユーザーをミュートしますか？</div>
+                    <figure className="max-w-full mx-2 mt-2 mb-6 p-4 rounded-md dark:bg-slate-700 bg-slate-200">
+                      <ListOfUser target={UserDoc.$id} />
+                    </figure>
+                    <div className="grid grid-cols-2">
+                      {" "}
+                      <div className="flex content-center justify-center  items-center">
+                        <button
+                          className="dark:bg-slate-800 bg-slate-400 hover:bg-rose-800 rounded py-2 w-32"
+                          onClick={() => MuteUser()}
+                        >
+                          ミュートする
+                        </button>
+                      </div>
+                      <div className="flex content-center justify-center  items-center">
+                        <button
+                          className="dark:bg-slate-800 bg-slate-400 hover:bg-slate-600 rounded py-2 w-32"
+                          onClick={() => setModalBoolean(false)}
+                          disabled={buttonLoading}
+                        >
+                          ミュートしない
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
+                );
+              }}
+            >
+              {<NoSymbolIcon className="h-4 mx-auto" />}
+            </button>
+          )}
+        </div>
+        <div className="col-start-4">
+          <button
+            className="hover:bg-sky-600 hover:text-white w-8 rounded-full"
+            onClick={() => {
+              setReplyWindowExist(!replyWindowExist);
+              ReplyForm.reset();
             }}
           >
-            {<NoSymbolIcon className="h-4 mx-auto" />}
+            <ChatBubbleOvalLeftIcon className="h-4 mx-auto " />
           </button>
-        )}
+        </div>
       </div>
-      <div>
-        <button
-          className="hover:bg-sky-600 hover:text-white w-8 rounded-full"
-          onClick={() => {
-            setReplyWindowExist(!replyWindowExist);
-            ReplyForm.reset();
-          }}
-        >
-          <ChatBubbleOvalLeftIcon className="h-4 mx-auto " />
-        </button>
-      </div>
+
       {replyWindowExist && (
-        <form
-          onSubmit={ReplyForm.handleSubmit(onReplySubmit)}
-          className="row-start-4 col-start-2 col-span-11 grid  grid-cols-[1fr_100px] mb-2"
-        >
-          <div className="col-span-2">
-            <textarea
-              className="w-full bg-transparent border border-slate-500"
-              {...ReplyForm.register("replyData", { required: true })}
-            >{`@${UserDoc.DisplayUID} `}</textarea>
-          </div>
-          <div className="col-start-1">
-            {ReplyForm.formState.errors.replyData && (
-              <span className="text-rose-800">本文は必須です</span>
-            )}
-          </div>
-          <div className="col-start-2">
-            <input
-              type="submit"
-              className="w-full h-full p-1 rounded-md bg-sky-500 hover:bg-sky-400 text-sm text-slate-900"
+        <>
+          <div className="row-start-4 col-start-2 col-span-1 w-full">
+            <HandleGenque
+              uid={currentUserId}
+              replyTo={data.$id}
+              defaultValue={`@${UserDoc.DisplayUID} `}
+              exFunc={() => {
+                setReplyWindowExist(false);
+              }}
             />
           </div>
-        </form>
+        </>
       )}
     </div>
   );
