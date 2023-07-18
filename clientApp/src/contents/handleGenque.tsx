@@ -64,22 +64,23 @@ const HandleGenque = ({
           ID.unique(),
           data.Image[0]
         );
-        if (CreateStrage.mimeType.match("image")) {
+        if (CreateStrage.mimeType.includes("image")) {
           imageURL = await api.getFilePreview(
             Server.bucketID,
             CreateStrage.$id
           );
           MediaURLtype = "image";
         } else {
-          if (CreateStrage.mimeType.match("video")) {
+          imageURL = await api
+            .provider()
+            .storage.getFileView(Server.bucketID, CreateStrage.$id);
+          if (CreateStrage.mimeType.includes("video")) {
             MediaURLtype = "video";
+          } else {
             if (CreateStrage.mimeType.match("audio")) {
               MediaURLtype = "audio";
             }
           }
-          imageURL = await api
-            .provider()
-            .storage.getFileView(Server.bucketID, CreateStrage.$id);
         }
         //        router.refresh();
       } catch {
@@ -97,8 +98,8 @@ const HandleGenque = ({
         createUserId: uid,
         replyTo: replyTo,
         MediaURL: imageURL,
-        MediaURLtype: MediaURLtype,
         deleted: false,
+        MediaURLtype: MediaURLtype,
       };
       const UploadData = JSON.stringify(PreUploadData);
       if (
@@ -206,7 +207,7 @@ const HandleGenque = ({
             className="hidden"
             type="file"
             id="file-input"
-            accept="image/*,video/mp4,audio/mp3,audio/wav"
+            accept="image/*,video/mp4,audio/mp3"
             {...Form.register("Image", {
               required: false,
             })}
