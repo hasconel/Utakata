@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Temporal } from "temporal-polyfill";
 import Image from "next/image";
-import { HandThumbUpIcon } from "@heroicons/react/20/solid";
+import { HandThumbUpIcon, PlayIcon } from "@heroicons/react/20/solid";
 import {
   NoSymbolIcon,
   ChatBubbleOvalLeftIcon,
@@ -294,7 +294,15 @@ const Genque = ({
                 <>
                   {data.MediaURLtype === "audio" ? (
                     <>
-                      <audio controls src={data.MediaURL} />
+                      <button
+                        onClick={() =>
+                          clickModal(<audio controls src={data.MediaURL} />)
+                        }
+                        className="rounded-xl m-2 px-4 bg-slate-400 hover:bg-slate-500 dark:bg-slate-600 grid gap-2 grid-cols-[32px_1fr]"
+                      >
+                        <PlayIcon />
+                        <span className="my-auto">音声</span>
+                      </button>
                     </>
                   ) : (
                     <>

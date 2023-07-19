@@ -25,7 +25,10 @@ const App = ({ postId }: { postId: string }) => {
         .then((d) => {
           setModalWindow(
             <>
-              <div className="rounded-md w-full max-w-3xl dark:bg-slate-900 p-4 bg-slate-50">
+              <div
+                className="
+              rounded-md w-full max-w-3xl dark:bg-slate-900 p-4 bg-slate-50"
+              >
                 {d.GoodedUsers[0] ? (
                   <div className="w-full">
                     <div className="text-sm w-96">GOODしているユーザー</div>
@@ -135,64 +138,67 @@ const App = ({ postId }: { postId: string }) => {
         Boolean={isModal}
         SetBoolean={setIsModal}
         fullContents={true}
-      />
-      <div className="grid grid-cols-[32px_1fr]">
-        <div className="col-start-2">
-          {ReplyTarget.map((d) => {
-            return (
-              <div key={d}>
-                <GenqueW key={d} target={d} />
+      />{" "}
+      <Card className="max-w-4xl mx-auto mt-8">
+        <div className="grid grid-cols-[32px_1fr]">
+          <div className="col-start-2">
+            {ReplyTarget.map((d) => {
+              return (
+                <div key={d}>
+                  <GenqueW key={d} target={d} />
+                </div>
+              );
+            })}
+          </div>
+          <div className="col-start-1 col-span-2">
+            <GenqueW target={postId} />
+            <button
+              className="
+            w-full p-1 rounded hover:bg-slate-500 dark:bg-slate-600 bg-slate-400"
+              onClick={() => getGoodUserList(postId)}
+            >
+              Goodしているユーザーを表示
+            </button>
+          </div>
+          <div className="col-start-2 mt-2">
+            {ReplyFromList.isLoading ? (
+              <div className="flex items-center justify-center">
+                <LoadingScreen />
               </div>
-            );
-          })}
-        </div>
-        <div className="col-start-1 col-span-2">
-          <GenqueW target={postId} />
-          <button
-            className="w-full p-1 rounded hover:bg-slate-500 dark:bg-slate-600 bg-slate-400"
-            onClick={() => getGoodUserList(postId)}
-          >
-            Goodしているユーザーを表示
-          </button>
-        </div>
-        <div className="col-start-2 mt-2">
-          {ReplyFromList.isLoading ? (
-            <div className="flex items-center justify-center">
-              <LoadingScreen />
-            </div>
-          ) : (
-            <>
-              {ReplyFromList.data && (
-                <>
-                  {ReplyFromList.data.docs.map((d) => {
-                    if (ReplyFromList.data) {
-                      const UserDataDoc = ReplyFromList.data.userList.find(
-                        (arg) => arg.$id === d.createUserId
-                      );
-                      if (UserDataDoc && LoginUser.data) {
-                        return (
-                          <div
-                            key={d.$id}
-                            className=" border-t  border-dark-tremor-content"
-                          >
-                            <Genque
-                              data={d}
-                              currentUserId={LoginUser.data.user.$id}
-                              UserDoc={UserDataDoc}
-                              ModalContentsFunc={setModalWindow}
-                              setModalBoolean={setIsModal}
-                            />
-                          </div>
+            ) : (
+              <>
+                {ReplyFromList.data && (
+                  <>
+                    {ReplyFromList.data.docs.map((d) => {
+                      if (ReplyFromList.data) {
+                        const UserDataDoc = ReplyFromList.data.userList.find(
+                          (arg) => arg.$id === d.createUserId
                         );
+                        if (UserDataDoc && LoginUser.data) {
+                          return (
+                            <div
+                              key={d.$id}
+                              className=" border-t  border-dark-tremor-content"
+                            >
+                              <Genque
+                                data={d}
+                                currentUserId={LoginUser.data.user.$id}
+                                UserDoc={UserDataDoc}
+                                ModalContentsFunc={setModalWindow}
+                                setModalBoolean={setIsModal}
+                              />
+                            </div>
+                          );
+                        }
                       }
-                    }
-                  })}
-                </>
-              )}
-            </>
-          )}
+                    })}
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </Card>
     </>
   );
 };

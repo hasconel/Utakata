@@ -31,7 +31,7 @@ const HandleGenque = ({
       if (FileArray[0]) {
         const file = FileArray[0];
         if (file.size < 3 * 1024 ** 2) {
-          if (file?.type.match(/(image|video\/mp4|audio\/mpeg|audio\/wav)/)) {
+          if (file?.type.match(/(image|video\/mp4|audio\/mpeg)/)) {
             const reader = new FileReader();
             reader.onloadend = () => {
               setPreviewUrl(reader.result as string);

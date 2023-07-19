@@ -1,9 +1,13 @@
-import Home0 from "./page0";
-
+"use client";
+import { QueryClientProvider, QueryClient } from "react-query";
+import HomeSite from "./app";
+const queryClient = new QueryClient();
 const Home = () => {
   return (
     <>
-      <Home0 />
+      <QueryClientProvider client={queryClient}>
+        <HomeSite />
+      </QueryClientProvider>
     </>
   );
 };

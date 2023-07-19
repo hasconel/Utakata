@@ -6,13 +6,12 @@ import ListOfUser from "@/contents/userlist";
 import { GetLoginUser, GetRankingList, GetSingleGenque } from "@/feature/hooks";
 import { UserGroupIcon } from "@heroicons/react/20/solid";
 import { UserGroupIcon as OutlineUserGroupIcon } from "@heroicons/react/24/outline";
-import { Metric } from "@tremor/react";
+import { Card, Metric } from "@tremor/react";
 import { Models } from "appwrite";
 import { useEffect, useState } from "react";
 
 const App = () => {
   const [isModal, setIsModal] = useState<boolean>(false);
-  const [rank, setRank] = useState(0);
   const [modalWindow, setModalWindow] = useState<JSX.Element>(<></>);
   const LoginUser = GetLoginUser();
   const RankingList = GetRankingList();
@@ -50,7 +49,7 @@ const App = () => {
         ) : (
           <>
             {LoginUser.data && Triger.data ? (
-              <div className="col-start-2 w-full grid grid-cols-[1fr_40px] gap-2 z-0">
+              <div className="col-start-2 w-full grid grid-cols-1 sm:grid-cols-[1fr_40px] gap-2 z-0">
                 <div className="col-start-1">
                   <Genque
                     ModalContentsFunc={setModalWindow}
@@ -60,21 +59,30 @@ const App = () => {
                     data={Triger.data.Doc}
                   />
                 </div>
-                <div className="col-start-2 flex justify-center items-center h-full w-full">
+                <div className="sm:col-start-2 mb-1 flex justify-center items-center h-full w-full">
                   <button
-                    className="w-full p-1 rounded text-center  hover:bg-slate-500 dark:bg-slate-600 bg-slate-400"
+                    className="w-full p-1 rounded text-center grid gap-2 grid-cols-2 sm:grid-cols-1 hover:bg-slate-500 dark:bg-slate-600 bg-slate-400"
                     onClick={() => getGoodUserList(target.GoodedUsers)}
                   >
                     {target.GoodedUsers.includes(LoginUser.data.user.$id) ? (
                       <>
-                        <UserGroupIcon height={32} />
-                        {target.GoodedUsers.length}
+                        <div className="flex justify-end items-center my-auto sm:justify-center">
+                          <UserGroupIcon className="h-5 sm:h-8" />
+                        </div>
+
+                        <div className="text-left sm:text-center my-auto">
+                          {target.GoodedUsers.length}
+                        </div>
                       </>
                     ) : (
                       <>
-                        <OutlineUserGroupIcon height={32} />
+                        <div className="flex justify-end items-center my-auto sm:justify-center">
+                          <OutlineUserGroupIcon className="h-5 sm:h-8" />
+                        </div>
                         {target.GoodedUsers.length > 0 && (
-                          <>{target.GoodedUsers.length}</>
+                          <div className="text-left sm:text-center my-auto">
+                            {target.GoodedUsers.length}
+                          </div>
                         )}
                       </>
                     )}
@@ -91,38 +99,41 @@ const App = () => {
   };
   return (
     <>
-      <Metric className="text-center w-full">Goodランキング</Metric>
-      <div className="border-t-2 mt-3 border-gray-500">
-        {RankingList.isLoading ? (
-          <>
-            <LoadingScreen />
-          </>
-        ) : (
-          <>
-            {RankingList.data && (
-              <>
-                {RankingList.data
-                  .sort((a, b) => {
-                    return b.GoodedUsers.length - a.GoodedUsers.length;
-                  })
-                  .map((d, index) => {
-                    return (
-                      <div
-                        key={d.$id}
-                        className="grid gap-1 border-b border-dark-tremor-content grid-cols-[32px_1fr] "
-                      >
-                        <div className="w-full text-center text-xl font-black my-auto">
-                          {index + 1}
+      {" "}
+      <Card className="max-w-4xl mx-auto mt-8">
+        <Metric className="text-center w-full">Goodランキング</Metric>
+        <div className="border-t-2 mt-3 border-gray-500">
+          {RankingList.isLoading ? (
+            <>
+              <LoadingScreen />
+            </>
+          ) : (
+            <>
+              {RankingList.data && (
+                <>
+                  {RankingList.data
+                    .sort((a, b) => {
+                      return b.GoodedUsers.length - a.GoodedUsers.length;
+                    })
+                    .map((d, index) => {
+                      return (
+                        <div
+                          key={d.$id}
+                          className="grid gap-1 border-b border-dark-tremor-content grid-cols-[32px_1fr] "
+                        >
+                          <div className="w-full text-center text-xl font-black my-auto">
+                            {index + 1}
+                          </div>
+                          <GenqueW target={d} />{" "}
                         </div>
-                        <GenqueW target={d} />{" "}
-                      </div>
-                    );
-                  })}
-              </>
-            )}
-          </>
-        )}
-      </div>{" "}
+                      );
+                    })}
+                </>
+              )}
+            </>
+          )}
+        </div>{" "}
+      </Card>{" "}
       <ModalWindow
         contents={modalWindow}
         Boolean={isModal}

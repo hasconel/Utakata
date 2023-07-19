@@ -7,9 +7,7 @@ const Home = ({ params }: { params: { post: string } }) => {
   return (
     <>
       <QueryClientProvider client={queryClient}>
-        <Card className="max-w-4xl mx-auto mt-8">
-          <App postId={params.post} />
-        </Card>
+        <App postId={params.post} />
       </QueryClientProvider>
     </>
   );

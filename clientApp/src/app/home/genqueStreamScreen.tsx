@@ -76,14 +76,9 @@ const GenqueStreamScreen = ({
         }
       }
     );
-  const clickModal = () => {
-    setModalBoolean(true);
-    ModalContentsFunc(<>やったね</>);
-  };
   return (
     <>
       <div className="w-full grid ">
-        {/*<button onClick={clickModal}>モーダル</button> */}
         <>
           {isLoading ? (
             <LoadingScreen />

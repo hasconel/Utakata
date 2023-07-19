@@ -37,6 +37,7 @@ const Header = () => {
           <>
             {HeaderLoginUser.data ? (
               <>
+                <MainManu />
                 <div>
                   <div className="relative">
                     <button
@@ -164,7 +165,6 @@ const Header = () => {
             </div>
             <div className="flex justify-end content-end">
               {" "}
-              <MainManu />
               <AccountIcon />
             </div>
           </div>

@@ -24,9 +24,60 @@ export const GetRankingList = () => {
   });
   return { isLoading, isError, data, error };
 };
+export const SearchGetGenques = (searchWord: string) => {
+  const { isLoading, isError, data, error } = useQuery(searchWord, async () => {
+    try {
+      if (
+        Server.databaseID != undefined &&
+        Server.collectionID != undefined &&
+        Server.usercollectionID != undefined
+      ) {
+        const PostQueries = [Query.search("data", searchWord), Query.limit(99)];
+        const initstream = await api.listDocuments(
+          Server.databaseID,
+          Server.collectionID,
+          PostQueries
+        );
+        //   console.log(initstream);
+        if (initstream != undefined) {
+          const date = Temporal.Now.instant().add({ hours: -12 }).toString();
+
+          const TrueDocList = initstream.documents.filter((d) => {
+            d.$createdAt > date && d.deleted === false;
+          });
+          const UserList0: string[] = Array.from(
+            new Set(
+              TrueDocList.map((d) => {
+                return d.createUserId;
+              })
+            )
+          ).filter((ag) => ag != null);
+          //   console.log(UserList0);
+          const UserList = await api.listDocuments(
+            Server.databaseID,
+            Server.usercollectionID,
+            [Query.equal("$id", UserList0)]
+          );
+          //   console.log(UserList);
+          return { docs: TrueDocList, userList: UserList.documents };
+        } else {
+          const NullList: Models.Document[] = [];
+          return { docs: NullList, userList: NullList };
+        }
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  });
+  return { isLoading, isError, data, error };
+};
 export const GetGenqueStream = (queries?: string[]) => {
   const request: XMLHttpRequest = new XMLHttpRequest();
-  const { isLoading, isError, data, error } = useQuery("genques", async () => {
+  let key = "genque";
+  if (queries) {
+    key = queries.toString();
+  }
+  const { isLoading, isError, data, error } = useQuery(key, async () => {
     try {
       if (
         Server.databaseID != undefined &&
@@ -59,13 +110,13 @@ export const GetGenqueStream = (queries?: string[]) => {
           Query.orderDesc("$createdAt"),
         ];
         if (queries != undefined) PostQueries = PostQueries.concat(queries);
-        //console.log(PostQueries);
+        // console.log(PostQueries);
         const initstream = await api.listDocuments(
           Server.databaseID,
           Server.collectionID,
           PostQueries
         );
-        //console.log(initstream);
+        //   console.log(initstream);
         if (initstream != undefined) {
           const UserList0: string[] = Array.from(
             new Set(
@@ -74,13 +125,13 @@ export const GetGenqueStream = (queries?: string[]) => {
               })
             )
           ).filter((ag) => ag != null);
-          //console.log(UserList0);
+          //   console.log(UserList0);
           const UserList = await api.listDocuments(
             Server.databaseID,
             Server.usercollectionID,
             [Query.equal("$id", UserList0)]
           );
-          //console.log(UserList);
+          //   console.log(UserList);
           return {
             docs: initstream.documents,
             userList: UserList.documents,
@@ -92,7 +143,9 @@ export const GetGenqueStream = (queries?: string[]) => {
           return { docs: NullList, userList: NullList, lastTime: "" };
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      //   console.log(e);
+    }
   });
   return { isLoading, isError, data, error };
 };
