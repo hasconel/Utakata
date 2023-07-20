@@ -11,10 +11,13 @@ import { useRouter } from "next/navigation";
 import { createHash } from "crypto";
 import LoadingScreen from "@/contents/loading";
 import { Server } from "@/feature/config";
+import ModalWindow from "@/contents/modal";
+import RulesPage from "@/contents/rules";
 type FormValues = {
   uname: string;
   email: string;
   password: string;
+  Rules: boolean;
 };
 export default function SignUpForm() {
   const {
@@ -23,6 +26,8 @@ export default function SignUpForm() {
     watch,
     formState: { errors },
   } = useForm<FormValues>();
+  const [isModal, setIsModal] = useState<boolean>(false);
+  const [ModalWindowContents, setModalWindowContents] = useState(<></>);
   const router = useRouter();
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
@@ -30,26 +35,33 @@ export default function SignUpForm() {
   const [buttonIsLoading, setButtonIsLoading] = useState(false);
   const onSubmit = async (data: FormValues) => {
     setButtonIsLoading(true);
-    try {
-      console.log(Server.deployPont);
-      await api.createAccount(data.email, data.password, data.uname);
-      await api
-        .provider()
-        .account.createVerification(
-          `${Server.deployPont}/auth/emailverification/`
+    if (data.Rules) {
+      try {
+        console.log(Server.deployPont);
+        await api.createAccount(data.email, data.password, data.uname);
+        await api
+          .provider()
+          .account.createVerification(
+            `${Server.deployPont}/auth/emailverification/`
+          );
+        setSuccesMessage(
+          `\"${data.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
         );
-      setSuccesMessage(
-        `\"${data.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
-      );
-      setTimeout(() => setButtonIsLoading(false), 2000);
-    } catch (e: any) {
-      // console.log(e.message);
-      setLoginError(e.message);
-      setButtonIsLoading(false);
+        setTimeout(() => setButtonIsLoading(false), 2000);
+      } catch (e: any) {
+        // console.log(e.message);
+        setLoginError(e.message);
+        setButtonIsLoading(false);
+      }
     }
   };
   return (
     <>
+      <ModalWindow
+        contents={ModalWindowContents}
+        Boolean={isModal}
+        SetBoolean={setIsModal}
+      />
       <Card className="max-w-lg mx-auto mt-8 gap-6">
         {LoginError && <AlertMessage message={LoginError} />}
         {succesMessage && (
@@ -103,19 +115,32 @@ export default function SignUpForm() {
               )}
             </i>
           </div>
-          <Button
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setModalWindowContents(
+                  <>
+                    <div className=" w-full max-h-[60vh] overflow-y-scroll">
+                      {" "}
+                      <RulesPage />
+                    </div>
+                  </>
+                );
+                setIsModal(true);
+              }}
+            >
+              利用規約
+            </button>
+            に同意します{" "}
+            <input type="checkbox" {...register("Rules", { required: true })} />
+          </div>
+          <input
             type="submit"
-            className="max-w-lg mt-4"
+            className="mt-4 p-2 rounded-md w-28 bg-sky-300 hover:bg-sky-500 dark:bg-sky-700"
             disabled={buttonIsLoading}
-          >
-            {buttonIsLoading ? (
-              <>
-                <LoadingScreen />
-              </>
-            ) : (
-              <>登録</>
-            )}
-          </Button>
+            value="登録"
+          ></input>
           <span className="ml-4 place-item-right -translate-y-0 ">
             アカウントを持っている方は<Link href="/login">ログイン</Link>
           </span>
