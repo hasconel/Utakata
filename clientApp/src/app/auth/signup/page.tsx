@@ -137,9 +137,9 @@ export default function SignUpForm() {
           </div>
           <input
             type="submit"
-            className="mt-4 p-2 rounded-md w-28 bg-sky-300 hover:bg-sky-500 dark:bg-sky-700"
+            className="mt-4 p-2 rounded-md w-28 bg-sky-300 hover:bg-sky-500 dark:bg-sky-700 disabled:bg-gray-500"
             disabled={buttonIsLoading}
-            value="登録"
+            value={buttonIsLoading ? "登録中…" : "登録"}
           ></input>
           <span className="ml-4 place-item-right -translate-y-0 ">
             アカウントを持っている方は<Link href="/login">ログイン</Link>

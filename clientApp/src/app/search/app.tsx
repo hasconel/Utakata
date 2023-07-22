@@ -19,7 +19,10 @@ const App = ({ query }: { query: string }) => {
     <>
       {" "}
       <Card className="max-w-4xl mx-auto mt-8">
-        <Metric className="text-center w-full">Goodランキング</Metric>
+        <Metric className="text-center w-full">
+          <span className="text-2xl">検索：</span>
+          {query}
+        </Metric>
         <div className="border-t-2 mt-3 border-gray-500">
           {Search.isLoading ? (
             <>
@@ -27,7 +30,7 @@ const App = ({ query }: { query: string }) => {
             </>
           ) : (
             <>
-              {Search.data && LoginUser.data && (
+              {Search.data && LoginUser.data ? (
                 <>
                   {Search.data.docs.map((d) => {
                     if (Search.data) {
@@ -35,7 +38,7 @@ const App = ({ query }: { query: string }) => {
                         (arg) => arg.$id === d.createUserId
                       );
                       if (UserDoc === undefined) {
-                        return <span key={d.$id}></span>;
+                        return <span key={d.$id}>ないです</span>;
                       } else;
                       {
                         if (LoginUser.data)
@@ -57,6 +60,8 @@ const App = ({ query }: { query: string }) => {
                     }
                   })}
                 </>
+              ) : (
+                <>ないです</>
               )}
             </>
           )}

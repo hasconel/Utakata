@@ -42,16 +42,14 @@ const ReplaceJSX = (
     if (result0 === undefined) {
       return <>{target}</>;
     } else {
-      let count = 0;
       return (
-        <>
+        <div className="max-w-full break-all sm:break-words">
           <Linkify options={options}>{result0}</Linkify>
-          {separate.map((d) => {
-            count += 1;
+          {separate.map((d, index) => {
             return (
-              <span key={count}>
+              <span key={index}>
                 {limit ? (
-                  <>{count < limit && <>{replaceto}</>}</>
+                  <>{index < limit && <>{replaceto}</>}</>
                 ) : (
                   <>{replaceto}</>
                 )}
@@ -59,7 +57,7 @@ const ReplaceJSX = (
               </span>
             );
           })}
-        </>
+        </div>
       );
     }
   }

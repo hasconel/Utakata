@@ -3,22 +3,61 @@ import LoadingScreen from "@/contents/loading";
 import ModalWindow from "@/contents/modal";
 import api from "@/feature/api";
 import { GetLoginUser } from "@/feature/hooks";
-import { FireIcon } from "@heroicons/react/20/solid";
+import { FireIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import { Metric } from "@tremor/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { QueryClientProvider, QueryClient } from "react-query";
 const queryClient = new QueryClient();
 
 const Header = () => {
-  const [modalBoolean, setModalBoolean] = useState(false);
-  const [userStatusMenu, setUserStatusMenu] = useState(false);
+  const Search = useForm<{ words: string }>();
+  const onSubmit = (data: { words: string }) => {
+    router.push(`/search?q=${data.words}`);
+    setModalBoolean(false);
+  };
   const router = useRouter();
-  const MainManu = () => {
+  const [modalBoolean, setModalBoolean] = useState(false);
+  const [modalContents, setModalContents] = useState(<></>);
+  const [userStatusMenu, setUserStatusMenu] = useState(false);
+  const SearchModal = () => (
+    <>
+      <form
+        onSubmit={Search.handleSubmit(onSubmit)}
+        className="flex justify-center items-center"
+      >
+        <input
+          type="text"
+          className="p-1 rounded bg-transparent border border-gray-600"
+          {...Search.register("words")}
+        />
+        <button className="ml-3 w-14 h-9 rounded dark:bg-sky-600 bg-sky-400 hover:bg-sky-500">
+          検索
+        </button>
+      </form>
+    </>
+  );
+  const SearchButton = () => {
+    return (
+      <button
+        onClick={() => {
+          setModalContents(SearchModal());
+          Search.resetField("words");
+          setModalBoolean(true);
+        }}
+        className="grid md:grid-cols-[24px_60px] mr-3 h-8 bottom-0 mt-1 gap-2 hover:bg-slate-500 overflow-hidden dark:bg-slate-800 bg-slate-300 rounded-full px-2"
+      >
+        <MagnifyingGlassIcon className="my-auto h-6" />
+        <span className="text-left hidden my-auto md:block">Search</span>
+      </button>
+    );
+  };
+  const MainMenu = () => {
     return (
       <Link href={"/ranking"}>
-        <button className="grid md:grid-cols-[24px_70px] mx-3 h-8 bottom-0 mt-1 gap-2 hover:bg-slate-500 overflow-hidden dark:bg-slate-800 bg-slate-300 rounded-full px-2">
+        <button className="grid md:grid-cols-[24px_70px] mr-3 h-8 bottom-0 mt-1 gap-2 hover:bg-slate-500 overflow-hidden dark:bg-slate-800 bg-slate-300 rounded-full px-2">
           <FireIcon className="my-auto h-6" />
           <span className="text-left hidden my-auto md:block">Ranking</span>
         </button>
@@ -37,7 +76,8 @@ const Header = () => {
           <>
             {HeaderLoginUser.data ? (
               <>
-                <MainManu />
+                <MainMenu />
+                <SearchButton />
                 <div>
                   <div className="relative">
                     <button
@@ -98,6 +138,34 @@ const Header = () => {
                             className="hover:bg-slate-500 w-full text-left px-4 py-2 border-slate-400"
                             onClick={() => {
                               setUserStatusMenu(false);
+
+                              setModalContents(
+                                <>
+                                  <div>Utakataからログアウトしますか？</div>
+                                  <div className="grid grid-cols-2 gap-6 pr-8">
+                                    <div>
+                                      <button
+                                        className="w-full m-4 bg-rose-900 hover:bg-rose-600 text-white py-1 px-4 rounded-md"
+                                        onClick={() => {
+                                          api.deleteCurrentSession();
+                                          setModalBoolean(false);
+                                          router.push("/");
+                                        }}
+                                      >
+                                        ログアウトする
+                                      </button>
+                                    </div>
+                                    <div>
+                                      <button
+                                        className="w-full m-4 bg-slate-700 hover:bg-slate-600 py-1 text-white px-4 rounded-md"
+                                        onClick={() => setModalBoolean(false)}
+                                      >
+                                        Utakataにとどまる
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              );
                               setModalBoolean(true);
                             }}
                           >
@@ -128,33 +196,7 @@ const Header = () => {
         <ModalWindow
           Boolean={modalBoolean}
           SetBoolean={setModalBoolean}
-          contents={
-            <>
-              <div>Utakataからログアウトしますか？</div>
-              <div className="grid grid-cols-2 gap-6 pr-8">
-                <div>
-                  <button
-                    className="w-full m-4 bg-rose-900 hover:bg-rose-600 text-white py-1 px-4 rounded-md"
-                    onClick={() => {
-                      api.deleteCurrentSession();
-                      setModalBoolean(false);
-                      router.push("/");
-                    }}
-                  >
-                    ログアウトする
-                  </button>
-                </div>
-                <div>
-                  <button
-                    className="w-full m-4 bg-slate-700 hover:bg-slate-600 py-1 text-white px-4 rounded-md"
-                    onClick={() => setModalBoolean(false)}
-                  >
-                    Utakataにとどまる
-                  </button>
-                </div>
-              </div>
-            </>
-          }
+          contents={modalContents}
         />
         <div className="flex justify-center items-center bg-gradient-to-r from-slate-800 to-sky-900">
           <div className="grid grid-cols-2 gap-4 p-2 w-screen max-w-7xl">

@@ -38,13 +38,15 @@ export const SearchGetGenques = (searchWord: string) => {
           Server.collectionID,
           PostQueries
         );
-        //   console.log(initstream);
+        //console.log(initstream);
         if (initstream != undefined) {
           const date = Temporal.Now.instant().add({ hours: -12 }).toString();
-
+          //console.log(date);
           const TrueDocList = initstream.documents.filter((d) => {
-            d.$createdAt > date && d.deleted === false;
+            //console.log(d.$createdAt > date);
+            return d.$createdAt > date && d.deleted === false;
           });
+          //console.log(TrueDocList);
           const UserList0: string[] = Array.from(
             new Set(
               TrueDocList.map((d) => {
@@ -52,7 +54,7 @@ export const SearchGetGenques = (searchWord: string) => {
               })
             )
           ).filter((ag) => ag != null);
-          //   console.log(UserList0);
+          //  console.log(UserList0);
           const UserList = await api.listDocuments(
             Server.databaseID,
             Server.usercollectionID,
@@ -66,7 +68,7 @@ export const SearchGetGenques = (searchWord: string) => {
         }
       }
     } catch (e) {
-      console.log(e);
+      //console.log(e);
     }
   });
   return { isLoading, isError, data, error };
