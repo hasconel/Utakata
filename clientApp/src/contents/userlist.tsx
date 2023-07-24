@@ -4,6 +4,7 @@ import { useQuery } from "react-query";
 import api from "@/feature/api";
 import { Metric } from "@tremor/react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const ListOfUser = ({ target }: { target: string }) => {
   const [imageURL, setImageURL] = useState<string>("");
@@ -53,8 +54,10 @@ const ListOfUser = ({ target }: { target: string }) => {
               />
             </div>
             <div className="col-start-2 row-start-1">
-              <span>{DisplayName}</span>
-              <span className="text-gray-500">{DisplayUID}</span>
+              <Link href={`/home/${DisplayUID}`}>
+                <span>{DisplayName}</span>
+                <span className="text-gray-500">{DisplayUID}</span>
+              </Link>
             </div>
             <div className="col-start-2 row-start-2">{ProfileBIO}</div>
           </>

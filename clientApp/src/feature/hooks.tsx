@@ -17,7 +17,38 @@ export const GetRankingList = () => {
       const Result = Doc.documents.sort((a, b) => {
         return b.GoodedUsers.length - a.GoodedUsers.length;
       });
-      return Result.slice(0, 15);
+      let TrueResult: {
+        Good: Models.Document;
+        data: Models.Document;
+        user: Models.Document;
+      }[] = [];
+      Result.slice(0, 15).map(async (d) => {
+        if (
+          Server.databaseID &&
+          Server.collectionID &&
+          Server.usercollectionID
+        ) {
+          const bool = await api.getDocument(
+            Server.databaseID,
+            Server.collectionID,
+            d.$id
+          );
+          if (!bool.deleted) {
+            const User = await api.getDocument(
+              Server.databaseID,
+              Server.usercollectionID,
+              bool.createUserId
+            );
+            TrueResult.push({ Good: d, data: bool, user: User });
+            // console.log(TrueResult);
+          }
+        }
+      });
+      if (TrueResult.length < 10) {
+        return TrueResult;
+      } else {
+        return TrueResult.slice(0, 10);
+      }
     } else {
       throw new Error("サーバーとの接続に失敗");
     }

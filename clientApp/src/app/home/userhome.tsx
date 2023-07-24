@@ -1,5 +1,4 @@
 "use client";
-//・検索機能・利用規約 ・githubのreadme
 import { Models } from "appwrite";
 import GenqueStreamScreen from "./genqueStreamScreen";
 import { useState } from "react";
