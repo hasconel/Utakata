@@ -42,59 +42,57 @@ const App = () => {
   };
   const GenqueW = ({
     target,
+    currentUserId,
   }: {
     target: {
       Good: Models.Document;
       data: Models.Document;
       user: Models.Document;
     };
+    currentUserId: string;
   }) => {
     return (
       <>
-        {LoginUser.data ? (
-          <div className="col-start-2 w-full grid grid-cols-1 sm:grid-cols-[1fr_40px] gap-2 z-0">
-            <div className="col-start-1">
-              <Genque
-                ModalContentsFunc={setModalWindow}
-                setModalBoolean={setIsModal}
-                currentUserId={LoginUser.data.user.$id}
-                UserDoc={target.user}
-                data={target.data}
-              />
-            </div>
-            <div className="sm:col-start-2 mb-1 flex justify-center items-center h-full w-full">
-              <button
-                className="w-full p-1 rounded text-center grid gap-2 grid-cols-2 sm:grid-cols-1 hover:bg-slate-500 dark:bg-slate-600 bg-slate-400"
-                onClick={() => getGoodUserList(target.Good.GoodedUsers)}
-              >
-                {target.Good.GoodedUsers.includes(LoginUser.data.user.$id) ? (
-                  <>
-                    <div className="flex justify-end items-center my-auto sm:justify-center">
-                      <UserGroupIcon className="h-5 sm:h-8" />
-                    </div>
+        <div className="col-start-2 w-full grid grid-cols-1 sm:grid-cols-[1fr_40px] gap-2 z-0">
+          <div className="col-start-1">
+            <Genque
+              ModalContentsFunc={setModalWindow}
+              setModalBoolean={setIsModal}
+              currentUserId={currentUserId}
+              UserDoc={target.user}
+              data={target.data}
+            />
+          </div>
+          <div className="sm:col-start-2 mb-1 flex justify-center items-center h-full w-full">
+            <button
+              className="w-full p-1 rounded text-center grid gap-2 grid-cols-2 sm:grid-cols-1 hover:bg-slate-500 dark:bg-slate-600 bg-slate-400"
+              onClick={() => getGoodUserList(target.Good.GoodedUsers)}
+            >
+              {target.Good.GoodedUsers.includes(currentUserId) ? (
+                <>
+                  <div className="flex justify-end items-center my-auto sm:justify-center">
+                    <UserGroupIcon className="h-5 sm:h-8" />
+                  </div>
 
+                  <div className="text-left sm:text-center my-auto">
+                    {target.Good.GoodedUsers.length}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-end items-center my-auto sm:justify-center">
+                    <OutlineUserGroupIcon className="h-5 sm:h-8" />
+                  </div>
+                  {target.Good.GoodedUsers.length > 0 && (
                     <div className="text-left sm:text-center my-auto">
                       {target.Good.GoodedUsers.length}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-end items-center my-auto sm:justify-center">
-                      <OutlineUserGroupIcon className="h-5 sm:h-8" />
-                    </div>
-                    {target.Good.GoodedUsers.length > 0 && (
-                      <div className="text-left sm:text-center my-auto">
-                        {target.Good.GoodedUsers.length}
-                      </div>
-                    )}
-                  </>
-                )}
-              </button>
-            </div>
+                  )}
+                </>
+              )}
+            </button>
           </div>
-        ) : (
-          <>削除されたつぶやき</>
-        )}
+        </div>
       </>
     );
   };
@@ -104,21 +102,16 @@ const App = () => {
       <Card className="max-w-4xl mx-auto mt-8">
         <Metric className="text-center w-full">Goodランキング</Metric>
         <div className="border-t-2 mt-3 border-gray-500">
-          {RankingList.isLoading ? (
+          {RankingList.isLoading || LoginUser.isLoading ? (
             <>
               <LoadingScreen />
             </>
           ) : (
             <>
-              {RankingList.data && (
+              {RankingList.data && LoginUser.data && (
                 <>
-                  {RankingList.data
-                    .sort((a, b) => {
-                      return (
-                        b.Good.GoodedUsers.length - a.Good.GoodedUsers.length
-                      );
-                    })
-                    .map((d, index) => {
+                  {RankingList.data.map((d, index) => {
+                    if (d != undefined && LoginUser.data?.user.$id) {
                       return (
                         <div
                           key={d.data.$id}
@@ -127,10 +120,14 @@ const App = () => {
                           <div className="w-full text-center text-xl font-black my-auto">
                             {index + 1}
                           </div>
-                          <GenqueW target={d} />{" "}
+                          <GenqueW
+                            target={d}
+                            currentUserId={LoginUser.data?.user.$id}
+                          />{" "}
                         </div>
                       );
-                    })}
+                    }
+                  })}
                 </>
               )}
             </>

@@ -7,48 +7,57 @@ import { Temporal } from "temporal-polyfill";
 
 export const GetRankingList = () => {
   const { isLoading, isError, data, error } = useQuery("rank", async () => {
-    if (Server.databaseID && Server.subCollectionID) {
+    if (
+      Server.databaseID &&
+      Server.subCollectionID &&
+      Server.collectionID &&
+      Server.usercollectionID
+    ) {
       const date = Temporal.Now.instant().add({ hours: -12 }).toString();
       const Doc = await api.listDocuments(
         Server.databaseID,
         Server.subCollectionID,
         [Query.limit(99), Query.greaterThan("$createdAt", date)]
       );
-      const Result = Doc.documents.sort((a, b) => {
-        return b.GoodedUsers.length - a.GoodedUsers.length;
-      });
-      let TrueResult: {
-        Good: Models.Document;
-        data: Models.Document;
-        user: Models.Document;
-      }[] = [];
-      Result.slice(0, 15).map(async (d) => {
-        if (
-          Server.databaseID &&
-          Server.collectionID &&
-          Server.usercollectionID
-        ) {
-          const bool = await api.getDocument(
-            Server.databaseID,
-            Server.collectionID,
-            d.$id
+      const Result = Doc.documents
+        .sort((a, b) => {
+          return b.GoodedUsers.length - a.GoodedUsers.length;
+        })
+        .slice(0, 15);
+      const ResultIDs = Result.map((d) => d.$id);
+      const ResultData = await api.listDocuments(
+        Server.databaseID,
+        Server.collectionID,
+        [
+          Query.equal("$id", ResultIDs),
+          Query.greaterThan("$createdAt", date),
+          Query.equal("deleted", false),
+        ]
+      );
+      const UserIdList: string[] = Array.from(
+        new Set(ResultData.documents.map((d) => d.createUserId))
+      );
+      const ResultUserDataList = await api.listDocuments(
+        Server.databaseID,
+        Server.usercollectionID,
+        [Query.equal("$id", UserIdList)]
+      );
+      const TrueResult = ResultData.documents.map((d) => {
+        const resData = Result.find((dd) => dd.$id === d.$id);
+        if (resData && d.createUserId) {
+          const resUData = ResultUserDataList.documents.find(
+            (du) => du.$id === d.createUserId
           );
-          if (!bool.deleted) {
-            const User = await api.getDocument(
-              Server.databaseID,
-              Server.usercollectionID,
-              bool.createUserId
-            );
-            TrueResult.push({ Good: d, data: bool, user: User });
-            // console.log(TrueResult);
-          }
+          if (resUData) return { Good: resData, data: d, user: resUData };
         }
       });
-      if (TrueResult.length < 10) {
-        return TrueResult;
-      } else {
-        return TrueResult.slice(0, 10);
-      }
+      return TrueResult.sort((a, b) => {
+        if (a && b) {
+          return b.Good.GoodedUsers.length - a.Good.GoodedUsers.length;
+        } else {
+          return 0;
+        }
+      }).slice(0, 10);
     } else {
       throw new Error("サーバーとの接続に失敗");
     }
