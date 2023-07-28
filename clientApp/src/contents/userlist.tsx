@@ -54,7 +54,7 @@ const ListOfUser = ({ target }: { target: string }) => {
               />
             </div>
             <div className="col-start-2 row-start-1">
-              <Link href={`/home/${DisplayUID}`}>
+              <Link href={`/users/${DisplayUID}`}>
                 <span>{DisplayName}</span>
                 <span className="text-gray-500">{DisplayUID}</span>
               </Link>

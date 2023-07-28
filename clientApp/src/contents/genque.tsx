@@ -281,7 +281,10 @@ const Genque = ({
           <Link href={`/posts/${data.$id}`}>{Time}</Link>
         </div>
       </div>
-      <div id="data" className="break-words col-start-2 row-start-2 col-span-1">
+      <div
+        id="data"
+        className="sm:break-words break-all col-start-2 row-start-2 col-span-1"
+      >
         {BrData}
         {data.MediaURL ? (
           <>

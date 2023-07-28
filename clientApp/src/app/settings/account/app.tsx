@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import api from "@/feature/api";
 import { AlertMessage } from "@/contents/alert";
+import { ID } from "appwrite";
 
 const AccountSetting = () => {
   const [passwordHidden, setPasswordHidden] = useState(true);
@@ -330,7 +331,7 @@ const AccountSetting = () => {
       try {
         await api
           .provider()
-          .account.updateEmail("deleted@deleted.dsdfasdf", data.password)
+          .account.updateEmail(`deleted@deleted.${ID.unique}`, data.password)
           .then(() => {
             api.provider().account.updateStatus();
           });
