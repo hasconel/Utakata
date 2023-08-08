@@ -17,7 +17,7 @@ const App = () => {
             <>
               welcome to Utakata!
               <button
-                className="p-2 m-1 bg-slate-700 hover:bg-slate-500"
+                className="p-2 m-1 bg-slate-700 hover:bg-slate-500 text-slate-100"
                 onClick={() => router.push("/home")}
               >
                 ホームへ移動する
