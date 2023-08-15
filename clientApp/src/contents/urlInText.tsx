@@ -1,4 +1,5 @@
 const UrlInText = ({ arg }: { arg: string }) => {
+  const mql = window.matchMedia("(prefers-color-scheme: dark)");
   if (arg == null) {
     return <></>;
   } else {
@@ -58,7 +59,10 @@ const UrlInText = ({ arg }: { arg: string }) => {
           if (TwitURLs != null) {
             return (
               <>
-                <blockquote data-theme="dark" className="twitter-tweet w-full">
+                <blockquote
+                  data-theme={mql.matches ? "dark" : "light"}
+                  className="twitter-tweet w-full"
+                >
                   <a href={TwitURLs[0]}></a>
                 </blockquote>
                 <script
