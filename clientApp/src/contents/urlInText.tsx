@@ -1,3 +1,5 @@
+import { log } from "console";
+
 const UrlInText = ({ arg }: { arg: string }) => {
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
   if (arg == null) {
@@ -53,17 +55,18 @@ const UrlInText = ({ arg }: { arg: string }) => {
             </>
           );
         } else {
-          const TwitURLs = arg.match(
-            /https?:\/\/twitter\.com\/\w+\/status\/[0-9]{6,22}/
+          const XURLs = arg.match(
+            /https?:\/\/(twitter|x)\.com\/\w+\/status\/[0-9]{6,22}/
           );
-          if (TwitURLs != null) {
+          if (XURLs != null) {
+            const ResultPath = new URL(XURLs[0]).pathname;
             return (
               <>
                 <blockquote
                   data-theme={mql.matches ? "dark" : "light"}
                   className="twitter-tweet w-full"
                 >
-                  <a href={TwitURLs[0]}></a>
+                  <a href={`https://twitter.com${ResultPath}`}></a>
                 </blockquote>
                 <script
                   async
