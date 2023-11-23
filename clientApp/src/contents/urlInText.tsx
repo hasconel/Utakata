@@ -6,7 +6,7 @@ const UrlInText = ({ arg }: { arg: string }) => {
     return <></>;
   } else {
     const NiconicoURLs = arg.match(
-      /https?:\/\/(\w+\.)?nicovideo\.jp\/watch\/sm[0-9]+/
+      /https?:\/\/(((\w+\.)?nicovideo\.jp\/watch)|nico\.ms)\/sm[0-9]+/
     );
     if (NiconicoURLs != null) {
       const ResultPath = NiconicoURLs[0].split("/watch/")[1];
