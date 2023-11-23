@@ -9,7 +9,10 @@ const UrlInText = ({ arg }: { arg: string }) => {
       /https?:\/\/(((\w+\.)?nicovideo\.jp\/watch)|nico\.ms)\/sm[0-9]+/
     );
     if (NiconicoURLs != null) {
-      const ResultPath = NiconicoURLs[0].split("/watch/")[1];
+      let ResultPath = NiconicoURLs[0].split("/watch/")[1];
+      if (ResultPath == null) {
+        ResultPath = NiconicoURLs[0].split(".ms/")[1];
+      }
       return (
         <>
           <iframe

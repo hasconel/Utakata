@@ -34,3 +34,5 @@ clientApp/.vercel
 # typescript
 clientApp/*.tsbuildinfo
 clientApp/next-env.d.ts
+.vercel
+.env*.local
