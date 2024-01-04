@@ -5,7 +5,7 @@ import { Button, TextInput, Card, Flex, Metric } from "@tremor/react";
 import api from "@/feature/api";
 import { AlertMessage } from "@/contents/alert";
 import { useState } from "react";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
+//import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LoadingScreen from "@/contents/loading";
@@ -67,19 +67,7 @@ export default function LoginForm() {
               errorMessage={errors.password?.type}
               {...register("password", { required: true, maxLength: 100 })}
             />{" "}
-            <i
-              onClick={() => setPasswordHidden(!passwordHidden)}
-              aria-hidden="true"
-              className="absolute top-2 right-10 z-10 h-14 grid -translate-y-0 w-5 place-items-left"
-            >
-              {passwordHidden ? (
-                <>
-                  <EyeSlashIcon />
-                </>
-              ) : (
-                <EyeIcon />
-              )}
-            </i>
+
           </div>
           <Button
             type="submit"
