@@ -28,10 +28,9 @@ export default function SignUpForm() {
   } = useForm<FormValues>();
   const [isModal, setIsModal] = useState<boolean>(false);
   const [ModalWindowContents, setModalWindowContents] = useState(<></>);
-  const router = useRouter();
   const [LoginError, setLoginError] = useState<string | null>(null);
   const [passwordHidden, setPasswordHidden] = useState(true);
-  const [succesMessage, setSuccesMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [buttonIsLoading, setButtonIsLoading] = useState(false);
   const onSubmit = async (data: FormValues) => {
     setButtonIsLoading(true);
@@ -44,7 +43,7 @@ export default function SignUpForm() {
           .account.createVerification(
             `${Server.deployPont}/auth/emailverification/`
           );
-        setSuccesMessage(
+        setSuccessMessage(
           `\"${data.email}\"に認証メールを送信しました。メールに記載されたリンクをクリックし、認証を完了させてください。`
         );
         setTimeout(() => setButtonIsLoading(false), 2000);
@@ -64,12 +63,13 @@ export default function SignUpForm() {
       />
       <Card className="max-w-lg mx-auto mt-8 gap-6">
         {LoginError && <AlertMessage message={LoginError} />}
-        {succesMessage && (
+        {successMessage && (
           <>
-            <div className="w-full  rounded bg-blue-500">{succesMessage}</div>
+            <div className="w-full  rounded bg-blue-500">{successMessage}</div>
           </>
         )}
         <form onSubmit={handleSubmit(onSubmit)}>
+          ユーザーIDは5文字以上の半角英数字で登録可能です。
           <TextInput
             type="text"
             placeholder="ユーザーID"
