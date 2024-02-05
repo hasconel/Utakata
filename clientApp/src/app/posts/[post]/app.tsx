@@ -11,7 +11,6 @@ import {
 } from "@/feature/hooks";
 import { Card, Metric } from "@tremor/react";
 import { Models, Query } from "appwrite";
-import { GetServerSideProps } from "next";
 import { useEffect, useState } from "react";
 
 const App = ({ postId }: { postId: string }) => {
@@ -105,21 +104,21 @@ const App = ({ postId }: { postId: string }) => {
   }, []);
   const ReplyFromList = GetGenqueStream([Query.equal("replyTo", [postId])]);
   const GenqueW = ({ target }: { target: string }) => {
-    const Triger = GetSingleGenque(target);
+    const Trigger = GetSingleGenque(target);
     return (
       <>
-        {Triger.isLoading ? (
+        {Trigger.isLoading ? (
           <LoadingScreen />
         ) : (
           <>
-            {LoginUser.data && Triger.data ? (
+            {LoginUser.data && Trigger.data ? (
               <div className=" border-b  border-dark-tremor-content">
                 <Genque
                   ModalContentsFunc={setModalWindow}
                   setModalBoolean={setIsModal}
                   currentUserId={LoginUser.data.user.$id}
-                  UserDoc={Triger.data.User}
-                  data={Triger.data.Doc}
+                  UserDoc={Trigger.data.User}
+                  data={Trigger.data.Doc}
                 />
               </div>
             ) : (

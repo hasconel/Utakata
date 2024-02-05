@@ -13,6 +13,7 @@ export const GetRankingList = () => {
       Server.collectionID &&
       Server.usercollectionID
     ) {
+      //↓１２時間制限
       const date = Temporal.Now.instant().add({ hours: -12 }).toString();
       const Doc = await api.listDocuments(
         Server.databaseID,
@@ -80,7 +81,8 @@ export const SearchGetGenques = (searchWord: string) => {
         );
         //console.log(initstream);
         if (initstream != undefined) {
-          const date = Temporal.Now.instant().add({ hours: -12 }).toString();
+          //↓７日制限（手打ちゴリ押しでごめん）
+          const date = Temporal.Now.instant().add({ hours: -84 }).toString();
           //console.log(date);
           const TrueDocList = initstream.documents.filter((d) => {
             //console.log(d.$createdAt > date);
@@ -137,7 +139,7 @@ export const GetGenqueStream = (queries?: string[]) => {
               if (ServerDate != null) {
                 const serverTime0 = Temporal.Instant.from(ServerDate3);
                 const serverTime = Temporal.Instant.from(
-                  serverTime0.add({ hours: -12 })
+                  serverTime0.add({ hours: -84 })
                 ).toString();
                 return resolve(serverTime);
               } else throw new Error("通信に失敗しました");
@@ -206,7 +208,7 @@ export const GetSingleGenque = (arg: string) => {
             if (ServerDate != null) {
               const serverTime0 = Temporal.Instant.from(ServerDate3);
               const serverTime = Temporal.Instant.from(
-                serverTime0.add({ hours: -12 })
+                serverTime0.add({ hours: -84 })
               ).toString();
               return resolve(serverTime);
             } else throw new Error("通信に失敗しました");
@@ -218,11 +220,7 @@ export const GetSingleGenque = (arg: string) => {
       const Doc = await api.getDocument(
         Server.databaseID,
         Server.collectionID,
-        arg,
-        [
-          Query.notEqual("deleted", [true]),
-          Query.greaterThan("$createdAt", date),
-        ]
+        arg
       );
       const User = await api.getDocument(
         Server.databaseID,
