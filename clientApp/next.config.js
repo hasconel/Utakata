@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {},
   images: {
-    domains: [process.env.NEXT_PUBLIC_REACT_APP_ENDPOINT],
+    domains: ["localhost", "127.0.0.1", "192.168.1.121"],
   },
+  reactStrictMode: true,
 };
 
 module.exports = nextConfig;

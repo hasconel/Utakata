@@ -18,7 +18,7 @@ clientApp/build
 # misc
 clientApp/.DS_Store
 clientApp/*.pem
-appwrite/
+appwrite/appwrite.json
 
 # debug
 clientApp/npm-debug.log*
@@ -26,7 +26,7 @@ clientApp/yarn-debug.log*
 clientApp/yarn-error.log*
 
 # local env files
-clientApp/.env*.local
+clientApp/.env*
 
 # vercel
 clientApp/.vercel
