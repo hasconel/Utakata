@@ -13,6 +13,7 @@ import sanitizeHtml from "sanitize-html";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ID, Permission } from "node-appwrite";
 import { MeiliSearch } from "meilisearch";
+import { getActorByUserId } from "@/lib/appwrite/database";
 
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -220,5 +221,42 @@ export async function deliverActivity(
       }
     })
   );
+}
+
+/**
+ * 投稿を作成する関数！✨
+ * @param input 投稿の入力値
+ * @returns 投稿の結果
+ */
+export async function createPost(input: PostInput) {
+  const { account } = await createSessionClient();
+  const user = await account.get();
+  if (!user) {
+    throw new Error("ユーザーが見つからないよ！💦");
+  }
+
+  const actor = await getActorByUserId(user.$id);
+  if (!actor) {
+    throw new Error("アクターが見つからないよ！💦");
+  }
+
+  const { document, activity, parentActorId } = await savePost(
+    input,
+    {
+      actorId: actor.actorId,
+      preferredUsername: actor.preferredUsername,
+      displayName: actor.displayName || "",
+      followers: actor.followers || [],
+      avatarUrl: actor.avatarUrl || "",
+    }
+  );
+
+  await deliverActivity(activity, {
+    actorId: actor.actorId,
+    privateKey: actor.privateKey,
+    followers: actor.followers || [],
+  }, parentActorId);
+
+  return document;
 }
 

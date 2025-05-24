@@ -90,7 +90,7 @@ const ActorSchema = z.object({
    * @param doc Appwriteのドキュメント
    * @returns docがActor型かどうか
    */
-  function isActor(doc: Models.Document): boolean {
+  export async function isActor(doc: Models.Document): Promise<boolean> {
     const result = ActorSchema.safeParse(doc);
     return result.success;
   }

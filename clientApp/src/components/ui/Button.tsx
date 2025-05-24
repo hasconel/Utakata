@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 // キラキラなボタンのバリエーション！✨
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'gradient';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'gradient' | 'destructive';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type ButtonShape = 'default' | 'pill' | 'square';
 
@@ -37,6 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ghost: 'text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-900/20 focus:ring-purple-500 dark:focus:ring-pink-500',
       link: 'text-purple-600 dark:text-pink-500 hover:underline focus:ring-purple-500 dark:focus:ring-pink-500',
       gradient: 'bg-gradient-to-r from-purple-600 to-pink-500 dark:from-pink-500 dark:to-purple-600 text-white hover:from-purple-700 hover:to-pink-600 dark:hover:from-pink-600 dark:hover:to-purple-700 focus:ring-purple-500 dark:focus:ring-pink-500',
+      destructive: 'bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600 focus:ring-red-500 dark:focus:ring-red-500',
     };
 
     const sizes = {

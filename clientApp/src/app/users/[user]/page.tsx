@@ -190,7 +190,7 @@ export default function UserProfile() {
           </p>
         ) : (
           posts.map((post) => (
-            <PostCard key={post.$id} post={post}  canDelete={isOwnProfile} isLiked={post.LikedActors?.includes(user?.actorId || "") || false}/>
+            <PostCard key={post.$id} post={post} />
           ))
         )}
       </div>

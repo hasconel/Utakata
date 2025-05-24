@@ -19,7 +19,7 @@ export default function Notification({ notification }: { notification: Notificat
                 setPost(post);
             });
         }
-    }, []);
+    }, [notification.from, notification.target]);
     return (
         <div className="w-full">
              <Card className={`w-full ${notification.read ? "dark:bg-gray-800 bg-gray-100" : "dark:bg-gray-700 bg-gray-200"} flex flex-col gap-2 p-2`}>       

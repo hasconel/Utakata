@@ -124,7 +124,7 @@ export default function TimelinePage() {
       ) : (
         <div className="space-y-6">
           {posts.map((post) => (
-            <PostCard key={post.$id} post={post} canDelete={post.attributedTo === `https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${session?.name}`} isLiked={post.LikedActors?.includes(`https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${session?.name}` || "") || false} />
+            <PostCard key={post.$id} post={post} />
           ))}
           
           {/* もっと見るボタン！✨ */}

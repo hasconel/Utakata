@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: { username: s
     if (body.type === "Follow") {
       // フォロー処理
       await databases.updateDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, actor.$id, {
-        followers: [...actor.followers, body.actor],
+        followers: [...(actor.followers || []), body.actor],
       });
       // Acceptアクティビティを返す
       const accept = {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: { username: s
       return NextResponse.json(accept, { status: 200 });
     } else if (body.type === "Create" && body.object.type === "Note") {
       // 投稿（リプライなど）を保存
-      const sanitizedDisplayName = sanitizeHtml(actor.displayName, {
+      const sanitizedDisplayName = sanitizeHtml(actor.displayName || "", {
         allowedTags: [],
         allowedAttributes: {},
       });
