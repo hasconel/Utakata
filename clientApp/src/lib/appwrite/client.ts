@@ -124,7 +124,9 @@ export async function getImagePreview(fileImageId: ActivityPubImage, height?: nu
   }
 
   try {
-    return await storage.getFilePreview(
+    return await storage.getFileView(process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!, fileId)
+    /**
+    storage.getFilePreview(
       process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
       fileId,
       width,
@@ -139,6 +141,7 @@ export async function getImagePreview(fileImageId: ActivityPubImage, height?: nu
       undefined,
       ImageFormat.Webp
     );
+    */
   } catch (error) {
     console.error("プレビューの取得に失敗しました:", error);
     return null;
