@@ -80,7 +80,7 @@ export async function POST(request: Request) {
             return result.toString();
           }
           const fileUrl = await fileUrlfunc(fileId);
-          console.log("画像URL取得完了！✨", fileUrl);
+          //console.log("画像URL取得完了！✨", fileUrl);
           // ActivityPubImageオブジェクトを作成
           const activityPubImage = {
             type: "Image" as const,
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       }
     });
   } catch (error: any) {
-    console.error("投稿に失敗したよ！💦", error);
+    //console.error("投稿に失敗したよ！💦", error);
     return NextResponse.json(
       { error: error.message || "投稿に失敗したよ！もう一度試してみてね！💦" },
       { 
@@ -229,7 +229,7 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error("投稿の取得に失敗したよ！💦", error);
+    //console.error("投稿の取得に失敗したよ！💦", error);
     return NextResponse.json(
       { error: "投稿の取得に失敗したよ！💦" },
       { 

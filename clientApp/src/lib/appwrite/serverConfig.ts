@@ -31,7 +31,7 @@ export async function createSessionClient(cookie?: Request) {
     let session: string | undefined;
     if (cookie) {
       session = cookie.headers.get("cookie")?.split("; ")[0].split("=")[1];
-      console.log("session", session);
+      //console.log("session", session);
     } else {
       session = cookies().get("my-custom-session")?.value;
     }
@@ -161,7 +161,7 @@ export async function followUser(userId: string) {
       console.log("ユーザーが見つからないわ！💦");
       return { error: "ユーザーが見つからないわ！💦" };
     }
-    console.log("session", session);
+    //console.log("session", session);
     // 自分のユーザー情報を取得
     const { documents: [currentUser] } = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,

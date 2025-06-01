@@ -59,9 +59,9 @@ export default function SearchPage() {
         return postData;
       }));
       setPosts(postlist);
-      console.log(postlist);
+      //console.log(postlist);
     } catch (error) {
-      console.error('検索に失敗したよ！💦', error);
+      //console.error('検索に失敗したよ！💦', error);
       setPosts([]);
     } finally {
       setIsLoading(false);
