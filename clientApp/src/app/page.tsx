@@ -1,7 +1,9 @@
+"use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getLoggedInUser } from "@/lib/appwrite/serverConfig";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 interface CTAButtonProps {
   href: string;
   text: string;
@@ -13,7 +15,7 @@ const CTAButton = ({ href, text, primary = false }: CTAButtonProps) => (
     href={href}
     className={`px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 ${
       primary
-        ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
+        ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 hover:from-pink-600 hover:to-purple-600"
         : "bg-white/80 text-purple-600 dark:bg-gray-800/80 dark:text-purple-300 border-2 border-purple-600 dark:border-pink-500 hover:bg-purple-50 dark:hover:bg-gray-700 shadow-md hover:shadow-lg backdrop-blur-sm"
     }`}
     aria-label={text}
@@ -22,14 +24,42 @@ const CTAButton = ({ href, text, primary = false }: CTAButtonProps) => (
   </Link>
 );
 
-export default async function Home() {
-  const currentUser = await getLoggedInUser().catch((err:any)=>{
-    
-  });
-  if(currentUser){
-    redirect("/timeline");
+export default function HomePage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const user = await getLoggedInUser();
+        if (user.$id) {
+          router.push("/timeline");
+        }
+      } catch (err) {
+        //console.error('セッションチェックに失敗したよ！💦', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkSession();
+  }, []);
+  //console.log(user);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
+      </div>
+    );
   }
+
   return (
+    <>
+    {isLoading ? (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
+      </div>
+    ) : (
+    <>
     <div>
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24">
         <div className="relative">
@@ -119,6 +149,9 @@ export default async function Home() {
         </div>
       </main>
     </div>
+    </>
+    )}
+    </>
   );
 }
 

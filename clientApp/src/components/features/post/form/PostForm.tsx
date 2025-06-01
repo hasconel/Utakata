@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Alert from "@/components/ui/Alert";
-import ReplyToPost from "./ReplyToPost";
+import ReplyToPost from "../reply/ReplyToPost";
 import { Post } from "@/lib/appwrite/posts";
 import { Button } from "@/components/ui/Button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/Textarea";
+//import { Label } from "@/components/ui/label";
+//import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ImagePlus, X } from "lucide-react";
 import { fetchReplyToPost } from "@/lib/appwrite/client";
 
@@ -20,6 +19,7 @@ import { fetchReplyToPost } from "@/lib/appwrite/client";
 interface PostFormProps {
   post?: { activityId: string; username: string };
   onClose?: () => void;
+  isReplyDisplay?: boolean;
 }
 
 /**
@@ -27,11 +27,11 @@ interface PostFormProps {
  * 新しい投稿やリプライを作成できるよ！💖
  * 画像も追加できるし、公開範囲も選べるよ！🎀
  */
-export default function PostForm({ post, onClose }: PostFormProps) {
+export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFormProps) {
   // 投稿内容の状態！✨
   const [content, setContent] = useState(post ? `@${post.username} ` : "");
   // 公開範囲の状態！✨
-  const [visibility, setVisibility] = useState<"public" | "followers">("followers");
+  //const [visibility, setVisibility] = useState<"public" | "followers">("followers");
   // エラーメッセージの状態！✨
   const [error, setError] = useState<string | null>(null);
   // リプライ先の投稿の状態！✨
@@ -121,7 +121,7 @@ export default function PostForm({ post, onClose }: PostFormProps) {
         },
         body: JSON.stringify({
           content,
-          visibility,
+          visibility: "followers",
           images: imageData,
           inReplyTo: isReply ? post.activityId : undefined,
         }),
@@ -149,23 +149,23 @@ export default function PostForm({ post, onClose }: PostFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* リプライ先の投稿を表示するよ！✨ */}
-      {replyToPost && <ReplyToPost post={replyToPost} />}
+      {replyToPost && isReplyDisplay && <ReplyToPost post={replyToPost} />}
 
       <div className="space-y-4">
         {/* 投稿内容の入力エリア！✨ */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 p-4 border-2 border-purple-100 dark:border-pink-100">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group">
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="キラキラな投稿を書いてね！✨"
-            className="w-full p-4 bg-transparent border-none focus:ring-0 resize-none text-lg placeholder-purple-300 dark:placeholder-pink-300"
+            className="w-full p-4 bg-transparent border-none rounded-3xl focus:ring-0 resize-none text-lg placeholder-purple-300 dark:placeholder-pink-300 group-hover:placeholder-purple-400 dark:group-hover:placeholder-pink-400 transition-all duration-300"
             rows={3}
             required
           />
         </div>
         {/* エラーメッセージを表示するよ！✨ */}
         {error && (
-          <div className="p-4 rounded-xl bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-200 border-2 border-red-200 dark:border-red-800">
+          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-200 border-2 border-red-200 dark:border-red-800 animate-bounce">
             <p className="font-bold">エラーが発生したよ！💦</p>
             <p>{error}</p>
           </div>
@@ -180,11 +180,11 @@ export default function PostForm({ post, onClose }: PostFormProps) {
               <img
                 src={url}
                 alt={`プレビュー ${index + 1}`}
-                className="w-full h-32 object-cover rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border-2 border-purple-100 dark:border-pink-100"
+                className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
               />
               <button
                 onClick={() => handleRemoveImage(index)}
-                className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/70 hover:scale-110"
+                className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 active:scale-95"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -194,15 +194,15 @@ export default function PostForm({ post, onClose }: PostFormProps) {
       )}
 
       {/* 画像追加と公開範囲の設定エリア！✨ */}
-      <div className="flex justify-between items-center gap-4">
+      <div className="flex justify-between items-center gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 bg-purple-100 dark:bg-pink-100 text-purple-600 dark:text-pink-600 hover:bg-purple-200 dark:hover:bg-pink-200 transition-all duration-200 hover:scale-105 active:scale-95 rounded-xl border-2 border-purple-200 dark:border-pink-200"
+          className="flex items-center gap-2 bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-900/30 transition-all duration-300 hover:scale-105 active:scale-95 rounded-xl border-2 border-pink-200 dark:border-pink-800"
         >
           <ImagePlus className="w-4 h-4" />
-          画像を追加 📸
+          画像追加 📸
         </Button>
         <input
           type="file"
@@ -213,51 +213,57 @@ export default function PostForm({ post, onClose }: PostFormProps) {
           className="hidden"
         />
 
-        {/* 公開範囲の設定！✨ */}
-        <RadioGroup
-          value={visibility}
-          onValueChange={(value) => setVisibility(value as "public" | "followers")}
-          className="flex items-center gap-4 invisible"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="public" id="public" className="text-purple-600 dark:text-pink-600" />
-            <Label htmlFor="public" className="text-purple-600 dark:text-pink-600">公開</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="followers" id="followers" className="text-purple-600 dark:text-pink-600" />
-            <Label htmlFor="followers" className="text-purple-600 dark:text-pink-600">フォロワー限定</Label>
-          </div>
-        </RadioGroup>
-      
-
       {/* 投稿ボタンエリア！✨ */}
-      <div className="flex items-center justify-end space-x-4">
-        <button
+      <div className="flex items-center justify-end gap-4">
+        <Button
           type="submit"
           disabled={isSubmitting || (!content.trim() && images.length === 0)}
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 dark:hover:from-pink-700 dark:hover:to-purple-700 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+          className="px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 dark:from-pink-600 dark:via-purple-500 dark:to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:via-pink-600 hover:to-purple-700 dark:hover:from-pink-700 dark:hover:via-purple-600 dark:hover:to-pink-700 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg hover:shadow-xl"
           aria-label={isReply ? "リプライを投稿" : "投稿する"}
         >
           {isSubmitting ? (
             <span className="animate-spin">🌀</span>
           ) : isReply ? (
-            "リプライ！💖"
+            <>
+              <span className="animate-bounce">💭</span>
+              リプライ！💖
+            </>
           ) : (
-            "投稿する！💖"
+            <>
+              <span className="animate-bounce">✨</span>
+              投稿する！💖
+            </>
           )}
-        </button>
-        </div>
+        </Button>
         {isReply && (
-          <button
+          <Button
             type="button"
             onClick={onClose}
-            className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 hover:scale-105 active:scale-95 transition-all duration-200 border-2 border-gray-200 dark:border-gray-700"
+            className="px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 text-gray-800 dark:text-gray-200 rounded-2xl hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-700 dark:hover:to-gray-600 hover:scale-105 active:scale-95 transition-all duration-300 border-2 border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg"
             aria-label="キャンセル"
           >
             キャンセル
-          </button>
+          </Button>
         )}
       </div>
+        {/* 公開範囲の設定！✨ 
+        <RadioGroup
+          value={visibility}
+          onValueChange={(value) => setVisibility(value as "public" | "followers")}
+          className="flex items-center gap-4"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="public" id="public" className="text-pink-600" />
+            <Label htmlFor="public" className="text-pink-600">公開</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="followers" id="followers" className="text-pink-600" />
+            <Label htmlFor="followers" className="text-pink-600">Utakata限定</Label>
+          </div>
+        </RadioGroup>
+        */}
+      </div>
+
     </form>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
-import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/appwrite/auth";
 
 /**
@@ -11,12 +10,11 @@ import { signOut } from "@/lib/appwrite/auth";
  */
 export default function LogoutButton() {
   const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
 
   const handleLogout = async () => {
     try {
       await signOut();
-      router.push("/auth/login");
+      window.location.href = "/login";
     } catch (error) {
       console.error("ログアウトに失敗したよ！💦", error);
     }

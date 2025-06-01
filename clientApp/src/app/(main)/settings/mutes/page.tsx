@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { getLoggedInUser,  unmuteUser } from "@/lib/appwrite/serverConfig";
-import { redirect } from "next/navigation";
 import { UserCard } from "@/components/features/user/UserCard";
 import { Button } from "@/components/ui/Button";
 import { getActorByUserId, getActorById } from "@/lib/appwrite/database";
-import { useTheme } from "@/lib/theme/ThemeContext";
 interface User {
   preferredUsername: string;
   displayName?: string;

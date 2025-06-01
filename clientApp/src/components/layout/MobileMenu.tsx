@@ -1,87 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { Models } from "appwrite";
+import { Menu } from "lucide-react";
 import Link from "next/link";
-import LogoutButton from "../features/auth/LogoutButton";
-import { Home, Bell, MessageSquare, LogIn, UserPlus, Menu } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/Sheet";
 
 interface MobileMenuProps {
-  isLoggedIn: boolean;
+  user: Models.User<Models.Preferences> | null;
 }
 
-export default function MobileMenu({ isLoggedIn }: MobileMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const toggleMenu = () => setIsOpen(!isOpen);
-
+export function MobileMenu({ user }: MobileMenuProps) {
   return (
-    <div className="relative">
-      <button
-        onClick={toggleMenu}
-        className="p-2 rounded-xl text-purple-600 dark:text-pink-500 hover:bg-purple-100 dark:hover:bg-pink-100/20 transition-all duration-200 hover:scale-105 active:scale-95"
-        aria-label={isOpen ? "メニューを閉じる" : "メニューを開く"}
-      >
-        <Menu className="w-6 h-6" />
-      </button>
-
-      {isOpen && (
-        <nav
-          className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-gray-800 shadow-lg border-2 border-purple-100 dark:border-pink-100 p-4 space-y-2 animate-in slide-in-from-top-2 duration-200"
-          aria-label="モバイルナビゲーション"
-        >
-          {isLoggedIn ? (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="sm" className="md:hidden p-2">
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">メニューを開く</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>メニュー</SheetTitle>
+        </SheetHeader>
+        <nav className="flex flex-col space-y-4 mt-4">
+          <Link href="/" className="text-sm font-medium">
+            ホーム
+          </Link>
+          {user ? (
             <>
-              <Link
-                href="/timeline"
-                className="flex items-center gap-3 py-3 px-4 text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-50/20 rounded-xl transition-all duration-200 group"
-                onClick={toggleMenu}
-              >
-                <Home className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                <span>タイムライン</span>
+              <Link href="/notifications" className="text-sm font-medium">
+                通知
               </Link>
-              <Link
-                href="/notifications"
-                className="flex items-center gap-3 py-3 px-4 text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-50/20 rounded-xl transition-all duration-200 group"
-                onClick={toggleMenu}
-              >
-                <Bell className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                <span>通知</span>
+              <Link href="/settings" className="text-sm font-medium">
+                設定
               </Link>
-              <Link
-                href="/messages"
-                className="flex items-center gap-3 py-3 px-4 text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-50/20 rounded-xl transition-all duration-200 group"
-                onClick={toggleMenu}
-              >
-                <MessageSquare className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                <span>メッセージ</span>
+              <Link href="/logout" className="text-sm font-medium">
+                ログアウト
               </Link>
-              <div className="h-px bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-800 dark:to-pink-800 my-2" />
-              <div className="px-4">
-                <LogoutButton />
-              </div>
             </>
           ) : (
             <>
-              <Link
-                href="/login"
-                className="flex items-center gap-3 py-3 px-4 text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-50/20 rounded-xl transition-all duration-200 group"
-                onClick={toggleMenu}
-              >
-                <LogIn className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                <span>ログイン</span>
+              <Link href="/login" className="text-sm font-medium">
+                ログイン
               </Link>
-              <Link
-                href="/register"
-                className="flex items-center gap-3 py-3 px-4 text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-50/20 rounded-xl transition-all duration-200 group"
-                onClick={toggleMenu}
-              >
-                <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                <span>新規登録</span>
+              <Link href="/signup" className="text-sm font-medium">
+                新規登録
               </Link>
             </>
           )}
         </nav>
-      )}
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

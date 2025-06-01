@@ -12,6 +12,7 @@ export interface Actor {
   preferredUsername: string;
   name?: string;
   summary?: string;
+  avatarUrl?: string;
   inbox: string;
   outbox: string;
   followers?: string;

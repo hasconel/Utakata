@@ -8,7 +8,6 @@ import { createAdminClient, createSessionClient, deletePost } from "./serverConf
 import { cookies } from "next/headers";
 import {  createDecipheriv } from "crypto";
 const ENCRYPTION_KEY = Buffer.from(process.env.APPWRITE_ENCRYPTION_KEY!, "hex");
-const IV_LENGTH = 16;
 
 /**
  * 復号化！🔓
@@ -26,26 +25,28 @@ function decrypt(encrypted: string): string {
 }
 
 export async function signInWithEmail(formData:{email:string,password:string}) {
-
   const email = formData.email;
   const password = formData.password;
   const { account } = await createAdminClient();
-  try{
-  const session = await account.createEmailPasswordSession(email, password);
+  try {
+    const session = await account.createEmailPasswordSession(email, password);
 
-  (await cookies()).set("my-custom-session", session.secret, {
-    path: "/",
-    httpOnly: true,
-    sameSite: "strict",
-    secure: true,
-  });
-  return session;
-  }catch(error:any){
-    throw new Error("no account found")
+    (await cookies()).set("my-custom-session", session.secret, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "strict",
+      secure: true,
+    });
+    return session;
+  } catch (error: any) {
+    console.error("ログインエラー:", error);
+    if (error.code === 401) {
+      throw new Error("メールアドレスかパスワードが間違ってるよ！💦");
+    }
+    throw new Error("ログインに失敗したよ！もう一度試してみてね！��");
   }
-
-  
 }
+
 /**
  * サインアウト
  * @returns サインアウト成功かどうか

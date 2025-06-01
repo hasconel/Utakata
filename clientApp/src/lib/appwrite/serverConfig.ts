@@ -1,14 +1,15 @@
 "use server";
-import { Client, Account, Databases, Storage, ImageFormat,Users, Query, ID, Permission, Role } from "node-appwrite";
+import { Client, Account, Databases, Storage, Users, Query, ID,  } from "node-appwrite";
 import { InputFile } from "node-appwrite/file";
 import { getImageUrl } from "./client";
 import { cookies } from "next/headers";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { Actor,getActorById,getActorByUserId } from "./database";
+import { getActorByUserId } from "./database";
 import { formatDateForUrl } from "@/lib/utils/date";
 import { MeiliSearch } from "meilisearch";
+import { Post } from "@/lib/appwrite/posts";
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
   apiKey: process.env.MEILISEARCH_API_KEY!,
@@ -25,18 +26,33 @@ const client = new Client()
  * セッションクライアントを作成！✨
  * ログイン済みユーザーのセッションで接続するよ！💖
  */
-export async function createSessionClient() {
+export async function createSessionClient(cookie?: Request) {
   try {
-    const session = cookies().get("my-custom-session");
-    if (!session?.value) throw new Error("セッションが見つからないよ！💦");
-    client.setSession(session.value);
+    let session: string | undefined;
+    if (cookie) {
+      session = cookie.headers.get("cookie")?.split("; ")[0].split("=")[1];
+      console.log("session", session);
+    } else {
+      session = cookies().get("my-custom-session")?.value;
+    }
+    if (session) {
+      client.setSession(session);
+    } else {
+      throw new Error("セッションが見つからないよ！💦");
+    }
+    if (!session) throw new Error("セッションが見つからないよ！💦");
+    client.setSession(session);
     return {
       account: new Account(client),
       databases: new Databases(client),
       storage: new Storage(client),
     };
-  } catch (error) {
-    throw error;
+  } catch (error: any) {
+    console.error("セッションエラー:", error);
+    if (error.code === 401) {
+      throw new Error("ログインが必要だよ！💦 もう一度ログインしてね！✨");
+    }
+    throw new Error("セッションの取得に失敗したよ！💦");
   }
 }
 
@@ -49,8 +65,11 @@ export async function getLoggedInUser() {
     const { account } = await createSessionClient();
     return await account.get();
   } catch (error: any) {
-    throw new Error("セッションが見つからないよ！💦");
-    
+    console.error("セッションエラー:", error);
+    if (error.code === 401) {
+      throw new Error("ログインが必要だよ！💦 もう一度ログインしてね！✨");
+    }
+    throw new Error("セッションの取得に失敗したよ！💦");
   }
 }
 
@@ -180,8 +199,7 @@ export async function followUser(userId: string) {
         to: targetUser.actorId,
         message: `${currentUser.displayName}さんにフォローされました！`,
         read: false
-      },
-      [Permission.read(Role.user(targetUser.$id)), Permission.write(Role.user(targetUser.$id))]
+      }
     );
     //console.log("フォロワーとして追加成功！✨");
     return { message: "フォロー成功！✨" };
@@ -313,13 +331,6 @@ export async function unmuteUser(ActorId: string) {
   }
 }
 
-function isActor(user:any): user is Actor {
-  if(user.$id !== undefined && user.actorId !== undefined && user.preferredUsername !== undefined && user.displayName !== undefined && user.followers !== undefined && user.privateKey !== undefined && user.userId !== undefined && user.mutedUsers !== undefined && user.following !== undefined){
-    return true;
-  }
-  return false;
-}
-
 /**
  * 投稿の削除
  * @param postId 削除する投稿の$id
@@ -367,10 +378,10 @@ export async function likePost(postId: string) {
       throw new Error("ユーザーが見つからないわ！💦");
     }
     // 投稿の情報を取得
-    const { documents: [post] } = await databases.listDocuments(
+    const post = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      [Query.equal("$id", [postId])]
+      postId
     );
     if (!post) {
       throw new Error("投稿が見つからないわ！💦");
@@ -385,9 +396,7 @@ export async function likePost(postId: string) {
         LikedActors: [...(post.LikedActors || []), currentUser.actorId]
       }
     );
-    const targetActorID = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [
-      Query.equal("actorId", post.attributedTo),
-    ]).then(res=>res.documents[0].$id);
+
     await databases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
@@ -400,7 +409,6 @@ export async function likePost(postId: string) {
         message: `${currentUser.displayName}さんがあなたの投稿をいいねしました！`,
         read: false
       },
-      [Permission.read(Role.user(targetActorID)), Permission.write(Role.user(targetActorID))]
     )
 
     return true;
@@ -536,20 +544,23 @@ export async function updateProfile( displayName?: string, bio?: string, avatarU
  * @returns 通知一覧
  */
 export async function getUserNotifications() {
-  const { databases } = await createSessionClient();
+  const { databases,account } = await createSessionClient();
+  const session = await account.get();
   const { documents } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!
+    process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+    [Query.equal("to", `https://${process.env.APPWRITE_DOMAIN}/users/${session.name}`),Query.orderDesc("$createdAt"),Query.greaterThan("$updatedAt",new Date(Date.now()-1000*60*60*84).toISOString())]
   );
   return documents
 }
 
 export async function getUnreadNotifications() {
-  const { databases } = await createSessionClient();
+  const { databases ,account} = await createSessionClient();
+  const session = await account.get();
   const { documents } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-    [Query.equal("read", false)]
+    [Query.equal("read", false),Query.equal("to", `https://${process.env.APPWRITE_DOMAIN}/users/${session.name}`)]
   );
   return documents;
 }
@@ -593,6 +604,7 @@ export async function getPostFromActivityId(activityId:string): Promise<{
   canDelete: boolean;
   isLiked: boolean;
 }> {
+  try{
   const { databases,account } = await createSessionClient();
   const session = await account.get();
   const { documents } = await databases.listDocuments(
@@ -626,4 +638,192 @@ export async function getPostFromActivityId(activityId:string): Promise<{
     isLiked: subdocument.LikedActors.map((actor:string)=>actor.split("/").pop() || "").includes(session.name),
   }
   return post;
+} catch (error) {
+  console.error("ポストの取得に失敗したわ！💦", error);
+  throw error;
+} 
+}
+
+/**
+ * タイムラインの投稿を取得！✨
+ * 投稿をキラキラに取得するよ！💖
+ */
+export async function getTimelinePosts(limit: number = 10, offset: number = 0) {
+  try {
+    const { databases } = await createSessionClient();
+    const { documents } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      [
+        Query.orderDesc('$createdAt'),
+        Query.limit(limit),
+        Query.offset(offset)
+      ]
+    );
+    const posts : Post[] = await Promise.all(documents.map(async (document) => {
+      const subdocument = await databases.getDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
+        document.$id
+      );
+      return {
+        $id: document.$id,
+        $createdAt: document.$createdAt,
+        $updatedAt: document.$updatedAt,
+        content: document.content,
+        username: document.username,
+        activityId: document.activityId,
+        to: document.to,
+        cc: document.cc,
+        published: document.published,
+        inReplyTo: document.inReplyTo,
+        replyCount: subdocument.replyCount,
+        attributedTo: document.attributedTo,
+        attachment: document.attachment,
+        LikedActors: subdocument.LikedActors,
+        avatar: document.avatar,
+      } as unknown as Post;
+    }));
+    return posts;
+  } catch (error) {
+    throw new Error('タイムラインの取得に失敗したよ！💦');
+  }
+}
+
+/**
+ * 投稿の詳細を取得！✨
+ * 投稿をキラキラに取得するよ！💖
+ */
+export async function getPost(postId: string) {
+  try {
+    const { databases } = await createSessionClient();
+    const document = await databases.getDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      postId
+    );
+    return document;
+  } catch (error) {
+    throw new Error('投稿の取得に失敗したよ！💦');
+  }
+}
+
+/**
+ * 投稿を作成！✨
+ * 投稿をキラキラに作成するよ！💖
+ */
+export async function createPost(content: string, userId: string, images?: File[]) {
+  try {
+    const { databases } = await createSessionClient();
+    const document = await databases.createDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      'unique()',
+      {
+        content,
+        images: images || [],
+        createdAt: new Date().toISOString(),
+        published: new Date().toISOString(),
+        to: '',
+        cc: [],
+        inReplyTo: null,
+        replyCount: 0,
+        attributedTo: userId,
+        attachment: [],
+        LikedActors: []
+      }
+    );
+    return document;
+  } catch (error) {
+    throw new Error('投稿の作成に失敗したよ！💦');
+  }
+}
+
+/**
+ * 投稿を削除！✨
+ * 投稿をキラキラに削除するよ！💖
+ */
+export async function deletePostById(postId: string) {
+  try {
+    const { databases } = await createSessionClient();
+    await databases.deleteDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      postId
+    );
+  } catch (error) {
+    throw new Error('投稿の削除に失敗したよ！💦');
+  }
+}
+
+/**
+ * ユーザーの投稿を取得！✨
+ * ユーザーの投稿をキラキラに取得するよ！💖
+ */
+export async function getUserPosts(userId: string) {
+  try {
+    const { databases } = await createSessionClient();
+    const { documents } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      [
+        Query.equal('$id', userId),
+        Query.orderDesc('$createdAt')
+      ]
+    );
+    return documents;
+  } catch (error) {
+    throw new Error('ユーザーの投稿の取得に失敗したよ！💦');
+  }
+}
+
+/**
+ * プロフィールを更新！✨
+ * プロフィールをキラキラに更新するよ！💖
+ */
+export async function updateUserProfile(actorId: string, data: { displayName: string; bio: string }) {
+  try {
+    const { databases } = await createSessionClient();
+    await databases.updateDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+      actorId,
+      {
+        displayName: data.displayName,
+        bio: data.bio,
+      }
+    );
+    return true;
+  } catch (error) {
+    throw new Error('プロフィールの更新に失敗したよ！💦');
+  }
+}
+
+/**
+ * リプライの投稿を取得！✨
+ * リプライの投稿をキラキラに取得するよ！💖
+ */
+export async function getReplyPostsFromActivityId(activityId: string) {
+  const { databases } = await createSessionClient();
+  const { documents } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_POSTS_COLLECTION_ID!,
+    [Query.equal("inReplyTo", activityId)]
+  );
+  return documents.map((document) => {
+    return {
+      $id: document.$id,
+      $createdAt: document.$createdAt,
+      $updatedAt: document.$updatedAt,
+      content: document.content,
+      username: document.username,
+      activityId: document.activityId,
+      to: document.to,
+      cc: document.cc,
+      published: document.published,
+      attributedTo: document.attributedTo,
+      avatar: document.avatar,
+      attachment: document.attachment,
+    } as unknown as Post;
+  });
 }

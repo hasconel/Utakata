@@ -1,8 +1,8 @@
-import { Client, Databases, Account,  } from "appwrite";
+import { Client, Databases, Account,  } from "node-appwrite";
 
 const client = new Client()
 
-client.setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_URL!)
+client.setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
 client.setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
 
 export const databases = new Databases(client)

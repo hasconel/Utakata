@@ -86,13 +86,9 @@ export async function savePost(
         replyCount: (parentPost.replyCount || 0) + 1,
       });
       parentActorId = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, parentPost.$id).then(res=>res.attributedTo);
-      console.log(parentActorId);
       // parentActorIdがnullでない場合のみccに追加（型安全）
       if (parentActorId) {
         activity.cc = Array.isArray(activity.cc) ? [...activity.cc, parentActorId] : [activity.cc, parentActorId].filter((id): id is string => id !== null);
-        const targetActorsID = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [
-          Query.equal("actorId", parentActorId),
-        ]).then(res=>res.documents[0].$id);
         await databases.createDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
@@ -104,12 +100,8 @@ export async function savePost(
             target: note.id,
             message: `${actor.displayName}さんがあなたの投稿にリプライしました！`,
             read: false
-          },[
-            Permission.read(Role.user(targetActorsID)),
-            Permission.write(Role.user(targetActorsID))
-          ]
+          }
         );
-        console.log("通知を送信しました！✨");
       }
     }
   }

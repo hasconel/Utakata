@@ -8,13 +8,12 @@ export default async function LoginPage() {
   } catch (error) {
     // エラーの型を適切に判定
     if (error instanceof Error) {
-      if (error.message === "セッションが見つからないよ！💦") {
+      if (error.message === "セッションの取得に失敗したよ！💦") {
         // 未ログイン、ページを表示
       } else {
         throw error;
       }
     } else {
-      console.error("Unknown error:", error);
       throw new Error("An unexpected error occurred");
     }
   }

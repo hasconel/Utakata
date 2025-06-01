@@ -12,6 +12,20 @@ import { getActorByUserId } from "@/lib/appwrite/database";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { InputFile } from "node-appwrite/file";
 import { Post } from "@/lib/appwrite/posts";
+import { ENV } from "@/lib/api/config";
+
+// CORSの設定を追加するよ！✨
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, user-agent',
+    },
+  });
+}
+
 /**
  * 投稿API！✨
  * 画像付きの投稿を処理するよ！💖
@@ -19,7 +33,7 @@ import { Post } from "@/lib/appwrite/posts";
 export async function POST(request: Request) {
   try {
     // セッションクライアントを作成
-    const { account, databases, storage } = await createSessionClient();
+    const { account, storage } = await createSessionClient(request);
     if (!account) {
       throw new Error("セッションが見つからないよ！💦");
     }
@@ -52,20 +66,18 @@ export async function POST(request: Request) {
           const fileId = require("appwrite").ID.unique();
           
           await storage.createFile(
-            process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
+            ENV.STORAGE_ID,
             fileId,
             InputFile.fromBuffer(binaryData, image.name),
-            [
-            ]
+            []
           );
           // 画像のURLを取得
 
           const fileUrlfunc = async (fileId:string)=> {
-            const client = new Client().setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!).setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
-          const storage = new Storage(client);
-          const result = await storage.getFileView(process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!, fileId)
-            return result
-            
+            const client = new Client().setEndpoint(ENV.ENDPOINT).setProject(ENV.PROJECT_ID);
+            const clientStorage = new Storage(client);
+            const result = await clientStorage.getFileView(ENV.STORAGE_ID, fileId);
+            return result.toString();
           }
           const fileUrl = await fileUrlfunc(fileId);
           console.log("画像URL取得完了！✨", fileUrl);
@@ -113,12 +125,25 @@ export async function POST(request: Request) {
       followers: actor.followers || [],
     }, parentActorId);
 
-    return NextResponse.json({ success: true, document });
+    return NextResponse.json({ success: true, document }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, user-agent',
+      }
+    });
   } catch (error: any) {
     console.error("投稿に失敗したよ！💦", error);
     return NextResponse.json(
       { error: error.message || "投稿に失敗したよ！もう一度試してみてね！💦" },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, user-agent',
+        }
+      }
     );
   }
 }
@@ -136,10 +161,10 @@ export async function GET(request: Request) {
   const offset = searchParams.get("offset") || "0";
   const inReplyTo = searchParams.get("inReplyTo") ;
   const userId = searchParams.get("userId") ;
-  const searchReplyTo = inReplyTo? [`https://${process.env.APPWRITE_DOMAIN}/posts/${inReplyTo}`] : "";
+  const searchReplyTo = inReplyTo? [`https://${ENV.DOMAIN}/posts/${inReplyTo}`] : "";
   const inReplyToQuery = inReplyTo? Query.equal('inReplyTo',searchReplyTo) : "";
   const attributedTo = searchParams.get("attributedTo") ;
-  const searchAttributedTo = attributedTo? [`https://${process.env.APPWRITE_DOMAIN}/users/${attributedTo}`] : "";
+  const searchAttributedTo = attributedTo? [`https://${ENV.DOMAIN}/users/${attributedTo}`] : "";
   const attributedToQuery = attributedTo? Query.equal('attributedTo',searchAttributedTo) : "";
   const queries = [
     Query.orderDesc("$createdAt"),
@@ -154,7 +179,7 @@ export async function GET(request: Request) {
     queries.push(attributedToQuery)
   }
   try {
-    const { databases, account } = await createSessionClient();    
+    const { databases, account } = await createSessionClient(request);    
     const currentUser = await account.get();
     if(userId){
       const currentUserActor = await getActorByUserId(userId);
@@ -164,15 +189,15 @@ export async function GET(request: Request) {
     }
 
     const posts = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      ENV.DATABASE_ID,
+      ENV.POSTS_COLLECTION_ID,
       queries
     );
     const postsAsPostArray: Post[] = [];
     for(const post of posts.documents){
       const subdocument = await databases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
+        ENV.DATABASE_ID,
+        ENV.POSTS_SUB_COLLECTION_ID,
         [Query.equal("$id", post.$id)]
       );
       const postAsPost: Post = {
@@ -196,12 +221,25 @@ export async function GET(request: Request) {
       }
       postsAsPostArray.push(postAsPost);
     }
-    return NextResponse.json({postsAsPostArray});
+    return NextResponse.json({postsAsPostArray}, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, user-agent',
+      }
+    });
   } catch (error) {
     console.error("投稿の取得に失敗したよ！💦", error);
     return NextResponse.json(
       { error: "投稿の取得に失敗したよ！💦" },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, user-agent',
+        }
+      }
     );
   }
 }

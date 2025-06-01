@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import LinkCard from "./LinkCard";
 import { useTheme } from "@/lib/theme/ThemeContext";
 /**
@@ -7,7 +7,7 @@ import { useTheme } from "@/lib/theme/ThemeContext";
  * ニコニコ動画、YouTube、X（旧Twitter）のURLを対応する埋め込みプレーヤーに変換するよ！💖
  */
 const UrlInText = ({ arg }: { arg: string }) => {
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const { theme } = useTheme();
 
   // URLが空の場合は何も表示しない

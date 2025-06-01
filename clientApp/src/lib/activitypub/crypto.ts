@@ -121,8 +121,8 @@ export async function verifySignature(req: import("next/server").NextRequest, ac
     const headers = Object.fromEntries(req.headers);
 
     // Signatureヘッダーをパース
-    const { keyId, signature, signingString } = parseSignatureHeader(headers, req.method || "POST", req.url);
-
+    const {  signature, signingString } = parseSignatureHeader(headers, req.method || "POST", req.url);
+    //console.log(keyId, signature, signingString);
     // 公開鍵を取得（actorIdからフェッチ）
     const actorData = await fetch(actor.actorId, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },

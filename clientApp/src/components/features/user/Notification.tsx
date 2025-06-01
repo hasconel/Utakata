@@ -5,62 +5,101 @@ import { Avatar } from "@/components/ui/Avatar";
 import { getActorById } from "@/lib/appwrite/database";
 import { getPostFromActivityId as fetchPostFromActivityId } from "@/lib/appwrite/serverConfig";
 import { useState, useEffect } from "react";
+import ReplyToPost from "../post/reply/ReplyToPost";
+import PostReplies from "../post/reply/PostReplies";
 
-
+/**
+ * 通知コンポーネント！✨
+ * キラキラな通知を表示するよ！💖
+ */
 export default function Notification({ notification }: { notification: NotificationType }) {
     const [post, setPost] = useState<any | null>(null);
     const [actor, setActor] = useState<any | null>(null);
+
     useEffect(() => {
-        const fromActor = getActorById(notification.from).then(actor=>{
-            setActor(actor);
-        });
         if(notification.target){
-            const post = fetchPostFromActivityId(notification.target).then(post=>{
+            fetchPostFromActivityId(notification.target).then((post)=>{
                 setPost(post);
             });
         }
-    }, [notification.from, notification.target]);
+        if(notification.from){
+            getActorById(notification.from).then((actor)=>{
+                setActor(actor);
+            });
+        }
+    }, [notification]);
+
     return (
-        <div className="w-full">
-             <Card className={`w-full ${notification.read ? "dark:bg-gray-800 bg-gray-100" : "dark:bg-gray-700 bg-gray-200"} flex flex-col gap-2 p-2`}>       
-                {notification.type === "like" && <div className="flex flex-row gap-2">
-                    <p>{notification.message}</p>
-                    <Avatar                
-                     src={actor?.avatarUrl}
-                     alt={actor?.name}
-                     fallback={actor?.displayName?.charAt(0)}
-                     size="lg"
-                     variant="outline"
-                     className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"/>
-                    <p>{actor?.name}</p>
-                    <p className="text-sm">{post?.content}</p>
-                </div>}
-                {notification.type === "follow" && <div className="flex flex-row gap-2">
-                    <p>{notification.message}</p>
-                    <Avatar                
-                     src={actor?.avatarUrl}
-                     alt={actor?.name}
-                     fallback={actor?.displayName?.charAt(0)}
-                     size="lg"
-                     variant="outline"
-                     className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"/>                    
-                     <p className="text-sm">{actor?.name}</p>
-                </div>}
-                {notification.type === "reply" && <div className="flex flex-row gap-2">
-                    <p>{notification.message}</p>
-                    <Avatar                
-                     src={actor?.avatarUrl}
-                     alt={actor?.name}
-                     fallback={actor?.displayName?.charAt(0)}
-                     size="lg"
-                     variant="outline"
-                     className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"/>                    
-                     <p className="text-sm">{actor?.name}</p>
-                    <p>{post?.content}</p>
-                </div>}
+        <div className="w-full p-2">
+            <Card className={`w-full ${notification.read ? "dark:bg-gray-800/80 bg-gray-100/80" : "dark:bg-gray-700/80 bg-gray-200/80"} backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-purple-100 dark:border-purple-900`}>       
+                {notification.type === "like" && (
+                    <div className="flex items-center gap-4 p-4">
+                        <div className="flex-shrink-0">
+                            <Avatar                
+                                src={actor?.avatarUrl}
+                                alt={actor?.name}
+                                fallback={actor?.displayName?.charAt(0)}
+                                size="lg"
+                                attributedTo={actor?.actorId}
+                                variant="default"
+                                className="ring-2 ring-purple-500/20 dark:ring-pink-500/20 hover:ring-purple-500/40 dark:hover:ring-pink-500/40 transition-all duration-300"
+                            />
+                        </div>
+                        <div className="flex-grow">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-purple-600 dark:text-pink-400">{actor?.name}</span>
+                                <span className="text-2xl ">💖</span>
+                            </div>
+                            {post && <ReplyToPost post={post} />}
+                        </div>
+                    </div>
+                )}
+                {notification.type === "follow" && (
+                    <div className="flex items-center gap-4 p-4">
+                        <div className="flex-shrink-0">
+                            <Avatar      
+                                src={actor?.avatarUrl}
+                                alt={actor?.name}
+                                attributedTo={actor?.actorId}
+                                fallback={actor?.displayName?.charAt(0)}
+                                size="lg"
+                                variant="default"
+                                className="ring-2 ring-purple-500/20 dark:ring-pink-500/20 hover:ring-purple-500/40 dark:hover:ring-pink-500/40 transition-all duration-300"
+                            />
+                        </div>
+                        <div className="flex-grow">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-purple-600 dark:text-pink-400">{actor?.name}</span>
+                                <span className="text-2xl animate-pulse">✨</span>
+                                <span className="text-gray-600 dark:text-gray-300">がフォローしてくれたよ！</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {notification.type === "reply" && (
+                    <div className="flex items-center gap-4 p-4">
+                        <div className="flex-shrink-0">
+                            <Avatar                
+                                src={actor?.avatarUrl}
+                                alt={actor?.name}
+                                fallback={actor?.displayName?.charAt(0)}
+                                size="lg"
+                                attributedTo={actor?.actorId}
+                                variant="default"
+                                className="ring-2 ring-purple-500/20 dark:ring-pink-500/20 hover:ring-purple-500/40 dark:hover:ring-pink-500/40 transition-all duration-300"
+                            />
+                        </div>
+                        <div className="flex-grow">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-purple-600 dark:text-pink-400">{actor?.name}</span>
+                                <span className="text-2xl ">💭</span>
+                            </div>
+                            {post && <PostReplies post={post} />}
+                        </div>
+                    </div>
+                )}
             </Card>     
-            
         </div>
-    )
+    );
 }
 

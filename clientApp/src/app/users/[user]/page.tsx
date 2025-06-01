@@ -5,16 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Post } from "@/lib/appwrite/posts";
 import { Actor } from "@/lib/appwrite/database";
-import PostCard from "@/components/features/post/PostCard";
+import PostCard from "@/components/features/post/card/PostCard";
 import { getUserPosts } from "@/lib/appwrite/client";
 import { Button } from "@/components/ui/Button";
 import FollowButton from "@/components/features/user/FollowButton";
 import MuteButton from "@/components/features/user/MuteButton";
 import { followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
-import { useTheme } from "@/lib/theme/ThemeContext";
 import { getLoggedInUser } from "@/lib/appwrite/serverConfig";
 import { muteUser, unmuteUser } from "@/lib/appwrite/serverConfig";
 import { getActorByUserId } from "@/lib/appwrite/database";
+import { ActivityPubImage } from "@/types/activitypub/collections";
+import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 /**
  * ユーザープロフィール画面！✨
  * かわいいデザインでユーザーの情報と投稿を表示するよ！💖
@@ -28,7 +29,9 @@ export default function UserProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
+  const [modalIndex, setModalIndex] = useState(0);
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -39,33 +42,24 @@ export default function UserProfile() {
             "Content-Type": "application/json",
           },
         }).then(res => res.json() as Promise<Actor>);
-        
         if (response.$id) {
           setUser(response);
 
-          const currentUser = await getLoggedInUser()
-          const currentUserActor = await getActorByUserId(currentUser.$id);
-          if(currentUser===null){
+          const currentUser = await getLoggedInUser();
+          if (!currentUser) {
             setIsOwnProfile(false);
-          }else{
-            if(currentUser.name === params.user){
-              setIsOwnProfile(true);
-            }
+          } else {
+            const currentUserActor = await getActorByUserId(currentUser.$id);
+            setIsOwnProfile(currentUser.name === params.user);
+            setIsMuted(currentUserActor?.mutedUsers?.includes(response.actorId) ?? false);
+            setIsFollowing(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_APPWRITE_DOMAIN}/v1/users/${currentUser.name}`) ?? false);
           }
-          if(currentUserActor?.mutedUsers?.includes(response.actorId)){
-            setIsMuted(true);
-          }else{
-            setIsMuted(false);
-          }
-          if(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_APPWRITE_DOMAIN}/v1/users/${currentUser.name}`)){
-            setIsFollowing(true);
-          }else{
-            setIsFollowing(false);
-          }
-        // ユーザーの投稿を取得
-        const userPosts = await getUserPosts(params.user as string);
-        setPosts(Array.isArray(userPosts) ? userPosts : []);
-      }} catch (error) {
+
+          // ユーザーの投稿を取得
+          const userPosts = await getUserPosts(params.user as string);
+          setPosts(Array.isArray(userPosts) ? userPosts : []);
+        }
+      } catch (error) {
         console.error("ユーザー投稿の取得に失敗したわ！", error);
         setPosts([]);
       } finally {
@@ -128,7 +122,6 @@ export default function UserProfile() {
       </div>
     );
   }
-
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       {/* プロフィールヘッダー */}
@@ -184,16 +177,22 @@ export default function UserProfile() {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           投稿一覧 💫
         </h2>
+        {isModalOpen && (
+        <div>
+          <ImageModalContent imagesTable={modalImages} isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} index={modalIndex} />
+        </div>
+      )}
         {posts.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-center py-8">
             まだ投稿がないわ！💦
           </p>
         ) : (
           posts.map((post) => (
-            <PostCard key={post.$id} post={post} />
+            <PostCard key={post.$id} post={post}  setIsModalOpen={setIsModalOpen} isModalOpen={isModalOpen} setModalImages={setModalImages} setModalIndex={setModalIndex} />
           ))
         )}
       </div>
+
     </div>
   );
 } 

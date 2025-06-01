@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { databases, account } = await createSessionClient();
+    const { databases, account } = await createSessionClient(request);
     const currentUser = await account.get();
     const post = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
@@ -53,13 +53,37 @@ export async function GET(
 }
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { databases } = await createSessionClient();
+    const { databases } = await createSessionClient(request);
     const deletepost = await databases.deleteDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,
       params.id
     );
     return NextResponse.json(deletepost);
+  } catch (error) {
+    console.error("投稿の削除に失敗したよ！💦", error);
+    return NextResponse.json(
+      { error: "投稿の削除に失敗したよ！💦" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const { databases } = await createSessionClient(request);
+    const deletepost = await databases.deleteDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_COLLECTION_ID!,
+      params.id
+    );
+    const deletepostsub = await databases.deleteDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
+      params.id
+    );
+
+    return NextResponse.json({deletepost,deletepostsub});
   } catch (error) {
     console.error("投稿の削除に失敗したよ！💦", error);
     return NextResponse.json(

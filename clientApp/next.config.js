@@ -1,7 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["localhost", "127.0.0.1", "192.168.1.121"],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pbs.hasconel.com',
+      }
+    ],
   },
   reactStrictMode: true,
 };

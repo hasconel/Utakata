@@ -1,4 +1,4 @@
-import { Client, Storage, ImageFormat, Databases } from "appwrite";
+import { Client, Storage } from "appwrite";
 import { Post } from "./posts";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { getLoggedInUser } from "./serverConfig";
@@ -109,7 +109,7 @@ export async function getUserPosts(username: string): Promise<Post[]> {
  * @param width 幅
  * @returns プレビューURL
  */
-export async function getImagePreview(fileImageId: ActivityPubImage, height?: number, width?: number) {
+export async function getImagePreview(fileImageId: ActivityPubImage, ) {
   if (!fileImageId || !fileImageId.url) {
     console.error("画像情報が不正です");
     return null;

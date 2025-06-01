@@ -27,7 +27,6 @@ const IV_LENGTH = 16;
 /**
  * 登録スキーマ！💎
  * 入力の安全性をキラキラ検証！✨
- */
 const SignUpSchema = z.object({
   email: z.string().email({ message: Errors.InvalidInput("メールアドレス") }),
   password: z.string().min(8, { message: Errors.InvalidInput("パスワードは8文字以上") }),
@@ -41,6 +40,7 @@ const SignUpSchema = z.object({
     .min(1, { message: Errors.InvalidInput("表示名を入力してね") })
     .max(100, { message: Errors.InvalidInput("表示名は100文字以内") }),
 });
+ */
 
 /**
  * 暗号化（AES-256-GCM）！🔒
@@ -138,12 +138,12 @@ const ActorSchema = z.object({
           bio: doc.bio || "",
         };
   
-        // displayNameがない場合、preferredUsernameを保存
+        /*displayNameがない場合、preferredUsernameを保存
         if (!doc.displayName) {
           await databases.updateDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, actor.$id, {
             displayName: actor.preferredUsername,
           });
-        }
+        }*/
   
         return actor;
       

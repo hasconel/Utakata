@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export default function DeletePage() {
-    const [password, setPassword] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const handleOpen = () => {

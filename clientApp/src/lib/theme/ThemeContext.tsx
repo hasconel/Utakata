@@ -39,6 +39,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);
     }
+    return () => {}; // システムテーマ以外の場合は空のクリーンアップ関数を返す
   }, [theme]);
 
   // ユーザー情報の取得

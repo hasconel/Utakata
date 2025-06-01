@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { signInWithEmail } from "@/lib/appwrite/auth";
 
 interface LoginFormProps {
@@ -13,7 +12,6 @@ export default function LoginForm({ error: initialError }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     if (initialError) {
@@ -27,9 +25,8 @@ export default function LoginForm({ error: initialError }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const session = await signInWithEmail({email,password});
-      session.$id;
-      router.push("/timeline");
+      await signInWithEmail({email,password});
+      window.location.href = "/timeline";
     } catch (err: any) {
       //console.log(err);
       setError(err.message || "ログインに失敗したよ！もう一度試してみてね！💦");
