@@ -10,35 +10,18 @@ import { Models } from "appwrite";
 import { useTimeline } from "@/hooks/api/useApi";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { ActivityPubImage } from "@/types/activitypub/collections";
+import { Post } from "@/lib/appwrite/posts";
+import { ApiError } from "@/lib/api/client";
 
 /**
  * タイムラインページ！✨
  * みんなの投稿が見れるよ！💖
  */
 export default function TimelinePage() {
-  const { refetch } = useTimeline(10, 0);
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
-        <button className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4" onClick={() => refetch()}>
-          タイムライン ✨
-        </button>
-        <PostForm />
-      </div>
-      <TimelineContent  />
-    </div>
-  );
-}
-
-const TimelineContent = () => {
-
-  const [session, setSession] = useState<Models.User<Models.Preferences> | null>(null);
   const [offset, setOffset] = useState(0);
   const { data: posts, isLoading, error, refetch } = useTimeline(10, offset);
   const [redirectAddress, setRedirectAddress] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
-  const [modalIndex, setModalIndex] = useState(0);
+  const [session, setSession] = useState<Models.User<Models.Preferences> | null>(null);
 
   // セッションチェック！✨
   const checkSession = async () => {
@@ -49,15 +32,24 @@ const TimelineContent = () => {
       }
       setSession(user);
     } catch (err: any) {
-      if (err.message === "セッションの取得に失敗したよ！💦" || err.code === 401) {
+      if (err.message==="セッションの取得に失敗したよ！💦"   || err.code === 401) {
         setRedirectAddress("/login?error=login_required");
       }
     }
+    if (redirectAddress !== "") { 
+      redirect(redirectAddress);
+    }
   };
 
-  // もっと見るボタンのハンドラー！✨
-  const handleLoadMore = (offset: 10 |-10) => {
-    setOffset(prev => prev + offset);
+  // セッションチェック！✨
+  useEffect(() => {
+    checkSession();
+  }, []);
+  
+  // タイムラインのリロード！✨
+  const handleTimelineReload = () => {
+    setOffset(0);
+    refetch();  
   };
 
   // 投稿作成イベントのリスナー！✨
@@ -71,16 +63,60 @@ const TimelineContent = () => {
     return () => window.removeEventListener('postCreated', handlePostCreated);
   }, [refetch]);
 
-  // セッションチェック！✨
-  useEffect(() => {
-    checkSession();
-  }, []);
+  // もっと見るボタンのハンドラー！✨
+  const handleLoadMore = (offset: 10 |-10) => {
+    setOffset(offset);
+  };
 
-  useEffect(() => {
-    if (redirectAddress !== "") { 
-      redirect(redirectAddress);
-    }
-  }, [redirectAddress]);
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
+        <button className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4" onClick={() => handleTimelineReload()}>
+          タイムライン ✨
+        </button>
+        <PostForm />
+      </div>
+      {offset !== 0 && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={() => handleLoadMore(-10)}
+            className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
+          >
+            <span className="flex items-center">
+              <span className="mr-2">✨</span>
+              もっと見る
+            </span>
+          </button>
+        </div>
+      )}
+      
+      {posts && <TimelineContent 
+      session={session} 
+      isLoading={isLoading} 
+      posts={posts} 
+      error={error}
+      />}
+          {/* もっと見るボタン！✨ */}
+            {posts && posts.length > 9 && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={() => handleLoadMore(10)}
+              className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
+            >
+              <span className="flex items-center">
+                <span className="mr-2">✨</span>
+                もっと見る
+              </span>
+            </button>
+          </div>
+          )}    </div>
+  );
+}
+const TimelineContent = ({session,  isLoading, posts,  error}: {session: Models.User<Models.Preferences> | null, isLoading: boolean | null, posts: Post[], error: ApiError | null}) => {
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
+  const [modalIndex, setModalIndex] = useState(0);
 
   if (!session) {
     return (
@@ -109,20 +145,6 @@ const TimelineContent = () => {
 
   return (
     <div>
-      {offset !== 0 && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => handleLoadMore(-10)}
-            className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
-          >
-            <span className="flex items-center">
-              <span className="mr-2">✨</span>
-              もっと見る
-            </span>
-          </button>
-        </div>
-      )}
-      
       {isModalOpen  && (
         <div className="fixed inset-0 z-50">
           <ImageModalContent 
@@ -156,20 +178,6 @@ const TimelineContent = () => {
             />
           ))}
           
-          {/* もっと見るボタン！✨ */}
-          {posts.length > 9 && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => handleLoadMore(10)}
-              className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
-            >
-              <span className="flex items-center">
-                <span className="mr-2">✨</span>
-                もっと見る
-              </span>
-            </button>
-          </div>
-          )}
         </div>
       )}
     </div>
