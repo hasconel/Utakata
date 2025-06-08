@@ -72,12 +72,12 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
 
         const url = URL.createObjectURL(file);
         if(file.type.includes("video")){
-          console.log("video",file);
+          //console.log("video",file);
           return {url:url,type:"video"};
         }else if(file.type.includes("image")){
           return {url:url,type:"image"};
         }else if(file.type.includes("audio")){
-          console.log("audio",file);
+          //console.log("audio",file);
           return {url:url,type:"audio"};
         }
         setError("サポートされていないファイル形式です！💦");
@@ -114,7 +114,7 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
        * 画像をBase64に変換して送信するよ！💖
        */
       const activityPubImages : Promise<ActivityPubImage>[] = images.map(async image => {
-        console.log("image",image);
+        //console.log("image",image);
         const base64Image = await image.arrayBuffer();
         const base64ImageString = Buffer.from(base64Image).toString("base64");
         const response = await fetch("/api/fileupload", {
@@ -143,7 +143,7 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
         };
       });
       const imageData = await Promise.all(activityPubImages);
-      console.log("imageData",imageData);
+      //console.log("imageData",imageData);
       // 投稿を送信するよ！✨
       const response = await fetch("/api/posts", {
         method: "POST",
