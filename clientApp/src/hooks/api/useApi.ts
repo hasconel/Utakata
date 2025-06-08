@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ApiError } from '@/lib/api/client';
 import { Post } from '@/lib/appwrite/posts';
-import { postsApi } from '@/lib/api/client';
+import { postsApi } from '@/lib/api/server';
 
 // APIフックのオプション！✨
 interface UseApiOptions<T> {
@@ -93,7 +93,7 @@ export function useTimeline(limit: number = 10, offset: number = 0): UseApiResul
  * @returns ユーザー情報の結果
  */
 export function useUser(userId: string) {
-  const { usersApi } = require('@/lib/api/client');
+  const { usersApi } = require('@/lib/api/server');
   return useApi(() => usersApi.getUser(userId));
 }
 
@@ -103,6 +103,6 @@ export function useUser(userId: string) {
  * @returns ユーザーの投稿の結果
  */
 export function useUserPosts(userId: string) {
-  const { usersApi } = require('@/lib/api/client');
+  const { usersApi } = require('@/lib/api/server');
   return useApi(() => usersApi.getUserPosts(userId));
 } 

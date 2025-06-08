@@ -13,7 +13,7 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'pbs.hasconel.com',
-      },
+      }
     ],
   },
   reactStrictMode: true,

@@ -32,7 +32,7 @@ export interface ActivityPubActor {
 }
 
 export interface ActivityPubImage {
-  type: "Image";
+  type: "Image"|"Video"|"Audio";
   mediaType: string;
   url: string;
   name: string;

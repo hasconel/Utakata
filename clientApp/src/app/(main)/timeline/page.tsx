@@ -11,7 +11,7 @@ import { useTimeline } from "@/hooks/api/useApi";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Post } from "@/lib/appwrite/posts";
-import { ApiError } from "@/lib/api/client";
+import { ApiError } from  "@/lib/api/client";
 
 /**
  * タイムラインページ！✨

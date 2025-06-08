@@ -1,12 +1,13 @@
-import { Client, Storage } from "appwrite";
+import { Client, Storage, ID, Account } from "appwrite";
 import { Post } from "./posts";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { getLoggedInUser } from "./serverConfig";
+import { ENV } from "@/lib/api/config";
 /**
  * Appwriteのクライアント設定！✨
  * クライアントサイドで使う設定だよ！💖
  */
-const client = new Client()
+export const client = new Client()
   .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
   .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
   .setSession("current");
@@ -49,14 +50,49 @@ export async function fetchTimelinePosts(limit: number = 10, offset: number = 0)
 }
 
 /**
+ * セッション情報を取得する関数！✨
+ * @returns セッション情報
+ */
+export async function getSession() {
+  const response = await fetch("/api/auth/session");
+  if (!response.ok) {
+    throw new Error("セッションの取得に失敗したよ！💦");
+  }
+  return response.json();
+}
+
+/**
  * 画像をアップロードする関数！✨
  * @param file 画像ファイル
  * @returns アップロード結果
  */
 export async function uploadImage(file: File) {
-  return await storage.createFile(
-    process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
-    "unique()",
+  const session = await getSession();
+  console.log("session in uploadImage", session);
+  
+  // 新しいクライアントを作成！✨
+  const newClient = new Client()
+    .setEndpoint(ENV.ENDPOINT)
+    .setProject(ENV.PROJECT_ID)
+    .setSession(session.secret);
+  
+  // ストレージクライアントを作成！✨
+  const newStorage = new Storage(newClient);
+  
+  // セッションの確認！✨
+  const account = new Account(newClient);
+  try {
+    // ユーザー情報を取得してセッションを確認！✨
+    const user = await account.get();
+    console.log("user", user);
+  } catch (error) {
+    console.error("セッションエラー:", error);
+    throw new Error("セッションが無効だよ！💦 もう一度ログインしてね！✨");
+  }
+  
+  return await newStorage.createFile(
+    ENV.STORAGE_ID,
+    ID.unique(),
     file
   );
 }
@@ -68,7 +104,7 @@ export async function uploadImage(file: File) {
  */
 export async function getImageUrl(fileId: string) {
   return await storage.getFileView(
-    process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
+    ENV.STORAGE_ID,
     fileId
   );
 }

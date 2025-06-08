@@ -15,16 +15,21 @@ import PostReplies from "../post/reply/PostReplies";
 export default function Notification({ notification }: { notification: NotificationType }) {
     const [post, setPost] = useState<any | null>(null);
     const [actor, setActor] = useState<any | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if(notification.target){
+            setIsLoading(true);
             fetchPostFromActivityId(notification.target).then((post)=>{
                 setPost(post);
+                setIsLoading(false);
             });
         }
         if(notification.from){
+            setIsLoading(true);
             getActorById(notification.from).then((actor)=>{
                 setActor(actor);
+                setIsLoading(false);
             });
         }
     }, [notification]);
@@ -32,7 +37,12 @@ export default function Notification({ notification }: { notification: Notificat
     return (
         <div className="w-full p-2">
             <Card className={`w-full ${notification.read ? "dark:bg-gray-800/80 bg-gray-100/80" : "dark:bg-gray-700/80 bg-gray-200/80"} backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-purple-100 dark:border-purple-900`}>       
-                {notification.type === "like" && (
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 dark:border-pink-500"></div>
+                    </div>
+                ) : (
+                    notification.type === "like" && (
                     <div className="flex items-center gap-4 p-4">
                         <div className="flex-shrink-0">
                             <Avatar                
@@ -53,7 +63,7 @@ export default function Notification({ notification }: { notification: Notificat
                             {post && <ReplyToPost post={post} />}
                         </div>
                     </div>
-                )}
+                ))}
                 {notification.type === "follow" && (
                     <div className="flex items-center gap-4 p-4">
                         <div className="flex-shrink-0">

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 //import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ImagePlus, X } from "lucide-react";
 import { fetchReplyToPost } from "@/lib/appwrite/client";
+import { ActivityPubImage } from "@/types/activitypub/collections";
 
 /**
  * 投稿フォームのプロパティ！✨
@@ -39,7 +40,7 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
   // 画像ファイルの状態！✨
   const [images, setImages] = useState<File[]>([]);
   // 画像プレビューのURLの状態！✨
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<{url:string,type:string}[]>([]);
   // 投稿中の状態！✨
   const [isSubmitting, setIsSubmitting] = useState(false);
   // ルーター！✨
@@ -67,8 +68,23 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
       setImages(files);
-      const urls = files.map(file => URL.createObjectURL(file));
-      setPreviewUrls(urls);
+      const urls = files.map(file => {
+
+        const url = URL.createObjectURL(file);
+        if(file.type.includes("video")){
+          console.log("video",file);
+          return {url:url,type:"video"};
+        }else if(file.type.includes("image")){
+          return {url:url,type:"image"};
+        }else if(file.type.includes("audio")){
+          console.log("audio",file);
+          return {url:url,type:"audio"};
+        }
+        setError("サポートされていないファイル形式です！💦");
+        return {url:url,type:"unknown"};
+
+      });
+      setPreviewUrls(urls.filter(url => url.type !== "unknown"));
     }
   };
 
@@ -79,7 +95,7 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
    */
   const handleRemoveImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
-    URL.revokeObjectURL(previewUrls[index]);
+    URL.revokeObjectURL(previewUrls[index].url);
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -91,28 +107,43 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() && images.length === 0) return;
-
     setIsSubmitting(true);
     try {
-      // 画像をBase64に変換するよ！✨
-      const imagePromises = images.map(async (file) => {
-        const image = new Image();
-        image.src = URL.createObjectURL(file);
-        const arrayBuffer = await file.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString('base64');
+      // 画像をアップロードするよ！✨
+      /**
+       * 画像をBase64に変換して送信するよ！💖
+       */
+      const activityPubImages : Promise<ActivityPubImage>[] = images.map(async image => {
+        console.log("image",image);
+        const base64Image = await image.arrayBuffer();
+        const base64ImageString = Buffer.from(base64Image).toString("base64");
+        const response = await fetch("/api/fileupload", {
+          method: "POST",
+          body: JSON.stringify({
+            file: {
+            bin: base64ImageString,
+            name: image.name,
+            type: image.type,
+            width: 0,
+            height: 0,
+            blurhash: "",
+            }
+          }),
+        });
+        if (!response.ok) throw new Error("画像のアップロードに失敗したよ！💦");
+        const uploadedFile = await response.json();
         return {
-          url: URL.createObjectURL(file),
-          name: file.name,
-          mediaType: file.type,
-          width: image.width,
-          height: image.height,
-          blurhash: "", // 後で実装するわ！✨
-          bin: base64
+          type: uploadedFile.type,
+          mediaType: uploadedFile.mediaType,
+          url: uploadedFile.url,
+          name: uploadedFile.name,
+          width: uploadedFile.width,
+          height: uploadedFile.height,
+          blurhash: uploadedFile.blurhash,
         };
       });
-
-      const imageData = await Promise.all(imagePromises);
-
+      const imageData = await Promise.all(activityPubImages);
+      console.log("imageData",imageData);
       // 投稿を送信するよ！✨
       const response = await fetch("/api/posts", {
         method: "POST",
@@ -177,11 +208,26 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
         <div className="grid grid-cols-2 gap-4">
           {previewUrls.map((url, index) => (
             <div key={index} className="relative group">
-              <img
-                src={url}
-                alt={`プレビュー ${index + 1}`}
-                className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
-              />
+              {url.type === "image" && (
+                <img
+                  src={url.url}
+                  alt={`プレビュー ${index + 1}`}
+                  className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
+                />
+              )}
+              {url.type === "video" && (
+                <video
+                  src={url.url}
+                  poster={url.url}
+                  className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
+                />
+              )}
+              {url.type === "audio" && (
+                <audio
+                  src={url.url}
+                  className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
+                />
+              )}
               <button
                 onClick={() => handleRemoveImage(index)}
                 className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 active:scale-95"

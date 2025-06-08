@@ -57,6 +57,14 @@ export async function createSessionClient(cookie?: Request) {
 }
 
 /**
+ * セッションクッキーを返す！✨
+ * セッションクッキーを返すよ！💖
+ */
+export async function getSessionCookie() {
+  return (await cookies()).get("my-custom-session")?.value;
+}
+
+/**
  * ログイン済みユーザーを取得！✨
  * セッションからユーザー情報をキラキラに取得するよ！💖
  */

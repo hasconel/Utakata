@@ -49,6 +49,7 @@ const LikedUsersModal = ({
   const [users, setUsers] = useState<Actor[]>([]);
 
   useEffect(() => {
+    setUsers([]);
     if (isOpen && likedActors.length > 0) {
       likedActors.forEach(async (actor) => {
         const user = await getActorById(actor);
@@ -274,7 +275,9 @@ export default function PostDetailCard({
 
         <LikedUsersModal 
           isOpen={isLikedUsersOpen} 
-          onClose={() => setIsLikedUsersOpen(false)} 
+          onClose={() => {
+            setIsLikedUsersOpen(false);
+          }}  
           likedActors={post.LikedActors || []} 
         />
 

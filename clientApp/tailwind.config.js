@@ -103,6 +103,10 @@ module.exports = {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
         },
+        "marquee": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -110,8 +114,9 @@ module.exports = {
         // キラキラなアニメーション！✨
         "bounce-slow": "bounce-slow 2s infinite",
         "pulse-slow": "pulse-slow 3s infinite",
-        "spin-slow": "spin-slow 3s linear infinite",
-      },
+          "spin-slow": "spin-slow 3s linear infinite",
+          "marquee": "marquee 10s linear infinite",
+        },
     },
   },
   plugins: [require("tailwindcss-animate")],

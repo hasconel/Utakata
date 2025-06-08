@@ -3,14 +3,11 @@
  * POSTリクエストを受け取り、投稿ロジックをpost.tsに委譲！💖
  * シンプルでキラキラ、ギャル風エラーで親しみやすく！😎
  */
-import { Client ,Storage} from "appwrite";
 import {  NextResponse } from "next/server";
 import { createSessionClient,  } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 import {  savePost, deliverActivity } from "@/lib/activitypub/post";
 import { getActorByUserId } from "@/lib/appwrite/database";
-import { ActivityPubImage } from "@/types/activitypub/collections";
-import { InputFile } from "node-appwrite/file";
 import { Post } from "@/lib/appwrite/posts";
 import { ENV } from "@/lib/api/config";
 
@@ -33,7 +30,7 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   try {
     // セッションクライアントを作成
-    const { account, storage } = await createSessionClient(request);
+    const { account } = await createSessionClient(request);
     if (!account) {
       throw new Error("セッションが見つからないよ！💦");
     }
@@ -51,60 +48,6 @@ export async function POST(request: Request) {
 
     const { content, visibility, images, inReplyTo } = await request.json();
     
-    // 画像をアップロード
-    const uploadedImages: ActivityPubImage[] = [];
-    if (images && images.length > 0) {
-      //console.log("画像アップロード開始！✨", images);
-      
-      for (const image of images) {
-        try {
-          
-          // バイナリデータを取得
-          const binaryData = Buffer.from(image.bin, 'base64');
-
-          // Appwriteのストレージにアップロード
-          const fileId = require("appwrite").ID.unique();
-          
-          await storage.createFile(
-            ENV.STORAGE_ID,
-            fileId,
-            InputFile.fromBuffer(binaryData, image.name),
-            []
-          );
-          // 画像のURLを取得
-
-          const fileUrlfunc = async (fileId:string)=> {
-            const client = new Client().setEndpoint(ENV.ENDPOINT).setProject(ENV.PROJECT_ID);
-            const clientStorage = new Storage(client);
-            const result = await clientStorage.getFileView(ENV.STORAGE_ID, fileId);
-            return result.toString();
-          }
-          const fileUrl = await fileUrlfunc(fileId);
-          //console.log("画像URL取得完了！✨", fileUrl);
-          // ActivityPubImageオブジェクトを作成
-          const activityPubImage = {
-            type: "Image" as const,
-            mediaType: image.mediaType,
-            url: fileUrl,
-            name: image.name,
-            width: image.width,
-            height: image.height,
-            blurhash: image.blurhash,
-          };
-          uploadedImages.push(activityPubImage);
-        } catch (error) {
-          throw new Error("画像のアップロードに失敗したよ！💦");
-        }
-      }
-    }
-
-    // 画像が1つもアップロードできなかった場合はエラー
-    if (images && images.length > 0 && uploadedImages.length === 0) {
-      throw new Error("画像のアップロードに失敗したよ！もう一度試してみてね！💦");
-    }
-    
-    //console.log("画像アップロード完了！✨", uploadedImages);
-
     // 投稿を保存
     const { document, activity, parentActorId } = await savePost(
       { content, visibility, inReplyTo },
@@ -115,7 +58,7 @@ export async function POST(request: Request) {
         followers: actor.followers || [],
         avatarUrl: actor.avatarUrl || "",
       },
-      uploadedImages
+      images
     );
 
     // ActivityPubで配信
