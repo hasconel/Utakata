@@ -34,8 +34,10 @@ export async function signInWithEmail(formData:{email:string,password:string}) {
     (await cookies()).set("my-custom-session", session.secret, {
       path: "/",
       httpOnly: true,
-      sameSite: "strict",
-      secure: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30, // 30日間
+      expires: new Date(Date.now() + 60 * 60 * 24 * 30 * 1000) // 30日後
     });
     return session;
   } catch (error: any) {
