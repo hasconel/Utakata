@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getLoggedInUser,  unmuteUser } from "@/lib/appwrite/serverConfig";
+import { unmuteUser } from "@/lib/appwrite/serverConfig";
 import { UserCard } from "@/components/features/user/UserCard";
 import { Button } from "@/components/ui/Button";
 import { getActorByUserId, getActorById } from "@/lib/appwrite/database";
+import { useAuth } from "@/hooks/auth/useAuth";
 interface User {
   preferredUsername: string;
   displayName?: string;
@@ -21,15 +22,17 @@ export default function MutesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
     checkSession();
   }, []);
 
   const checkSession = async () => {
-    const user = await getLoggedInUser();
-    setCurrentUserId(user.$id);
-    loadMutedUsers(user.$id);
+    if (user && !isAuthLoading) {
+      setCurrentUserId(user.$id);
+      loadMutedUsers(user.$id);
+    }
     setIsLoading(false);
   };
 

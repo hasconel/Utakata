@@ -3,6 +3,7 @@
  * ログイン状態とかをキラキラに管理するよ！💖
  */
 
+"use client";
 import { useState, useEffect } from "react";
 import { Models } from "appwrite";
 import { getLoggedInUser } from "@/lib/appwrite/serverConfig";

@@ -160,7 +160,7 @@ export default function PostDetailCard({
   setIsModalOpen,
   isModalOpen,
   setModalImages,
-  setModalIndex
+  setModalIndex,
 }: {
   post: Post;
   setIsDetailOpen: (isDetailOpen: boolean) => void;
@@ -199,7 +199,7 @@ export default function PostDetailCard({
     }
   }, [post.replyCount, post.activityId]);
   return (
-    <div>
+    <div >
       <div className="space-y-6 m-4">
         {post.inReplyTo && inReplyToPost && (
           <div className="">

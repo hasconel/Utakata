@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getLoggedInUser } from "@/lib/appwrite/serverConfig";
 import Link from "next/link";
+import { useAuth } from "@/hooks/auth/useAuth";
 interface CTAButtonProps {
   href: string;
   text: string;
@@ -27,11 +27,11 @@ const CTAButton = ({ href, text, primary = false }: CTAButtonProps) => (
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const user = await getLoggedInUser();
-        if (user.$id) {
+        if (user && !isAuthLoading) {
           router.push("/timeline");
         }
       } catch (err) {

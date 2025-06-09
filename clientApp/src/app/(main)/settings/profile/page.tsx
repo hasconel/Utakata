@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Avatar } from "@/components/ui/Avatar";
-import { getLoggedInUser} from "@/lib/appwrite/serverConfig";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { Actor } from "@/lib/appwrite/database";
 import { uploadImage, updateProfile } from "@/lib/appwrite/serverConfig";
 export default function ProfileSettings() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<Actor | null>(null);
+  const [actor, setActor] = useState<Actor | null>(null);
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [avatarFormData, setAvatarFormData] = useState({
     displayName: "",
     bio: "",
@@ -33,15 +34,16 @@ export default function ProfileSettings() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const session = await getLoggedInUser();
-        const actor = await getActorByUserId(session.$id);
-        if (actor) {
-          setUser(actor);
+        if (user && !isAuthLoading) {
+          const actor = await getActorByUserId(user.$id);
+          if(actor){
+            setActor(actor);
           setAvatarFormData(prev => ({
             ...prev,
             displayName: actor.displayName || "",
             bio: actor.bio || "",
           }));
+          }
         }
       } catch (error) {
         handleError();
@@ -143,9 +145,9 @@ export default function ProfileSettings() {
         <div className="flex flex-col items-center space-y-4 p-6 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
           <div className="relative group">
             <Avatar
-              src={previewUrl || user?.avatarUrl}
-              alt={user?.displayName || ""}
-              fallback={(user?.displayName || "U").charAt(0)}
+              src={previewUrl || actor?.avatarUrl}
+              alt={actor?.displayName || ""}
+              fallback={(actor?.displayName || "U").charAt(0)}
               size="lg"
               className="w-32 h-32 bg-gradient-to-br from-purple-600 to-pink-600 ring-4 ring-purple-200 dark:ring-purple-800 transition-transform duration-200 group-hover:scale-105"
             />

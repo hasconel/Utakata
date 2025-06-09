@@ -1,11 +1,13 @@
-import { getLoggedInUser } from "@/lib/appwrite/serverConfig";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/features/auth/LoginForm";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 export default async function LoginPage() {
   try {
-    await getLoggedInUser();
-    redirect("/timeline");
+    const { user, isLoading: isAuthLoading } = useAuth();
+    if (user && !isAuthLoading) {
+      redirect("/timeline");
+    }
   } catch (error) {
     // エラーの型を適切に判定
     if (error instanceof Error) {

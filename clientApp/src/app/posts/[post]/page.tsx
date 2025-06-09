@@ -24,7 +24,7 @@ export default function PostPage() {
     }, [post]);
 
     return (
-        <div className="m-5 justify-center items-center mx-auto max-w-2xl">
+        <div className="justify-center items-center mx-auto max-w-2xl bg-white dark:bg-gray-800 rounded-2xl py-2 px-4  shadow-lg">
             {document && (
                 <PostDetailCard 
                     post={document} 
@@ -37,9 +37,13 @@ export default function PostPage() {
                 />
             )}
             {isReplyOpen && document && !isDetailOpen && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl py-2 px-4 mb-2 ">
                 <PostForm post={document} onClose={()=>{setIsReplyOpen(false)}} isReplyDisplay={false} />
+                </div>
             )}
-            {!document && <div>Loading...</div>}
+            {!document &&       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
+      </div>}
         </div>
     )
 }

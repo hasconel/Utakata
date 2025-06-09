@@ -2,17 +2,15 @@
 
 import {  useEffect, useState } from "react";
 import { redirect } from "next/navigation";
-import { getLoggedInUser } from "@/lib/appwrite/serverConfig";
 import PostForm from "@/components/features/post/form/PostForm";
 import PostCard from "@/components/features/post/card/PostCard";
 import Alert from "@/components/ui/Alert";
-import { Models } from "appwrite";
 import { useTimeline } from "@/hooks/api/useApi";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Post } from "@/lib/appwrite/posts";
 import { ApiError } from  "@/lib/api/client";
-
+import { useAuth } from "@/hooks/auth/useAuth";
 /**
  * タイムラインページ！✨
  * みんなの投稿が見れるよ！💖
@@ -21,17 +19,14 @@ export default function TimelinePage() {
   const [offset, setOffset] = useState(0);
   const { data: posts, isLoading, error, refetch } = useTimeline(10, offset);
   const [redirectAddress, setRedirectAddress] = useState("");
-  const [session, setSession] = useState<Models.User<Models.Preferences> | null>(null);
   const [isComponentLoading, setIsComponentLoading] = useState(false);
-
+  const { user, isLoading: isAuthLoading } = useAuth();
   // セッションチェック！✨
   const checkSession = async () => {
     try {
-      const user = await getLoggedInUser();
-      if (!user) {
+      if (!user && !isAuthLoading) {
         setRedirectAddress("/login?error=login_required");
       }
-      setSession(user);
     } catch (err: any) {
       if (err.message==="セッションの取得に失敗したよ！💦"   || err.code === 401) {
         setRedirectAddress("/login?error=login_required");
@@ -73,7 +68,7 @@ export default function TimelinePage() {
 
   return (
     <>
-    {isComponentLoading && (
+    {isComponentLoading || isAuthLoading && (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
       </div>
@@ -100,7 +95,6 @@ export default function TimelinePage() {
       )}
       
       {posts && <TimelineContent 
-      session={session} 
       isLoading={isLoading} 
       posts={posts} 
       error={error}
@@ -123,19 +117,11 @@ export default function TimelinePage() {
   );
 }
 
-const TimelineContent = ({session,  isLoading, posts,  error}: {session: Models.User<Models.Preferences> | null, isLoading: boolean | null, posts: Post[], error: ApiError | null}) => {
+const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | null, posts: Post[], error: ApiError | null}) => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
   const [modalIndex, setModalIndex] = useState(0);
-
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (

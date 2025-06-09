@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import FollowButton from "@/components/features/user/FollowButton";
 import MuteButton from "@/components/features/user/MuteButton";
 import { followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
-import { getLoggedInUser } from "@/lib/appwrite/serverConfig";
+import { useAuth } from "@/hooks/auth/useAuth";
 import { muteUser, unmuteUser } from "@/lib/appwrite/serverConfig";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { ActivityPubImage } from "@/types/activitypub/collections";
@@ -23,7 +23,8 @@ import ImageModalContent from "@/components/features/post/modal/ImageModalConten
 export default function UserProfile() {
   const params = useParams();
   const router = useRouter();
-  const [user, setUser] = useState<Actor | null>(null);
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const [targetActor, setTargetActor] = useState<Actor | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -43,16 +44,17 @@ export default function UserProfile() {
           },
         }).then(res => res.json() as Promise<Actor>);
         if (response.$id) {
-          setUser(response);
+          setTargetActor(response);
 
-          const currentUser = await getLoggedInUser();
-          if (!currentUser) {
+          if (!user && !isAuthLoading) {
             setIsOwnProfile(false);
           } else {
-            const currentUserActor = await getActorByUserId(currentUser.$id);
-            setIsOwnProfile(currentUser.name === params.user);
-            setIsMuted(currentUserActor?.mutedUsers?.includes(response.actorId) ?? false);
-            setIsFollowing(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_APPWRITE_DOMAIN}/v1/users/${currentUser.name}`) ?? false);
+            if (user && !isAuthLoading) {
+              const currentUserActor = await getActorByUserId(user.$id);
+              setIsOwnProfile(user.name === params.user);
+              setIsMuted(currentUserActor?.mutedUsers?.includes(response.actorId) ?? false);
+              setIsFollowing(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_APPWRITE_DOMAIN}/v1/users/${user.name}`) ?? false);
+            }
           }
 
           // ユーザーの投稿を取得
@@ -128,19 +130,19 @@ export default function UserProfile() {
       <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-8 shadow-lg">
         <div className="flex items-center space-x-6">
           <Avatar
-            src={user.avatarUrl}
-            alt={user.displayName || user.preferredUsername}
-            fallback={(user.displayName || user.preferredUsername || "U").charAt(0)}
+            src={targetActor?.avatarUrl}
+            alt={targetActor?.displayName || targetActor?.preferredUsername}
+            fallback={(targetActor?.displayName || targetActor?.preferredUsername || "U").charAt(0)}
             size="lg"
             variant="outline"
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {user.displayName || user.preferredUsername}
+              {targetActor?.displayName || targetActor?.preferredUsername}
             </h1>
             <p className="text-gray-500 dark:text-gray-400">
-              @{user.preferredUsername}
+              @{targetActor?.preferredUsername}
             </p>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
               {posts.length}件の投稿 ✨
@@ -154,14 +156,14 @@ export default function UserProfile() {
             ) : (
               <>
                 <FollowButton
-                  userId={user.actorId}
+                  userId={targetActor?.actorId ?? ""}
                   isFollowing={isFollowing}
                   onFollow={handleFollow}
                   onUnfollow={handleUnfollow}
                 />
                 <MuteButton
-                  userId={user.actorId}
-                  username={user.displayName || user.preferredUsername}
+                  userId={targetActor?.actorId ?? ""}
+                  username={targetActor?.displayName || targetActor?.preferredUsername || ""}
                   isMuted={isMuted}
                   onMute={handleMute}
                   onUnmute={handleUnmute}
