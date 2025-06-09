@@ -15,6 +15,11 @@ export default function ProfileSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [actor, setActor] = useState<Actor | null>(null);
   const { user, isLoading: isAuthLoading } = useAuth();
+  useEffect(() => {
+    if (!user && !isAuthLoading) {
+      window.location.href = "/login";
+    }
+  }, [user, isAuthLoading]);
   const [avatarFormData, setAvatarFormData] = useState({
     displayName: "",
     bio: "",

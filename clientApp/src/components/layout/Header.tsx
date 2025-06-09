@@ -17,10 +17,10 @@ export function Header() {
   const { unreadCount } = useNotification();
   const [ topAnchor, setTopAnchor ] = useState("/");
   useEffect(() => {
-    if (user) {
+    if (user && !isAuthLoading) {
       setTopAnchor("/timeline");
     }
-  }, [user]);
+  }, [user, isAuthLoading]);
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ">
       <div className="container flex h-14 items-center justify-between">
@@ -32,7 +32,7 @@ export function Header() {
         <div className="flex items-center space-x-2">
           {/* デスクトップ用のナビゲーション！✨ */}
           <nav className="hidden md:flex items-center space-x-2">
-            {user && (
+            {user && !isAuthLoading && (
               <>
                 <Link href="/notifications">
                   <Button variant="ghost" size="sm" className="relative">

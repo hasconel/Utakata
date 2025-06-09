@@ -24,10 +24,6 @@ export default function MutesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const { user, isLoading: isAuthLoading } = useAuth();
 
-  useEffect(() => {
-    checkSession();
-  }, []);
-
   const checkSession = async () => {
     if (user && !isAuthLoading) {
       setCurrentUserId(user.$id);
@@ -35,6 +31,13 @@ export default function MutesPage() {
     }
     setIsLoading(false);
   };
+  useEffect(() => {
+    if (!user && !isAuthLoading) {
+      window.location.href = "/login";
+    }
+    checkSession();
+  }, [user, isAuthLoading]);
+
 
   const loadMutedUsers = async (userId?:string) => {
     try {

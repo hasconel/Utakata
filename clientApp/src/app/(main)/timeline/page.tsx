@@ -16,9 +16,11 @@ import { useAuth } from "@/hooks/auth/useAuth";
  */
 export default function TimelinePage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  if (!user && !isAuthLoading) {
-    window.location.href = "/login";
-  }
+  useEffect(() => {
+    if (!user && !isAuthLoading) {
+      window.location.href = "/login";
+    }
+  }, [user, isAuthLoading]);
   const [offset, setOffset] = useState(0);
   const { data: posts, isLoading, error, refetch } = useTimeline(10, offset);
   const [isComponentLoading, setIsComponentLoading] = useState(false);

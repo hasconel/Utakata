@@ -51,7 +51,8 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
         <Image
           src={src}
           alt={alt}
-          fill
+          width={100}
+          height={100}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover hover:scale-105 transition-transform duration-200"
         />

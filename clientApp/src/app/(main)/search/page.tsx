@@ -7,7 +7,7 @@ const meilisearch = new MeiliSearch({
   apiKey: process.env.NEXT_PUBLIC_MEILISEARCH_API_KEY!,
 });
 import { Post } from "@/lib/appwrite/posts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ActivityPubImage } from "@/types/activitypub/collections";
@@ -16,9 +16,11 @@ import { getPostFromActivityId } from "@/lib/appwrite/serverConfig";
 import { useAuth } from "@/hooks/auth/useAuth";
 export default function SearchPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  if (!user && !isAuthLoading) {
-    window.location.href = "/login";
-  }
+  useEffect(() => {
+    if (!user && !isAuthLoading) {
+      window.location.href = "/login";
+    }
+  }, [user, isAuthLoading]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
   const [modalIndex, setModalIndex] = useState(0);

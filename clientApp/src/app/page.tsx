@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/auth/useAuth";
+
 interface CTAButtonProps {
   href: string;
   text: string;
@@ -26,22 +26,13 @@ const CTAButton = ({ href, text, primary = false }: CTAButtonProps) => (
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        if (user && !isAuthLoading) {
-          router.push("/timeline");
-        }
-      } catch (err) {
-        //console.error('セッションチェックに失敗したよ！💦', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkSession();
-  }, []);
+    if (user && !isAuthLoading) {
+      window.location.href = "/timeline";
+    }
+    setIsLoading(false);
+  }, [user, isAuthLoading]);
   //console.log(user);
 
   if (isLoading) {
