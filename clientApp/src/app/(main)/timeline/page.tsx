@@ -1,7 +1,6 @@
 "use client";
 
 import {  useEffect, useState } from "react";
-import { redirect } from "next/navigation";
 import PostForm from "@/components/features/post/form/PostForm";
 import PostCard from "@/components/features/post/card/PostCard";
 import Alert from "@/components/ui/Alert";
@@ -16,31 +15,18 @@ import { useAuth } from "@/hooks/auth/useAuth";
  * みんなの投稿が見れるよ！💖
  */
 export default function TimelinePage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  if (!user && !isAuthLoading) {
+    window.location.href = "/login";
+  }
   const [offset, setOffset] = useState(0);
   const { data: posts, isLoading, error, refetch } = useTimeline(10, offset);
-  const [redirectAddress, setRedirectAddress] = useState("");
   const [isComponentLoading, setIsComponentLoading] = useState(false);
-  const { user, isLoading: isAuthLoading } = useAuth();
   // セッションチェック！✨
-  const checkSession = async () => {
-    try {
-      if (!user && !isAuthLoading) {
-        setRedirectAddress("/login?error=login_required");
-      }
-    } catch (err: any) {
-      if (err.message==="セッションの取得に失敗したよ！💦"   || err.code === 401) {
-        setRedirectAddress("/login?error=login_required");
-      }
-    }
-    if (redirectAddress !== "") { 
-      redirect(redirectAddress);
-    }
-  };
 
   // セッションチェック！✨
   useEffect(() => {
     setIsComponentLoading(true);
-    checkSession();
     setIsComponentLoading(false);
   }, []);
   
@@ -68,7 +54,7 @@ export default function TimelinePage() {
 
   return (
     <>
-    {isComponentLoading || isAuthLoading && (
+    {isComponentLoading && (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
       </div>

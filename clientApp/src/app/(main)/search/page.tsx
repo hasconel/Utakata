@@ -1,8 +1,6 @@
 "use client";
 import PostCard from "@/components/features/post/card/PostCard";
 import { MeiliSearch } from "meilisearch";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Search } from "lucide-react";
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -17,28 +15,17 @@ import ImageModalContent from "@/components/features/post/modal/ImageModalConten
 import { getPostFromActivityId } from "@/lib/appwrite/serverConfig";
 import { useAuth } from "@/hooks/auth/useAuth";
 export default function SearchPage() {
-  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  if (!user && !isAuthLoading) {
+    window.location.href = "/login";
+  }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
   const [modalIndex, setModalIndex] = useState(0);
-  const { user, isLoading: isAuthLoading } = useAuth();
   const [search, setSearch] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        if (!user && !isAuthLoading) {
-          router.push("/login");
-        }
-      } catch (error) {
-        console.error("セッションの取得に失敗したよ！💦", error);
-        router.push("/login");
-      }
-    }
-    checkSession();
-  }, []);
 
   const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

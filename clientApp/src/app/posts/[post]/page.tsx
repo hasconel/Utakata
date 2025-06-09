@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import PostDetailCard from "@/components/features/post/card/PostDetailCard";
 import { Post } from "@/lib/appwrite/posts";
 import PostForm from "@/components/features/post/form/PostForm";
-
+import { useAuth } from "@/hooks/auth/useAuth";
 export default function PostPage() {
+    const { user, isLoading: isAuthLoading } = useAuth();
+    if (!user && !isAuthLoading) {
+        window.location.href = "/login";
+    }
     const [document, setDocument] = useState<Post | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReplyOpen, setIsReplyOpen] = useState(false);
