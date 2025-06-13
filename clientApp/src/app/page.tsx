@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { useRouter } from "next/navigation";
 
 interface CTAButtonProps {
   href: string;
@@ -27,9 +28,14 @@ const CTAButton = ({ href, text, primary = false }: CTAButtonProps) => (
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const { user, isLoading: isAuthLoading } = useAuth();
+  const [redirect, setRedirect] = useState<string | null>(null);
+  const router = useRouter();
   useEffect(() => {
     if (user && !isAuthLoading) {
-      window.location.href = "/timeline";
+      setRedirect("/timeline");
+    }
+    if(redirect) {
+      router.push(redirect);
     }
     setIsLoading(false);
   }, [user, isAuthLoading]);

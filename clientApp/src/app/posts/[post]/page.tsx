@@ -5,6 +5,7 @@ import PostDetailCard from "@/components/features/post/card/PostDetailCard";
 import { Post } from "@/lib/appwrite/posts";
 import PostForm from "@/components/features/post/form/PostForm";
 import { useAuth } from "@/hooks/auth/useAuth";
+ 
 export default function PostPage() {
     const { user, isLoading: isAuthLoading } = useAuth();
     useEffect(() => {
@@ -16,6 +17,7 @@ export default function PostPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReplyOpen, setIsReplyOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [error,setError]= useState<string | null>(null);
     const { post } = useParams();
 
     useEffect(() => {
@@ -25,12 +27,19 @@ export default function PostPage() {
                 setDocument(data);
             })
             .catch(err => {
-                console.error(err);
+                setError(err.message)
+                //console.error(err);
             })
     }, [post]);
 
     return (
         <div className="justify-center items-center mx-auto max-w-2xl bg-white dark:bg-gray-800 rounded-2xl py-2 px-4  shadow-lg">
+            {error && (
+                <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-200 border-2 border-red-200 dark:border-red-800 animate-bounce">
+                    <p className="font-bold">エラーが発生したよ！💦</p>
+                    <p>{error}</p>
+                </div>
+            )}
             {document && (
                 <PostDetailCard 
                     post={document} 

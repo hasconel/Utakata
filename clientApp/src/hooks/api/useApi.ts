@@ -6,7 +6,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ApiError } from '@/lib/api/client';
 import { Post } from '@/lib/appwrite/posts';
-import { postsApi } from '@/lib/api/server';
 
 // APIフックのオプション！✨
 interface UseApiOptions<T> {
@@ -73,7 +72,7 @@ export function useApi<T>(
  * @returns 投稿の結果
  */
 export function usePost(postId: string) {
-  return useApi(() => postsApi.getPost(postId));
+  return useApi(() => fetch(`/api/posts/${postId}`).then(res => res.json()));
 }
 
 /**
@@ -83,7 +82,13 @@ export function usePost(postId: string) {
  * @returns タイムラインの結果
  */
 export function useTimeline(limit: number = 10, offset: number = 0): UseApiResult<Post[]> {
-  const fetcher = useCallback(() => postsApi.getTimeline(limit, offset), [limit, offset]);
+  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}&offset=${offset}`).then(res => res.body?.getReader()).then((reader)=> {
+    const decoder = new TextDecoder();
+    return reader?.read().then((result)=> {
+      const text = decoder.decode(result.value, { stream: true });
+      return JSON.parse(text).postsAsPostArray;
+    });
+  }), [limit, offset]);
   return useApi<Post[]>(fetcher);
 }
 
@@ -93,16 +98,5 @@ export function useTimeline(limit: number = 10, offset: number = 0): UseApiResul
  * @returns ユーザー情報の結果
  */
 export function useUser(userId: string) {
-  const { usersApi } = require('@/lib/api/server');
-  return useApi(() => usersApi.getUser(userId));
+  return useApi(() => fetch(`/api/users/${userId}`).then(res => res.json()));
 }
-
-/**
- * ユーザーの投稿を取得するフック！✨
- * @param userId ユーザーID
- * @returns ユーザーの投稿の結果
- */
-export function useUserPosts(userId: string) {
-  const { usersApi } = require('@/lib/api/server');
-  return useApi(() => usersApi.getUserPosts(userId));
-} 

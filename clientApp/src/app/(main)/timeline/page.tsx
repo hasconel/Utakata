@@ -23,19 +23,21 @@ export default function TimelinePage() {
   }, [user, isAuthLoading]);
   const [offset, setOffset] = useState(0);
   const { data: posts, isLoading, error, refetch } = useTimeline(10, offset);
-  const [isComponentLoading, setIsComponentLoading] = useState(false);
+  const [isComponentLoading, setIsComponentLoading] = useState(true);
   // セッションチェック！✨
 
   // セッションチェック！✨
   useEffect(() => {
-    setIsComponentLoading(true);
-    setIsComponentLoading(false);
-  }, []);
+    if(user && !isAuthLoading) {
+      setIsComponentLoading(false);
+    }
+  }, [ isAuthLoading, user]);
   
   // タイムラインのリロード！✨
   const handleTimelineReload = () => {
     setOffset(0);
     refetch();  
+    //console.log("posts", posts);
   };
 
   // 投稿作成イベントのリスナー！✨
