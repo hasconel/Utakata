@@ -9,7 +9,6 @@ import { useTheme } from "@/lib/theme/ThemeContext";
 const UrlInText = ({ arg }: { arg: string }) => {
   const [, setError] = useState<string | null>(null);
   const { theme } = useTheme();
-
   // URLが空の場合は何も表示しない
   if (arg == null) {
     return <></>;
@@ -106,7 +105,8 @@ const UrlInText = ({ arg }: { arg: string }) => {
   }
 
   // 他のURLを検出した場合はリンクカードを表示
-  const url = arg.match(/https?:\/\/[\w-]+\.[\w-]+\.[\w-]+/);
+  const url = arg.match(/https?:\/\/[\w/:%#\$&\?\(\)~\.=\+\-]+/);
+  
   if (url != null) {
     return <LinkCard url={url[0]} />;
   }

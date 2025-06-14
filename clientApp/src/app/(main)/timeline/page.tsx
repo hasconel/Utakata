@@ -21,29 +21,71 @@ export default function TimelinePage() {
       window.location.href = "/login";
     }
   }, [user, isAuthLoading]);
-  const [offset, setOffset] = useState(0);
-  const { data: posts, isLoading, error, refetch } = useTimeline(10, offset);
-  const [isComponentLoading, setIsComponentLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchMore, setFetchMore] = useState<boolean>(false);
+  const [firstId, setFirstId] = useState<string | null>(null);
+  const [lastId, setLastId] = useState<string | null>(null);
+  const [startY, setStartY] = useState(0);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const { data: posts, isLoading, error, refetch } = useTimeline(10, null,lastId,firstId);
   // セッションチェック！✨
 
-  // セッションチェック！✨
-  useEffect(() => {
-    if(user && !isAuthLoading) {
-      setIsComponentLoading(false);
+  // プルリフレッシュの処理！✨
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+    
+    // ページの最上部で下に引っ張った時だけリフレッシュ！✨
+    if (diff > 50 && window.scrollY === 0 && !isRefreshing) {
+      setIsRefreshing(true);
+      handleTimelineReload().finally(() => {
+        setIsRefreshing(false);
+      });
     }
-  }, [ isAuthLoading, user]);
-  
-  // タイムラインのリロード！✨
-  const handleTimelineReload = () => {
-    setOffset(0);
-    refetch();  
-    //console.log("posts", posts);
+  };
+
+  // 投稿を追加する処理！
+  useEffect(() => {
+    console.log("posts", posts);
+    console.log("firstId", firstId);
+    console.log("lastId", lastId);
+    if (posts) {
+      setAllPosts(prev => {
+        console.log("prev", prev);
+        //prevの$idを取得
+        const prevIds = prev.map(post => post.$id);
+        // 新しい投稿をフィルタリングして追加！✨
+        const newPosts = posts.filter(post => !prevIds.includes(post.$id)).sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
+
+        if (firstId !== null) return [...newPosts, ...prev];
+        if (newPosts.length > 9) setFetchMore(true);else setFetchMore(false);
+        return [...prev, ...newPosts];
+      });
+    }else{
+      setFetchMore(false);
+    }
+
+  }, [posts]);
+
+  // タイムラインのリロード！追加処理をする✨
+  const handleTimelineReload = async () => {
+    if (posts && posts.length > 0) {
+      setLastId(null);
+      setFirstId(posts[0].$id);
+    }
+    await refetch();
   };
 
   // 投稿作成イベントのリスナー！✨
   useEffect(() => {
     const handlePostCreated = () => {
-      setOffset(0);
+      if (posts && posts.length > 0) {
+        setFirstId(posts[0].$id);
+      }
       refetch();
     };
 
@@ -52,25 +94,39 @@ export default function TimelinePage() {
   }, [refetch]);
 
   // もっと見るボタンのハンドラー！✨
-  const handleLoadMore = (offsetcount: 10 |-10) => {
-    setOffset(offset+offsetcount);
+  const handleLoadMore =async () => {
+    setFirstId(null);
+    if (allPosts && allPosts.length > 0) {
+      setLastId(allPosts[allPosts.length - 1].$id);
+    }
+    await refetch();
   };
-
   return (
     <>
-    {isComponentLoading && (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    )}
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div 
+      className="max-w-2xl mx-auto px-4 py-8"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+    >
+      {/* プルリフレッシュのインジケーター！✨ */}
+      {isRefreshing && (
+        <div className="fixed top-0 left-0 right-0 flex justify-center z-50">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-4 py-2 rounded-b-2xl shadow-lg border border-purple-100 dark:border-purple-900">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
+          </div>
+        </div>
+      )}
+      
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
-        <button className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4" onClick={() => handleTimelineReload()}>
+        <button 
+          className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4" 
+          onClick={() => handleTimelineReload()}
+        >
           タイムライン ✨
         </button>
         <PostForm />
       </div>
-      {offset !== 0 && (
+      {/*offset !== 0 && (
         <div className="flex justify-center mt-8">
           <button
             onClick={() => handleLoadMore(-10)}
@@ -82,18 +138,18 @@ export default function TimelinePage() {
             </span>
           </button>
         </div>
-      )}
+      )*/}
       
-      {posts && <TimelineContent 
+      <TimelineContent 
       isLoading={isLoading} 
-      posts={posts} 
+      posts={allPosts} 
       error={error}
-      />}
+      />
           {/* もっと見るボタン！✨ */}
-            {posts && posts.length > 9 && (
+            {fetchMore && (
           <div className="flex justify-center mt-8">
             <button
-              onClick={() => handleLoadMore(10)}
+              onClick={() => handleLoadMore()}
               className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
             >
               <span className="flex items-center">
@@ -107,6 +163,43 @@ export default function TimelinePage() {
   );
 }
 
+/**
+ * スケルトンローディングコンポーネント！✨
+ * 投稿の読み込み中をキラキラに表示するよ！💖
+ */
+const LoadingSkeleton = () => (
+  <div className="space-y-6">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-100 dark:border-purple-900 animate-pulse">
+        {/* ユーザー情報のスケルトン！✨ */}
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+          <div className="flex-1">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/6"></div>
+          </div>
+        </div>
+        {/* 投稿内容のスケルトン！✨ */}
+        <div className="space-y-3">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+        </div>
+        {/* 画像のスケルトン！✨ */}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        </div>
+        {/* アクションボタンのスケルトン！✨ */}
+        <div className="mt-4 flex space-x-4">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | null, posts: Post[], error: ApiError | null}) => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -114,11 +207,7 @@ const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | nul
   const [modalIndex, setModalIndex] = useState(0);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (error) {

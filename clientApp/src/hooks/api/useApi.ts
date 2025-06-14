@@ -79,16 +79,21 @@ export function usePost(postId: string) {
  * タイムラインを取得するフック！✨
  * @param limit 取得件数
  * @param offset オフセット
+ * @param lastId 最後の投稿ID
+ * @param firstId 最初の投稿ID
  * @returns タイムラインの結果
  */
-export function useTimeline(limit: number = 10, offset: number = 0): UseApiResult<Post[]> {
-  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}&offset=${offset}`).then(res => res.body?.getReader()).then((reader)=> {
+export function useTimeline(limit: number = 10, offset: number | null = 0, lastId: string | null = null, firstId: string | null = null): UseApiResult<Post[]> {
+  const offsetQuery = offset ? `&offset=${offset}` : "";
+  const lastIdQuery = lastId ? `&lastId=${lastId}` : "";
+  const firstIdQuery = firstId ? `&firstId=${firstId}` : "";
+  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}`).then(res => res.body?.getReader()).then((reader)=> {
     const decoder = new TextDecoder();
     return reader?.read().then((result)=> {
       const text = decoder.decode(result.value, { stream: true });
       return JSON.parse(text).postsAsPostArray;
     });
-  }), [limit, offset]);
+  }), [limit, offset, lastId, firstId]);
   return useApi<Post[]>(fetcher);
 }
 

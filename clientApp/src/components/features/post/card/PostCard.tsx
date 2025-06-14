@@ -81,7 +81,6 @@ export default function PostCard({ post, setIsModalOpen, isModalOpen ,setModalIm
   const [, setReplyPosts] = useState<Post[]>([]);
   const [relativeTime, setRelativeTime] = useState<string>("");
   const images = post.attachment?.map((image) => JSON.parse(image) as ActivityPubImage) || [];
- 
   // 相対時間を更新するよ！⏰
   useEffect(() => {
     const updateRelativeTime = () => {

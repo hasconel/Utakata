@@ -109,6 +109,10 @@ export async function GET(request: Request) {
   const attributedTo = searchParams.get("attributedTo") ;
   const searchAttributedTo = attributedTo? [`https://${ENV.DOMAIN}/users/${attributedTo}`] : "";
   const attributedToQuery = attributedTo? Query.equal('attributedTo',searchAttributedTo) : "";
+  const lastId = searchParams.get("lastId") ;
+  const lastIdQuery = lastId? Query.cursorAfter(lastId) :"";
+  const firstId = searchParams.get("firstId") ;
+  const firstIdQuery = firstId? Query.cursorBefore(firstId) :"";
   const queries = [
     Query.orderDesc("$createdAt"),
     Query.limit(parseInt(limit)),
@@ -120,6 +124,12 @@ export async function GET(request: Request) {
   }
   if (attributedTo) {
     queries.push(attributedToQuery)
+  }
+  if (lastId) {
+    queries.push(lastIdQuery)
+  }
+  if (firstId) {
+    queries.push(firstIdQuery)
   }
   try {
     const { databases, account } = await createSessionClient(request);    
