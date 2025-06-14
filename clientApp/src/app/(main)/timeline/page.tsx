@@ -50,12 +50,8 @@ export default function TimelinePage() {
 
   // 投稿を追加する処理！
   useEffect(() => {
-    console.log("posts", posts);
-    console.log("firstId", firstId);
-    console.log("lastId", lastId);
     if (posts) {
       setAllPosts(prev => {
-        console.log("prev", prev);
         //prevの$idを取得
         const prevIds = prev.map(post => post.$id);
         // 新しい投稿をフィルタリングして追加！✨
