@@ -100,7 +100,7 @@ export default function PostCard({ post, setIsModalOpen, isModalOpen ,setModalIm
   return (
     <>
       <div 
-        className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0"
+        className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-white/80 dark:border-gray-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0"
         onClick={() => {setIsDetailOpen(true); {post.replyCount > 0 ? ReplyPosts() : ""}}}
       >
         {/* キラキラな背景エフェクト！✨ */}

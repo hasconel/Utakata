@@ -70,7 +70,7 @@ export default function UserProfile() {
     };
 
     fetchUserData();
-  }, [params.user]);
+  }, [params.user,user,isAuthLoading]);
 
 
   const handleFollow = async (userId: string) => {
@@ -124,16 +124,17 @@ export default function UserProfile() {
       </div>
     );
   }
-  return (
+  return (<>
+    <div className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${targetActor?.backgroundUrl})`}}/>
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       {/* プロフィールヘッダー */}
-      <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-8 shadow-lg">
+      <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl p-8 shadow-lg">
         <div className="flex items-center space-x-6">
           <Avatar
             src={targetActor?.avatarUrl}
             alt={targetActor?.displayName || targetActor?.preferredUsername}
             fallback={(targetActor?.displayName || targetActor?.preferredUsername || "U").charAt(0)}
-            size="lg"
+            size="2xl"
             variant="outline"
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
@@ -176,7 +177,7 @@ export default function UserProfile() {
 
       {/* 投稿一覧 */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl px-2 py-4 shadow-lg">
           投稿一覧 💫
         </h2>
         {isModalOpen && (
@@ -195,6 +196,6 @@ export default function UserProfile() {
         )}
       </div>
 
-    </div>
+    </div></>
   );
 } 

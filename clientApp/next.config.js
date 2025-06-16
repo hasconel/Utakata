@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '4mb',
+      allowedOrigins: ['http://localhost:3000','https://utakata.hasconel.com'],
+    },
+  },
   images: {
     remotePatterns: [
       {
@@ -13,7 +19,7 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'pbs.hasconel.com',
-      }
+      },
     ],
   },
   reactStrictMode: true,

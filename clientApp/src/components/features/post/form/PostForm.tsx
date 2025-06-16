@@ -245,7 +245,7 @@ export default function PostForm({ post, onClose, isReplyDisplay=true }: PostFor
           type="button"
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-900/30 transition-all duration-300 hover:scale-105 active:scale-95 rounded-xl border-2 border-pink-200 dark:border-pink-800"
+          className="flex items-center gap-2 bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-900 transition-all duration-300 hover:scale-105 active:scale-95 rounded-xl border-2 border-pink-200 dark:border-pink-800"
         >
           <ImagePlus className="w-4 h-4" />
           画像追加 📸

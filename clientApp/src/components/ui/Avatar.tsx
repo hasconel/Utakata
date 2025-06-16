@@ -5,7 +5,7 @@ import React from 'react';
 import Link from 'next/link';
 import Modal from './Modal';
 // キラキラなアバターのバリエーション！✨
-export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 export type AvatarVariant = 'default' | 'outline' | 'ghost';
 
 interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
@@ -27,6 +27,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
       md: 'w-10 h-10',
       lg: 'w-12 h-12',
       xl: 'w-16 h-16',
+      '2xl': 'w-20 h-20',
     };
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -54,7 +55,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
           width={100}
           height={100}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover hover:scale-105 transition-transform duration-200"
+          className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">

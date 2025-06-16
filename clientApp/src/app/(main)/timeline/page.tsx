@@ -10,6 +10,7 @@ import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Post } from "@/lib/appwrite/posts";
 import { ApiError } from  "@/lib/api/client";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { getActorByUserId ,Actor as ActorType} from "@/lib/appwrite/database";
 /**
  * タイムラインページ！✨
  * みんなの投稿が見れるよ！💖
@@ -28,8 +29,13 @@ export default function TimelinePage() {
   const [startY, setStartY] = useState(0);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const { data: posts, isLoading, error, refetch } = useTimeline(10, null,lastId,firstId);
+  const [actor, setActor] = useState<ActorType | null>(null);
   // セッションチェック！✨
-
+  useEffect(() => {
+    if (user) {
+      getActorByUserId(user.$id).then(res=>setActor(res)).catch(err=>console.error(err));
+    }
+  }, [user]);
   // プルリフレッシュの処理！✨
   const handleTouchStart = (e: React.TouchEvent) => {
     setStartY(e.touches[0].clientY);
@@ -51,27 +57,28 @@ export default function TimelinePage() {
   // 投稿を追加する処理！
   useEffect(() => {
     if (posts) {
-      setAllPosts(prev => {
+      return setAllPosts(prev => {
         //prevの$idを取得
         const prevIds = prev.map(post => post.$id);
         // 新しい投稿をフィルタリングして追加！✨
+        if (prevIds.length === 0) setFetchMore(true);
         const newPosts = posts.filter(post => !prevIds.includes(post.$id)).sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
-
-        if (firstId !== null) return [...newPosts, ...prev];
-        if (newPosts.length > 9) setFetchMore(true);else setFetchMore(false);
+        if (newPosts.length < 10) setFetchMore(false);else setFetchMore(true);
+        if (firstId !== null) return [...newPosts, ...prev].sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
+        if (firstId === null) return [...prev, ...newPosts].sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
         return [...prev, ...newPosts];
       });
-    }else{
-      setFetchMore(false);
     }
-
-  }, [posts]);
+    return () => {
+      setFetchMore(false);
+    };
+  }, [posts]);  
 
   // タイムラインのリロード！追加処理をする✨
   const handleTimelineReload = async () => {
-    if (posts && posts.length > 0) {
+    if (allPosts && allPosts.length > 0) {
       setLastId(null);
-      setFirstId(posts[0].$id);
+      setFirstId(allPosts[0].$id);
     }
     await refetch();
   };
@@ -79,8 +86,9 @@ export default function TimelinePage() {
   // 投稿作成イベントのリスナー！✨
   useEffect(() => {
     const handlePostCreated = () => {
-      if (posts && posts.length > 0) {
-        setFirstId(posts[0].$id);
+      if (allPosts && allPosts.length > 0) {
+        setLastId(null);
+        setFirstId(allPosts[0].$id);
       }
       refetch();
     };
@@ -99,6 +107,7 @@ export default function TimelinePage() {
   };
   return (
     <>
+    <div className="bg-cover bg-center z-0 absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${actor?.backgroundUrl})`}}/>
     <div 
       className="max-w-2xl mx-auto px-4 py-8"
       onTouchStart={handleTouchStart}
@@ -113,7 +122,7 @@ export default function TimelinePage() {
         </div>
       )}
       
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
+      <div className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/40 dark:via-gray-700/80 dark:to-gray-900/90  backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
         <button 
           className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4" 
           onClick={() => handleTimelineReload()}
@@ -216,7 +225,7 @@ const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | nul
 
 
   return (
-    <div>
+    <div >
       {isModalOpen  && (
         <div className="fixed inset-0 z-50">
           <ImageModalContent 

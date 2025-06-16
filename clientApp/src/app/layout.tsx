@@ -29,7 +29,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" type="image/x-icon" />
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} antialiased ` }>
         <ThemeProvider>
           <div className="relative flex flex-col min-h-screen">
             <div className="fixed inset-0 z-0">

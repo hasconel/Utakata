@@ -66,6 +66,7 @@ export interface Actor {
     avatarUrl?: string;
     bio?: string;
     followers?: string[];
+    backgroundUrl?: string;
   }
   export interface ActorSub extends Models.Document {
     followers?: string[];
@@ -136,6 +137,7 @@ const ActorSchema = z.object({
           followers: actorSubs[0].followers || doc.followers || [],
           avatarUrl: doc.avatarUrl || "",
           bio: doc.bio || "",
+          backgroundUrl: doc.backgroundUrl || "",
         };
   
         /*displayNameがない場合、preferredUsernameを保存

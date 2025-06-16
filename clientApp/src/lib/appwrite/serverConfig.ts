@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { getActorByUserId } from "./database";
-import { formatDateForUrl } from "@/lib/utils/date";
+import { formatDateForHex } from "@/lib/utils/date";
 import { MeiliSearch } from "meilisearch";
 import { Post } from "@/lib/appwrite/posts";
 const meilisearch = new MeiliSearch({
@@ -474,7 +474,7 @@ export async function unlikePost(postId: string) {
  * @param file アップロードする画像のファイルのバイナリデータ
  * @returns アップロードされた画像のURL
  */
-export async function uploadImage(file: string) {
+export async function uploadAvatar(buffer: string,fileName: string) {
   try {
     const { storage } = await createSessionClient();
     const session = await getLoggedInUser();
@@ -485,16 +485,41 @@ export async function uploadImage(file: string) {
     if (!currentUser) {
       throw new Error("ユーザーが見つからないわ！💦");
     }
-    const fileId = `avatar-${currentUser.actorId.split("/").pop()}-${formatDateForUrl(new Date())}`;
+    const fileId = `avatar-${currentUser.actorId.split("/").pop()}-${formatDateForHex(new Date())}`;
     const uploadedFile = await storage.createFile(
       process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
       fileId,
-      InputFile.fromBuffer(Buffer.from(file, 'base64'), "image.jpg")
+      InputFile.fromBuffer(Buffer.from(buffer, 'base64'), fileName)
     );
     const url = await getImageUrl(uploadedFile.$id);
     return url;
   } catch (error) {
     console.error("画像のアップロードに失敗したわ！💦", error);
+    return false;
+  }
+}
+
+export async function uploadBackground(buffer: string,fileName: string) {
+  try {
+    const { storage } = await createSessionClient();
+    const session = await getLoggedInUser();
+    if (!session) {
+      throw new Error("セッションが見つからないわ！💦");
+    }
+    const currentUser = await getActorByUserId(session.$id);
+    if (!currentUser) {
+      throw new Error("ユーザーが見つからないわ！💦");
+    }
+    const fileId = `background-${currentUser.actorId.split("/").pop()}-${formatDateForHex(new Date())}`;
+    const uploadedFile = await storage.createFile(
+      process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
+      fileId,
+      InputFile.fromBuffer(Buffer.from(buffer, 'base64'), fileName)
+    );
+    const url = await getImageUrl(uploadedFile.$id);
+    return url;
+  } catch (error) {
+    console.error("背景画像のアップロードに失敗したわ！💦", error);
     return false;
   }
 }
@@ -505,9 +530,10 @@ export async function uploadImage(file: string) {
  * @param displayName 表示名
  * @param bio 自己紹介
  * @param avatarUrl アバターのURL
+ * @param backgroundUrl 背景画像のURL
  * @returns プロフィールの更新成功かどうか
  */
-export async function updateProfile( displayName?: string, bio?: string, avatarUrl?: string) {
+export async function updateProfile( displayName?: string, bio?: string, avatarUrl?: string,backgroundUrl?: string) {
   if(!displayName && !bio && !avatarUrl){
     throw new Error("更新する内容がないわ！💦");
   }
@@ -521,7 +547,8 @@ export async function updateProfile( displayName?: string, bio?: string, avatarU
     const updateData = {
       displayName: currentUser.displayName,
       bio: currentUser.bio,
-      avatarUrl: currentUser.avatarUrl
+      avatarUrl: currentUser.avatarUrl,
+      backgroundUrl: currentUser.backgroundUrl || null
     };
     if(displayName){
       updateData.displayName = displayName;
@@ -531,6 +558,12 @@ export async function updateProfile( displayName?: string, bio?: string, avatarU
     }
     if(avatarUrl){
       updateData.avatarUrl = avatarUrl;
+    }
+    if(backgroundUrl && backgroundUrl !== ""){
+      updateData.backgroundUrl = backgroundUrl;
+    }
+    if(backgroundUrl === ""){
+      updateData.backgroundUrl = null;
     }
     await databases.updateDocument(
       process.env.APPWRITE_DATABASE_ID!,

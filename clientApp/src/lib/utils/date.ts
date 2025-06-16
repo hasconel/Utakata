@@ -75,3 +75,18 @@ export function formatDateForUrl(date: string | Date): string {
   const d = new Date(date);
   return d.toISOString().replace(/[-:Z]/g, "");
 }
+
+/**
+ * 日付をフォーマットする関数！✨
+ * 日付をフォーマットして、16進数に変換する関数
+ */
+export function formatDateForHex(date: string | Date): string {
+  const d = new Date(date);
+  const year = d.getFullYear().toString(16);
+  const month = (d.getMonth() + 1).toString(16);
+  const day = d.getDate().toString(16);
+  const hour = d.getHours().toString(16);
+  const minute = d.getMinutes().toString(16);
+  const second = d.getSeconds().toString(16);
+  return `${year}${month}${day}${hour}${minute}${second}`;
+}
