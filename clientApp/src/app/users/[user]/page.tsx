@@ -16,6 +16,8 @@ import { muteUser, unmuteUser } from "@/lib/appwrite/serverConfig";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
+
+
 /**
  * ユーザープロフィール画面！✨
  * かわいいデザインでユーザーの情報と投稿を表示するよ！💖

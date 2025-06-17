@@ -10,10 +10,10 @@ import { Actor } from "../appwrite/database";
 /**
  * HTTP Signatureを生成！📝
  * inboxへのリクエストを署名してセキュリティバッチリ！💪
- * @param url 配信先のinbox URL（例：https://example.com/users/alice/inbox）
+ * @param url 配信先のinbox URL（例：https://example.com/actor/alice/inbox）
  * @param body リクエストボディ（アクティビティJSON）
  * @param privateKey 署名用のRSA秘密鍵（PEM形式）
- * @param keyId 公開鍵のID（例：https://domain/users/alice#main-key）
+ * @param keyId 公開鍵のID（例：https://domain/actor/alice#main-key）
  * @returns 署名済みのヘッダー
  * @throws Error 署名生成エラー
  */

@@ -59,6 +59,7 @@ export interface Actor {
     actorId: string;
     preferredUsername: string;
     displayName?: string;
+    publicKey: string;
     privateKey: string;
     userId: string;
     mutedUsers?: string[];
@@ -122,14 +123,14 @@ const ActorSchema = z.object({
         throw new Error("サブアクターの取得に失敗したよ！💦");
       }
       // ドキュメントが存在する場合、Actor型に変換
-       
-  
+      
         // Actor型に変換（型ガードで安全）
         const actor: Actor = {
           $id: doc.$id,
           actorId: doc.actorId,
           preferredUsername: doc.preferredUsername,
           displayName: doc.displayName || doc.preferredUsername, // 移行用
+          publicKey: doc.publicKey ,
           privateKey: doc.privateKey,
           userId: doc.userId,
           mutedUsers: doc.mutedUsers || [],
@@ -215,6 +216,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
         preferredUsername: res.preferredUsername,
         displayName: res.displayName,
         followers: res.followers || [],
+        publicKey: res.publicKey,
         privateKey: res.privateKey,
         userId: res.userId,
         mutedUsers: res.mutedUsers || [],

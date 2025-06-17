@@ -99,17 +99,17 @@ export default function ProfileSettings() {
         if(typeof avatarFormData.background === "string" && avatarFormData.background === ""){
           uploadProfile.backgroundUrl = "";
         }else if(avatarFormData.background instanceof File){
-          const backgroundFormData2 = new FormData();
-          backgroundFormData2.append("background", avatarFormData.background);
-          const image = new Image();
-          image.src = URL.createObjectURL(avatarFormData.background);
-          const arrayBuffer = await avatarFormData.background.arrayBuffer();
-          const base64 = Buffer.from(arrayBuffer).toString('base64');
-          const backgroundBase64 = base64;
-          const backgroundUrl = await uploadBackground(backgroundBase64,avatarFormData.background.name);
-          if (backgroundUrl) {
-            uploadProfile.backgroundUrl = backgroundUrl;
-          }
+        const backgroundFormData2 = new FormData();
+        backgroundFormData2.append("background", avatarFormData.background);
+        const image = new Image();
+        image.src = URL.createObjectURL(avatarFormData.background);
+        const arrayBuffer = await avatarFormData.background.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const backgroundBase64 = base64;
+        const backgroundUrl = await uploadBackground(backgroundBase64,avatarFormData.background.name);
+        if (backgroundUrl) {
+          uploadProfile.backgroundUrl = backgroundUrl;
+        }
         }
       }
 

@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: { username: s
       preferredUsername: doc.preferredUsername,
       displayName: doc.displayName || doc.preferredUsername,
       followers: doc.followers,
+      publicKey: doc.publicKey,
       privateKey: doc.privateKey,
       userId: doc.userId,
     };
