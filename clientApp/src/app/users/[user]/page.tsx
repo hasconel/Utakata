@@ -130,7 +130,7 @@ export default function UserProfile({ params }: { params: { user: string } }) {
     );
   }
   return (<>
-    <div className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${targetActor?.backgroundUrl})`}}/>
+    <div className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${targetActor?.image?.url})`}}/>
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       {/* プロフィールヘッダー */}
       <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl p-8 shadow-lg">

@@ -60,6 +60,11 @@ export async function GET(
         mediaType: "image/png",
         url: user.avatarUrl,
       },
+      image: {
+        type: "Image",
+        mediaType: "image/png",
+        url: user.backgroundUrl,
+      },
     }
 
     return NextResponse.json(actor, {

@@ -333,5 +333,6 @@ export async function getActorById(actorId: string): Promise<Actor | null> {
     following: doc.following || [],
     avatarUrl: doc.avatarUrl,
     bio: doc.bio,
+    backgroundUrl: doc.backgroundUrl,
   } as Actor;
 }
