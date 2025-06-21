@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Post } from "@/lib/appwrite/posts";
-import { Actor } from "@/lib/appwrite/database";
 import PostCard from "@/components/features/post/card/PostCard";
 import { getUserPosts } from "@/lib/appwrite/client";
 import { Button } from "@/components/ui/Button";
