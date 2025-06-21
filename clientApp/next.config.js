@@ -20,6 +20,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'pbs.hasconel.com',
       },
+      {
+        protocol: 'http',
+        hostname: '192.168.1.121',
+      },
     ],
   },
   reactStrictMode: true,

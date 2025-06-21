@@ -87,7 +87,14 @@ export function useTimeline(limit: number = 10, offset: number | null = 0, lastI
   const offsetQuery = offset ? `&offset=${offset}` : "";
   const lastIdQuery = lastId ? `&lastId=${lastId}` : "";
   const firstIdQuery = firstId ? `&firstId=${firstId}` : "";
-  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}`).then(res => res.body?.getReader()).then((reader)=> {
+  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}`,
+    {
+      method: "GET",
+      headers: {
+        "Accept": "application/activity+json"
+      }
+    }
+  ).then(res => res.body?.getReader()).then((reader)=> {
     const decoder = new TextDecoder();
     return reader?.read().then((result)=> {
       const text = decoder.decode(result.value, { stream: true });
@@ -103,5 +110,12 @@ export function useTimeline(limit: number = 10, offset: number | null = 0, lastI
  * @returns ユーザー情報の結果
  */
 export function useUser(userId: string) {
-  return useApi(() => fetch(`/api/users/${userId}`).then(res => res.json()));
+  return useApi(() => fetch(`/api/users/${userId}`,
+    {
+      method: "GET",
+      headers: {
+        "Accept": "application/activity+json"
+      }
+    }
+  ).then(res => res.json()));
 }

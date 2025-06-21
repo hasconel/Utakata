@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
-import { Query } from "node-appwrite";
-import { ENV } from "@/lib/api/config";
+import { getActorById } from "@/lib/appwrite/database";
 
 /**
  * ユーザー情報を取得するAPI！✨
@@ -12,13 +10,22 @@ export async function GET(
   request: Request,
   { params }: { params: { username: string } }
 ) {
-  try {    
-    //console.log("params", params);
-    const { databases } = await createSessionClient(request);
-    const response = await databases.listDocuments(ENV.DATABASE_ID, ENV.ACTORS_COLLECTION_ID, [
-      Query.equal("preferredUsername", [params.username]),
-    ]);
-    if (response.documents.length === 0) {
+  try {
+    if (request.url.split("/").pop()?.split("?")[0].split("&")[0].split("=")[0].split("#")[0] !== params.username) {
+      return NextResponse.json(
+        { error: "ユーザーが見つからないわ！💦" },
+        { 
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          }
+        }
+      );
+    }
+    const actorId = `https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${params.username}`;
+    //console.log("actorId", actorId);
+    const user = await getActorById(actorId);
+    if (!user) {
       return NextResponse.json(
         { error: "ユーザーが見つからないわ！💦" },
         { 
@@ -31,8 +38,30 @@ export async function GET(
         }
       );
     }
-    const user = response.documents[0];
-    return NextResponse.json(user, {
+    const actor = {
+      type: "Person",
+      id: user.actorId,
+      preferredUsername: user.preferredUsername,
+      publicKey: {
+        id: user.actorId,
+        owner: user.actorId,
+        publicKeyPem: user.publicKey,
+      },
+      name: user.displayName,
+      followers: {
+        type: "OrderedCollection",
+        id: user.actorId,
+        totalItems: user.followers?.length || 0,
+        first: user.followers?.[0] || null,
+      },
+      icon: {
+        type: "Image",
+        mediaType: "image/png",
+        url: user.avatarUrl,
+      },
+    }
+
+    return NextResponse.json(actor, {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',

@@ -6,18 +6,19 @@
 import { createHash, createSign, createVerify } from "crypto";
 import { Errors } from "./errors";
 import { Actor } from "../appwrite/database";
+import { decrypt } from "@/lib/appwrite/database";
 
 /**
  * HTTP Signatureを生成！📝
  * inboxへのリクエストを署名してセキュリティバッチリ！💪
  * @param url 配信先のinbox URL（例：https://example.com/actor/alice/inbox）
  * @param body リクエストボディ（アクティビティJSON）
- * @param privateKey 署名用のRSA秘密鍵（PEM形式）
+ * @param privateKey 署名用のRSA秘密鍵（PEM形式）AES-256-GCMで暗号化されたもの
  * @param keyId 公開鍵のID（例：https://domain/actor/alice#main-key）
  * @returns 署名済みのヘッダー
  * @throws Error 署名生成エラー
  */
-export function signRequest(url: string, body: any, privateKey: string, keyId: string): { headers: Record<string, string> } {
+export async function signRequest(url: string, body: any, privateKey: string, keyId: string): Promise<{ headers: Record<string, string> }> {
   try {
     const parsedUrl = new URL(url);
     // ボディのSHA-256ハッシュを生成（Digestヘッダー用）
@@ -36,7 +37,8 @@ export function signRequest(url: string, body: any, privateKey: string, keyId: s
     const signer = createSign("RSA-SHA256");
     const headerString = `(request-target): post ${parsedUrl.pathname}\nhost: ${headers.Host}\ndate: ${headers.Date}\ndigest: ${headers.Digest}`;
     signer.update(headerString);
-    const signature = signer.sign(privateKey, "base64");
+
+    const signature = signer.sign(await decrypt(privateKey), "base64");
 
     const signatureHeader = `keyId="${keyId}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
     

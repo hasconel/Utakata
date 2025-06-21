@@ -2,8 +2,8 @@ import {NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 
-export async function GET(request: NextRequest, { params }: { params: { username: string } }) {
-  const username = params.username;
+export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
+  const username = params.user;
   const header = request.headers;
   if(header.get("Accept") !== "application/activity+json"){
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest, { params }: { params: { username
     "totalItems": 0,
     "first": {
       "type": "OrderedCollectionPage",
-      "id": `https://${process.env.NEXT_PUBLIC_DOMAIN}/actor/${username}/followers?page=1`,
-      "partOf": `https://${process.env.NEXT_PUBLIC_DOMAIN}/actor/${username}/followers`,
+      "id": `https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${username}/followers?page=1`,
+      "partOf": `https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${username}/followers`,
       "orderedItems": [],
       "next": null
     }

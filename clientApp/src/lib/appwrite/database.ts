@@ -9,7 +9,7 @@ import { generateKeyPairSync } from "crypto";
 import { Errors } from "../activitypub/errors";
 import {z} from "zod"
 import { cookies } from "next/headers";
-import { createCipheriv, randomBytes } from "crypto";
+import { createCipheriv, randomBytes, createDecipheriv } from "crypto";
 /**
  * ユーザーIDからアクターを取得！🔍
  * @param userId AppwriteのユーザーID
@@ -53,6 +53,19 @@ function encrypt(text: string): string {
   encrypted += cipher.final("hex");
   const authTag = cipher.getAuthTag().toString("hex");
   return `${iv.toString("hex")}:${encrypted}:${authTag}`;
+}
+
+/**
+ * 復号化（AES-256-GCM）！🔒
+ * 秘密鍵をキラキラ安全に復号化！✨
+ * @param text 暗号化されたテキスト
+ * @returns 復号化されたテキスト
+ */
+export async function decrypt(text: string): Promise<string> {
+  const [iv, encrypted, authTag] = text.split(":");
+  const decipher = createDecipheriv("aes-256-gcm", ENCRYPTION_KEY, Buffer.from(iv, "hex"));
+  decipher.setAuthTag(Buffer.from(authTag, "hex"));
+  return decipher.update(encrypted, "hex", "utf8") + decipher.final("utf8");
 }
 export interface Actor {
     $id: string;

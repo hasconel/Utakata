@@ -1,12 +1,15 @@
 "use client"
-import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import PostDetailCard from "@/components/features/post/card/PostDetailCard";
 import { Post } from "@/lib/appwrite/posts";
 import PostForm from "@/components/features/post/form/PostForm";
 import { useAuth } from "@/hooks/auth/useAuth";
- 
-export default function PostPage() {
+
+/**
+ * 投稿詳細ページコンポーネント！✨
+ * 投稿の詳細を表示して、リプライもできるよ！💖
+ */
+export default function PostPage( { params }: { params: { post: string } }) {
     const { user, isLoading: isAuthLoading } = useAuth();
     useEffect(() => {
         if (!user && !isAuthLoading) {
@@ -18,20 +21,25 @@ export default function PostPage() {
     const [isReplyOpen, setIsReplyOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [error,setError]= useState<string | null>(null);
-    const { post } = useParams();
-
+    const { post } = params;
+    
     useEffect(() => {
-        fetch(`/api/posts/${post}`)
-            .then(res => res.json())
-            .then(data => {
+        const fetchPost = async () => {
+            const res = await fetch(`/api/posts/${post}`,{
+                headers: {
+                    "Accept": ", application/activity+json",
+                }
+            })
+            if(res.ok){
+                const data = await res.json();
                 setDocument(data);
-            })
-            .catch(err => {
-                setError(err.message)
-                //console.error(err);
-            })
+            }else{
+                console.log(res);
+                setError("投稿が見つかりませんでした");
+            }
+        }
+        fetchPost();
     }, [post]);
-
     return (
         <div className="justify-center items-center mx-auto max-w-2xl bg-white dark:bg-gray-800 rounded-2xl py-2 px-4  shadow-lg">
             {error && (

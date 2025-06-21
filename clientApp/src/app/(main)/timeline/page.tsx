@@ -107,9 +107,9 @@ export default function TimelinePage() {
   };
   return (
     <>
-    <div className="bg-cover bg-center z-0 absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${actor?.backgroundUrl})`}}/>
+    <div className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${actor?.backgroundUrl})`}}/>
     <div 
-      className="max-w-2xl mx-auto px-4 py-8"
+      className="max-w-2xl mx-auto md:px-4  "
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
     >
@@ -122,7 +122,9 @@ export default function TimelinePage() {
         </div>
       )}
       
-      <div className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/40 dark:via-gray-700/80 dark:to-gray-900/90  backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
+      <div className="bg-gradient-to-br 
+      from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/40 dark:via-gray-700/80 dark:to-gray-900/90  backdrop-blur-sm
+       rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
         <button 
           className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4" 
           onClick={() => handleTimelineReload()}

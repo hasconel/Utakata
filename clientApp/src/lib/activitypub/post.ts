@@ -13,7 +13,7 @@ import sanitizeHtml from "sanitize-html";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ID, Permission } from "node-appwrite";
 import { MeiliSearch } from "meilisearch";
-import { getActorByUserId } from "@/lib/appwrite/database";
+import { getActorByUserId, getActorById } from "@/lib/appwrite/database";
 
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -89,6 +89,7 @@ export async function savePost(
       // parentActorIdがnullでない場合のみccに追加（型安全）
       if (parentActorId) {
         activity.cc = Array.isArray(activity.cc) ? [...activity.cc, parentActorId] : [activity.cc, parentActorId].filter((id): id is string => id !== null);
+        // リプライ通知を作成
         await databases.createDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
@@ -121,6 +122,21 @@ export async function savePost(
     allowedAttributes: {},
   });
   // 投稿をAppwriteに保存
+  const permission = (visibility:string)=>{
+    if(visibility === "public"){
+      return [
+        Permission.read(Role.any()),
+        Permission.update(Role.user(session.$id)),
+        Permission.delete(Role.user(session.$id)),
+      ];
+    }else{
+      return [
+        Permission.read(Role.users()),
+        Permission.update(Role.user(session.$id)),
+        Permission.delete(Role.user(session.$id)),
+      ];
+    }
+  }
   const userdocument = await databases.createDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, uniqueID, {
     content: input.content,
     username: sanitizedDisplayName,
@@ -133,9 +149,7 @@ export async function savePost(
     attachment: imagesArray,
     avatar: actor.avatarUrl,
   },[
-    Permission.read(Role.users()),
-    Permission.update(Role.user(session.$id)),
-    Permission.delete(Role.user(session.$id)),
+    ...permission(input.visibility),
   ]);
   const subdocument = await databases.createDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, uniqueID, {
     activityId: note.id,
@@ -163,6 +177,7 @@ export async function savePost(
     LikedActors: subdocument.LikedActors,
     replyCount: subdocument.replyCount,
   };
+  // メイリスケのインデックスに追加
   meilisearch.index("posts").addDocuments([document]);
   return { document, activity, parentActorId };
 }
@@ -196,7 +211,7 @@ export async function deliverActivity(
     Array.from(inboxes).map(async (inbox) => {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          const { headers } = signRequest(inbox, activity, actor.privateKey, `${actor.actorId}#main-key`);
+          const { headers } = await signRequest(inbox, activity, actor.privateKey, `${actor.actorId}#main-key`);
           await fetch(inbox, {
             method: "POST",
             headers,
@@ -252,3 +267,38 @@ export async function createPost(input: PostInput) {
   return document;
 }
 
+/**
+ * 投稿を削除する関数！✨
+ * @param postId 投稿のID
+ * @returns 削除の結果
+ */
+export async function deletePost(postId: string) {
+  const { databases } = await createSessionClient();
+  const post = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, postId);
+  if(!post){
+    throw new Error("投稿が見つからないよ！💦");
+  }
+  const actor = await getActorById(post.attributedTo);
+  if(!actor){
+    throw new Error("アクターが見つからないよ！💦");
+  }
+  const activity = {
+    type: "Delete",
+    id: `https://${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}#delete`,
+    actor: actor.actorId,
+    to:["https://www.w3.org/ns/activitystreams#Public"],
+    cc:[post.cc],
+    published: new Date().toISOString(),
+    object: {
+      id: `https://${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
+      url: `https://${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
+      type:"Tombstone",
+    }
+  }
+  await deliverActivity(activity, {
+    actorId: actor.actorId,
+    privateKey: actor.publicKey,
+    followers: actor.followers || [],
+  }, null);
+  await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, postId);
+}

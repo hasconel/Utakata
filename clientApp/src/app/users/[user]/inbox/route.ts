@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 
-export async function GET(request: NextRequest, { params }: { params: { username: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
+  const username = params.user;
   const header = request.headers;
   if(header.get("Accept") !== "application/activity+json"){
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
   }
-  const username = params.username;
   if (!username) {
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
@@ -26,16 +26,16 @@ export async function GET(request: NextRequest, { params }: { params: { username
   const actor = documents[0];
   const actorId = `${actor.actorId}`;
 
-  // TODO: 送信したアクティビティ一覧を取得する実装を追加するよ！✨
+  // TODO: 受信したアクティビティ一覧を取得する実装を追加するよ！✨
   return NextResponse.json({
     "@context": "https://www.w3.org/ns/activitystreams",
-    "id": `${actorId}/outbox`,
+    "id": `${actorId}/inbox`,
     "type": "OrderedCollection",
     "totalItems": 0,
     "first": {
       "type": "OrderedCollectionPage",
-      "id": `https://${process.env.NEXT_PUBLIC_DOMAIN}/actor/${username}/outbox?page=1`,
-      "partOf": `https://${process.env.NEXT_PUBLIC_DOMAIN}/actor/${username}/outbox`,
+      "id": `https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${username}/inbox?page=1`,
+      "partOf": `https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${username}/inbox`,
       "orderedItems": [],
       "next": null
     }
@@ -46,12 +46,12 @@ export async function GET(request: NextRequest, { params }: { params: { username
   });
 }
 
-export async function POST(request: NextRequest, { params }: { params: { username: string } }) {
+export async function POST(request: NextRequest, { params }: { params: { user: string } }) {
+  const username = params.user;
   const header = request.headers;
   if(header.get("Accept") !== "application/activity+json"){
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
   }
-  const username = params.username;
   if (!username) {
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest, { params }: { params: { usernam
   }
 
   //const actor = documents[0];
-  //    const activity = await request.json();
+  //const activity = await request.json();
 
-  // TODO: アクティビティを保存して、フォロワーに配信する実装を追加するよ！✨
+  // TODO: アクティビティを保存する実装を追加するよ！✨
   return NextResponse.json({ success: true });
 }

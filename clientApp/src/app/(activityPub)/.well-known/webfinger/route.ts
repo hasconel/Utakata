@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       {
         "rel": "self",
         "type": "application/activity+json",
-        "href": `${baseUrl}/actor/${acct}`
+        "href": `${baseUrl}/users/${acct}`
       }
     ]
   },{headers: {

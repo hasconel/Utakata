@@ -38,10 +38,9 @@ export async function createSessionClient(cookie?: Request) {
     if (session) {
       client.setSession(session);
     } else {
-      throw new Error("セッションが見つからないよ！💦");
+      //throw new Error("セッションが見つからないよ！💦");
     }
-    if (!session) throw new Error("セッションが見つからないよ！💦");
-    client.setSession(session);
+    //if (!session) throw new Error("セッションが見つからないよ！💦");
     return {
       account: new Account(client),
       databases: new Databases(client),

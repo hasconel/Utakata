@@ -119,7 +119,7 @@ export default function PostCard({ post, setIsModalOpen, isModalOpen ,setModalIm
               attributedTo={post?.attributedTo}
               fallback={post?.username?.charAt(0)}
               size="md"
-              variant="default"
+              variant={post.to ? "outline" : "default"}
               className="ring-2 ring-purple-500/20 dark:ring-pink-500/20 group-hover:ring-purple-500/40 dark:group-hover:ring-pink-500/40 transition-all duration-300"
             />
             <div className="flex flex-col">

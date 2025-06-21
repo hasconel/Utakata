@@ -45,3 +45,38 @@ export interface ActivityPubActor {
     published: string;
     inReplyTo?: string;
   }
+
+  export interface ActivityPubActivity {
+    "@context": string | string[];
+    summary?: string;
+    type: 
+    "Accept"|
+    "Add"|
+    "Announce"|
+    "Arrive"|
+    "Block"|
+    "Create"|
+    "Delete"|
+    "Dislike"|
+    "Flag"|
+    "Follow"|
+    "Ignore"|
+    "Invite"|
+    "Join"|
+    "Leave"|
+    "Like"|
+    "Listen"|
+    "Move"|
+    "Offer"|
+    "Reject"|
+    "Read"|
+    "Remove"|
+    "TentativeReject"|
+    "TentativeAccept"|
+    "Travel"|
+    "Undo"|
+    "Update"|
+    "View";
+    actor: string;
+    object:string;
+  }

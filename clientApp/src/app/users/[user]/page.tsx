@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { Post } from "@/lib/appwrite/posts";
 import { Actor } from "@/lib/appwrite/database";
@@ -17,13 +17,11 @@ import { getActorByUserId } from "@/lib/appwrite/database";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 
-
 /**
  * ユーザープロフィール画面！✨
  * かわいいデザインでユーザーの情報と投稿を表示するよ！💖
  */
-export default function UserProfile() {
-  const params = useParams();
+export default function UserProfile({ params }: { params: { user: string } }) {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [targetActor, setTargetActor] = useState<Actor | null>(null);
@@ -42,7 +40,7 @@ export default function UserProfile() {
         const response = await fetch(`/api/users/${params.user}`, {
           method: "GET",
           headers: {
-            "Content-Type": "application/json",
+            "Accept": "application/activity+json",
           },
         }).then(res => res.json() as Promise<Actor>);
         if (response.$id) {
@@ -55,7 +53,7 @@ export default function UserProfile() {
               const currentUserActor = await getActorByUserId(user.$id);
               setIsOwnProfile(user.name === params.user);
               setIsMuted(currentUserActor?.mutedUsers?.includes(response.actorId) ?? false);
-              setIsFollowing(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_APPWRITE_DOMAIN}/v1/users/${user.name}`) ?? false);
+              setIsFollowing(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${user.name}`) ?? false);
             }
           }
 
@@ -131,7 +129,7 @@ export default function UserProfile() {
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       {/* プロフィールヘッダー */}
       <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl p-8 shadow-lg">
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-6 flex-col sm:flex-row">
           <Avatar
             src={targetActor?.avatarUrl}
             alt={targetActor?.displayName || targetActor?.preferredUsername}

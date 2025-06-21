@@ -212,7 +212,7 @@ export default function PostDetailCard({
             alt={post?.username}
             fallback={post?.username?.charAt(0)}
             size="lg"
-            variant="outline"
+            variant={post.to ? "outline" : "default"}
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
           <div className="ml-4">
