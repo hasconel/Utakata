@@ -24,7 +24,7 @@ import ImageModalContent from "@/components/features/post/modal/ImageModalConten
 export default function UserProfile({ params }: { params: { user: string } }) {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [targetActor, setTargetActor] = useState<Actor | null>(null);
+  const [targetActor, setTargetActor] = useState<any | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -42,8 +42,8 @@ export default function UserProfile({ params }: { params: { user: string } }) {
           headers: {
             "Accept": "application/activity+json",
           },
-        }).then(res => res.json() as Promise<Actor>);
-        if (response.$id) {
+        }).then(res => res.json());
+        if (response.id) {
           setTargetActor(response);
 
           if (!user && !isAuthLoading) {
@@ -53,14 +53,20 @@ export default function UserProfile({ params }: { params: { user: string } }) {
               const currentUserActor = await getActorByUserId(user.$id);
               setIsOwnProfile(user.name === params.user);
               setIsMuted(currentUserActor?.mutedUsers?.includes(response.actorId) ?? false);
-              setIsFollowing(response.followers?.includes(`https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${user.name}`) ?? false);
+              
+              // followersが配列の場合はincludesを使用、そうでない場合はfalseを設定！✨
+              const isFollowingUser = Array.isArray(response.followersList) 
+                ? response.followersList.includes(`https://${process.env.NEXT_PUBLIC_DOMAIN}/users/${user.name}`)
+                : false;
+              setIsFollowing(isFollowingUser);
             }
           }
-
           // ユーザーの投稿を取得
           const userPosts = await getUserPosts(params.user as string);
+          //console.log("userPosts", userPosts);
           setPosts(Array.isArray(userPosts) ? userPosts : []);
         }
+        
       } catch (error) {
         console.error("ユーザー投稿の取得に失敗したわ！", error);
         setPosts([]);
@@ -131,16 +137,16 @@ export default function UserProfile({ params }: { params: { user: string } }) {
       <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl p-8 shadow-lg">
         <div className="flex items-center space-x-6 flex-col sm:flex-row">
           <Avatar
-            src={targetActor?.avatarUrl}
-            alt={targetActor?.displayName || targetActor?.preferredUsername}
-            fallback={(targetActor?.displayName || targetActor?.preferredUsername || "U").charAt(0)}
+            src={targetActor?.icon?.url}
+            alt={targetActor?.name || targetActor?.preferredUsername}
+            fallback={(targetActor?.name || targetActor?.preferredUsername || "U").charAt(0)}
             size="2xl"
             variant="outline"
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {targetActor?.displayName || targetActor?.preferredUsername}
+              {targetActor?.name || targetActor?.preferredUsername}
             </h1>
             <p className="text-gray-500 dark:text-gray-400">
               @{targetActor?.preferredUsername}
@@ -164,7 +170,7 @@ export default function UserProfile({ params }: { params: { user: string } }) {
                 />
                 <MuteButton
                   userId={targetActor?.actorId ?? ""}
-                  username={targetActor?.displayName || targetActor?.preferredUsername || ""}
+                  username={targetActor?.name || targetActor?.preferredUsername || ""}
                   isMuted={isMuted}
                   onMute={handleMute}
                   onUnmute={handleUnmute}

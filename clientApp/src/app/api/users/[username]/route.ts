@@ -54,6 +54,7 @@ export async function GET(
         totalItems: user.followers?.length || 0,
         first: user.followers?.[0] || null,
       },
+      followersList: user.followers || [],
       icon: {
         type: "Image",
         mediaType: "image/png",
