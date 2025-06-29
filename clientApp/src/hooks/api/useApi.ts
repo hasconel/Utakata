@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ApiError } from '@/lib/api/client';
-import { Post } from '@/lib/appwrite/posts';
 
 // APIフックのオプション！✨
 interface UseApiOptions<T> {
@@ -83,11 +82,12 @@ export function usePost(postId: string) {
  * @param firstId 最初の投稿ID
  * @returns タイムラインの結果
  */
-export function useTimeline(limit: number = 10, offset: number | null = 0, lastId: string | null = null, firstId: string | null = null): UseApiResult<Post[]> {
+export function useTimeline(limit: number = 10, offset: number | null = 0, lastId: string | null = null, firstId: string | null = null,attributedTo:string | null = null): UseApiResult<string[]> {
   const offsetQuery = offset ? `&offset=${offset}` : "";
   const lastIdQuery = lastId ? `&lastId=${lastId}` : "";
   const firstIdQuery = firstId ? `&firstId=${firstId}` : "";
-  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}`,
+  const attributedToQuery = attributedTo ? `&attributedTo=${attributedTo}` : "";
+  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}${attributedToQuery}`,
     {
       method: "GET",
       headers: {
@@ -101,7 +101,7 @@ export function useTimeline(limit: number = 10, offset: number | null = 0, lastI
       return JSON.parse(text).postsAsPostArray;
     });
   }), [limit, offset, lastId, firstId]);
-  return useApi<Post[]>(fetcher);
+  return useApi<string[]>(fetcher);
 }
 
 /**

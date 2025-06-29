@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ActivityPubImage } from "@/types/activitypub/collections";
-import { getImagePreview } from "@/lib/appwrite/client";
 import {  Image as ImageIcon, Play } from "lucide-react";
 import Image from "next/image";
 import ImageModalContent from "./ImageModalContent";
+import {  convertToInternalUrl } from "@/lib/utils";
 
 /**
  * 画像モーダルコンポーネント！✨
@@ -30,11 +30,9 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
       const previews = [];
       for (const image of images) {
         try {
+          const preview = image.url;
+          previews.push(preview);
           setIsLoading(true);
-          const preview = await getImagePreview(image);
-          if (preview) {
-            previews.push(preview);
-          }
         } catch (error) {
           console.error("プレビューの取得に失敗したよ！💦", error);
           previews.push(image.url);
@@ -86,7 +84,7 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
               <div className="w-full h-full rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
                 {image.type==="Image"&&(
                                   <Image
-                                  src={imagePreview[index] || image.url}
+                                  src={convertToInternalUrl(image.url)}
                                   alt={image.name || "画像"}
                                   width={400}
                                   height={400}
@@ -96,8 +94,8 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
                 )}
                 {image.type==="Video"&&(<>
                   <video
-                    src={imagePreview[index] || image.url}
-                    poster={imagePreview[index] || image.url}
+                    src={convertToInternalUrl(imagePreview[index] || image.url)}
+                    poster={convertToInternalUrl(imagePreview[index] || image.url)}
                     width={400}
                     height={400}
                     className="w-full h-full object-cover transition-all duration-300 hover:scale-110 cursor-pointer border-2 border-pink-200 dark:border-pink-800"
@@ -108,14 +106,14 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
                 )}
                 {image.type==="Audio"&&(<div className="relative overflow-hidden flex w-full h-full object-cover transition-all duration-300 cursor-pointer border-2 border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 rounded-xl "> 
                   <audio
-                    src={imagePreview[index] || image.url}
+                    src={convertToInternalUrl(imagePreview[index] || image.url)}
                     className=" w-full h-full object-cover transition-all duration-300 cursor-pointer border-2 border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 "
 
                   />
                   <span className="whitespace-nowrap text-pink-500 dark:text-pink-400 absolute top-0 left-0 text-8xl font-bold font-mono animate-marquee">{image.name}</span>
                   <Play className="w-8 h-8 text-pink-500 dark:text-pink-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" 
                   onClick={()=>{
-                    const audio = document.querySelector(`audio[src="${imagePreview[index] || image.url}"]`);
+                    const audio = document.querySelector(`audio[src="${convertToInternalUrl(imagePreview[index] || image.url)}"]`);
                     if(audio){
                       (audio as HTMLAudioElement).controls = true;
                       (audio as HTMLAudioElement).play();

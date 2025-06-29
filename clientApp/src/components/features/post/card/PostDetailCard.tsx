@@ -1,21 +1,24 @@
 "use client";
 
-import { Post } from "@/types/post";
+//import { Post } from "@/types/post";  
 import {useState, useEffect } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import ImageModal from "../modal/ImageModal";
-import PostReplies from "../reply/PostReplies";
+//import PostReplies from "../reply/PostReplies";
 import ContentsCard from "@/components/ui/ContentsCard";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import Link from "next/link";
-import { getPostFromActivityId} from "@/lib/appwrite/serverConfig";
+//import { fetchReplyToPost} from "@/lib/appwrite/client";  
 import ReplyToPost from "@/components/features/post/reply/ReplyToPost";
-import { getReplyPostsFromActivityId } from "@/lib/appwrite/serverConfig";
-import { formatDate } from "@/lib/utils";
+import { formatDate, isInternalUrl } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
 import { LikeButton } from "./PostCard";
 import { Button } from "@/components/ui/Button";
-import  {getActorById,Actor} from "@/lib/appwrite/database";
+import  {getActorById,ActivityPubActor} from "@/lib/appwrite/database";
+import { useActor } from "@/hooks/useActor";
+import { usePost } from "@/hooks/usePost";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { Loader2 } from "lucide-react";
 
 // いいねしたユーザーの一覧を表示するボタン！✨
 const LikedUsersButton = ({ likeCount, onClick }: { 
@@ -46,7 +49,7 @@ const LikedUsersModal = ({
   onClose: () => void; 
   likedActors: string[];
 }) => {
-  const [users, setUsers] = useState<Actor[]>([]);
+  const [users, setUsers] = useState<ActivityPubActor[]>([]);
 
   useEffect(() => {
     setUsers([]);
@@ -76,17 +79,17 @@ const LikedUsersModal = ({
         </div>
         <div className="space-y-2">
           {users.map((user) => (
-            <div key={user.$id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <div key={user.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <Avatar
-                    src={user.avatarUrl || ""}
+                    src={user.icon?.url || ""}
                     alt={user.preferredUsername}
                     fallback={user.preferredUsername?.charAt(0)}
-                    attributedTo={user.actorId}
+                    attributedTo={user.id}
                     size="md"
                     variant="outline"
                   />
                   <div className="flex flex-col">
-                    <span className="text-gray-900 dark:text-gray-100">{user.displayName}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{user.name}</span>
                     <span className="text-gray-500 dark:text-gray-400">@{user.preferredUsername}</span>
                   </div>
                 </div>
@@ -162,7 +165,7 @@ export default function PostDetailCard({
   setModalImages,
   setModalIndex,
 }: {
-  post: Post;
+  post: string;
   setIsDetailOpen: (isDetailOpen: boolean) => void;
   setIsReplyOpen: (isReplyOpen: boolean) => void;
   setIsModalOpen: (isModalOpen: boolean) => void;
@@ -170,63 +173,99 @@ export default function PostDetailCard({
   setModalImages: (images: ActivityPubImage[]) => void;
   setModalIndex: (index: number) => void;
 }) {
-  const [replyPosts,setReplyPosts] = useState<Post[]>([]);
+  const { getActor, isLoading: isActorLoading } = useActor();
+  const [actor, setActor] = useState<string | null>(null);  
+  const [actorData, setActorData] = useState<any | null>(null);
+ // const [replyPosts,setReplyPosts] = useState<Post[]>([]);
   const [isLikedUsersOpen, setIsLikedUsersOpen] = useState(false);
-  const [inReplyToPost, setInReplyToPost] = useState<Post | null>(null);
-  const images = post.attachment?.map((image) => JSON.parse(image) as ActivityPubImage) || [];
-  const relativeTime = getRelativeTime(post.$createdAt);
-  const ContentsDocment = post.content ? (
+  const { data: postData, isLoading: isPostLoading } = usePost(post);
+  const [canDelete, setCanDelete] = useState<boolean>(false);
+  const { user } = useAuth();
+  const images = postData?.attachment?.map((image) => JSON.parse(image) as ActivityPubImage) || [];
+  const [relativeTime, setRelativeTime] = useState<string>("");
+  const ContentsDocment = postData?.content ? (
     <div className="space-y-2">
-      {post.content.split("\n").map((line, index) => (
+      {postData?.content.split("\n").map((line, index) => (
         <p key={index} className="text-gray-800 dark:text-gray-200">{line}</p>
       ))}
     </div>
   ) : null;
+  
+  useEffect(() => {
+    //console.log("postData?.attributedTo",postData?.attributedTo);
+    if(`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}` === postData?.attributedTo){
+      //console.log("canDelete",canDelete);
+      setCanDelete(true);
+    }
+  }, [user,postData]);
 
   useEffect(() => {
-    if(post.inReplyTo){
-      getPostFromActivityId(post.inReplyTo).then((post) => {
-        setInReplyToPost(post);
+    if(postData?.attributedTo){
+      getActor(postData?.attributedTo).then(({actor,name}) => {
+        setActorData(actor);
+        setActor(name);
       });
     }
-  }, [post.inReplyTo]);
-
+  }, [postData]);
   useEffect(() => {
-    if(post.replyCount > 0 && post.activityId){
-      getReplyPostsFromActivityId(post.activityId).then((posts) => {
-        setReplyPosts(posts as Post[]);
-      });
+    if(actorData && postData?.attributedTo && !isActorLoading){
+      if(isInternalUrl(postData?.attributedTo)){
+        //console.log("actorData",actorData);
+        return setActor(actorData?.preferredUsername);
+      }else{
+        const domain = new URL(postData?.attributedTo || "").hostname;
+        return setActor(`${actorData?.preferredUsername}@${domain}`);
+      }
     }
-  }, [post.replyCount, post.activityId]);
+    return setActor(null);
+  }, [actorData,postData]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRelativeTime(getRelativeTime(postData?.published || ""));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [postData]);
+
+  // 投稿データとアクターデータが読み込まれていない場合はローディング中を表示
+  if(isPostLoading || isActorLoading){
+    return <div className="flex items-center justify-center h-40">
+      <Loader2 className="w-6 h-6 animate-spin" />
+    </div>
+  }
+  if(!postData?.published || !actorData){
+    return <div className="flex items-center justify-center h-40">
+      <Loader2 className="w-6 h-6 animate-spin" />
+    </div>
+  }
   return (
     <div >
       <div className="space-y-6 m-4">
-        {post.inReplyTo && inReplyToPost && (
+        {postData?.inReplyTo && (
           <div className="">
-            <ReplyToPost post={inReplyToPost} />
+            <ReplyToPost post={postData?.inReplyTo} />
           </div>
         )}
         <div className="flex items-center">
           <Avatar
-            src={post?.avatar}
-            alt={post?.username}
-            fallback={post?.username?.charAt(0)}
+            src={actorData?.icon?.url}
+            alt={actorData?.preferredUsername}
+            fallback={actorData?.preferredUsername?.charAt(0)}
             size="lg"
-            variant={post.to ? "outline" : "default"}
+            variant={postData?.to ? "outline" : "default"}
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
           <div className="ml-4">
-            <Link href={`/users/${post?.attributedTo?.split("/").pop()}`}>
+            <Link href={`/@${actor}`}>
               <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {post.username}
+                {actorData?.name}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                @{post.attributedTo?.split("/").pop()}
+                @{actor}
               </p>
             </Link>
-            <Link href={`/posts/${post.$id}`}>
+            <Link href={`${postData?.id}`}>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {formatDate(post.$createdAt)}
+              {formatDate(postData?.published)}
               </p>
             </Link>
           </div>
@@ -244,7 +283,7 @@ export default function PostDetailCard({
             <ImageModal images={images} setIsModalOpen={setIsModalOpen} isModalOpen={isModalOpen} ModalSwitch={false} setModalImages={setModalImages} setModalIndex={setModalIndex} />
           </div>
         ) : (
-          <ContentsCard arg={post.content} />
+          <ContentsCard arg={postData?.content || ""} />
         )}
 
         <div className="flex items-center justify-between">
@@ -255,22 +294,22 @@ export default function PostDetailCard({
                 setIsReplyOpen(true);
               }}
               className="text-purple-600 dark:text-pink hover:text-purple-700 dark:hover:text-pink-600 hover:scale-105 transition-all duration-200 flex items-center gap-1.5 group"
-              aria-label={`@${post.username} にリプライ`}
+              aria-label={`@${actor} にリプライ`}
             >
               <span className="group-hover:animate-bounce">💭</span>
               <span>言及する</span>
             </button>
             <LikeButton 
-              postId={post.$id} 
-              isPostLiked={post.isLiked} 
-              initialLikes={post.LikedActors?.length || 0} 
+              postId={postData?.id || ""} 
+              isPostLiked={false} 
+              initialLikes={0} 
             />
             <LikedUsersButton 
-              likeCount={post.LikedActors?.length || 0} 
+              likeCount={0} 
               onClick={() => setIsLikedUsersOpen(true)} 
             />
           </div>
-          {post.canDelete && <DeleteButton postId={post.$id} />}
+          {canDelete && <DeleteButton postId={postData?.id || ""} />}
         </div>
 
         <LikedUsersModal 
@@ -278,16 +317,16 @@ export default function PostDetailCard({
           onClose={() => {
             setIsLikedUsersOpen(false);
           }}  
-          likedActors={post.LikedActors || []} 
+          likedActors={[]} 
         />
 
-        {post.replyCount > 0 && (
+        {/**postData?.replyCount > 0 && (
           replyPosts.map((reply) => (
-            <div key={reply.$id} className="flex flex-col gap-2">
-              <PostReplies key={reply.$id} post={reply} />
+            <div key={reply.id} className="flex flex-col gap-2">
+              <PostReplies key={reply.id} post={reply.id} />
             </div>
           ))
-        )}
+        )*/}
       </div>
     </div>
   );

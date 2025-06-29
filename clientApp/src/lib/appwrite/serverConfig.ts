@@ -1,13 +1,7 @@
 "use server";
 import { Client, Account, Databases, Storage, Users, Query, ID,  } from "node-appwrite";
-import { InputFile } from "node-appwrite/file";
-import { getImageUrl } from "./client";
 import { cookies } from "next/headers";
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
 import { getActorByUserId } from "./database";
-import { formatDateForHex } from "@/lib/utils/date";
 import { MeiliSearch } from "meilisearch";
 import { Post } from "@/lib/appwrite/posts";
 const meilisearch = new MeiliSearch({
@@ -19,8 +13,8 @@ const meilisearch = new MeiliSearch({
  * セッション管理とデータベース接続をキラキラに設定！💖
  */
 const client = new Client()
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
+  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+  .setProject(process.env.APPWRITE_PROJECT_ID!);
 
 /**
  * セッションクライアントを作成！✨
@@ -99,8 +93,8 @@ export async function getCurrentSession() {
  */
 export async function createAdminClient() {
   const adminClient = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
+    .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+    .setProject(process.env.APPWRITE_PROJECT_ID!)
     .setKey(process.env.APPWRITE_API_KEY!);
 
   return {
@@ -126,15 +120,15 @@ export async function throwIfMissing(obj: any, keys: string[]) {
   }
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const staticFolder = path.join(__dirname, '../static');
-
 /**
  * 静的ファイルを取得！✨
  * 指定したファイルの内容をキラキラに読み込むよ！💖
  */
 export async function getStaticFile(fileName: string) {
+  // Next.js環境では相対パスで静的ファイルを読み込む
+  const fs = require('fs');
+  const path = require('path');
+  const staticFolder = path.join(process.cwd(), 'src/lib/appwrite/static');
   return fs.readFileSync(path.join(staticFolder, fileName)).toString();
 }
 
@@ -147,74 +141,7 @@ export async function interpolate(template: string, values: Record<string, strin
 }
 
 
-/**
- * フォローする
- * @param userId フォローするユーザーのactorID
- * @returns フォロー成功かどうか
- */
-export async function followUser(userId: string) {
-  try {
-    //console.log("フォローします！", userId);
-    const { account, databases } = await createSessionClient();
-    const session = await account.get();
-    // フォローするユーザーの情報を取得
-    //console.log("userId", userId);
-    const { documents: [targetUser] } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      [Query.equal("actorId", [`${userId}`])]
-    );
-    if (!targetUser) {
-      console.log("ユーザーが見つからないわ！💦");
-      return { error: "ユーザーが見つからないわ！💦" };
-    }
-    //console.log("session", session);
-    // 自分のユーザー情報を取得
-    const { documents: [currentUser] } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      [Query.equal("actorId", [`https://${process.env.APPWRITE_DOMAIN}/users/${session.name}`])]
-    );
-    //console.log("currentUser", currentUser);
-    
-    // フォロー処理
-    await databases.updateDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      currentUser.$id,
-      {
-        following: [...(currentUser.following || []), `targetUser.actorId`]
-      }
-    );
-    //console.log("フォロー処理成功！✨");
-    // フォロワーとして追加
-    await databases.updateDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-      targetUser.$id,
-      {
-        followers: [...(targetUser.followers || []), `currentUser.actorId`]
-      }
-    );
-    await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-      ID.unique(),
-      {
-        type: "follow",
-        from: currentUser.actorId,
-        to: targetUser.actorId,
-        message: `${currentUser.displayName}さんにフォローされました！`,
-        read: false
-      }
-    );
-    //console.log("フォロワーとして追加成功！✨");
-    return { message: "フォロー成功！✨" };
-  } catch (error) {
-    console.error("フォローに失敗したわ！💦", error);
-    return { error: "フォローに失敗したわ！" };
-  }
-}
+
 
 // フォロー解除
 export async function unfollowUser(userId: string){
@@ -315,7 +242,7 @@ export async function unmuteUser(ActorId: string) {
     // ミュート解除するユーザーの情報を取得
     const targetActor = await getActorByUserId(session.$id);
     if (!targetActor) {
-      console.log("ユーザーが見つからないわ！💦");
+      //console.log("ユーザーが見つからないわ！💦");
       return { error: "ユーザーが見つからないわ！💦" };
     }
     //console.log("targetActor", targetActor);
@@ -469,61 +396,6 @@ export async function unlikePost(postId: string) {
 } 
 
 /**
- * 画像のアップロード
- * @param file アップロードする画像のファイルのバイナリデータ
- * @returns アップロードされた画像のURL
- */
-export async function uploadAvatar(buffer: string,fileName: string) {
-  try {
-    const { storage } = await createSessionClient();
-    const session = await getLoggedInUser();
-    if (!session) {
-      throw new Error("セッションが見つからないわ！💦");
-    }
-    const currentUser = await getActorByUserId(session.$id);
-    if (!currentUser) {
-      throw new Error("ユーザーが見つからないわ！💦");
-    }
-    const fileId = `avatar-${currentUser.actorId.split("/").pop()}-${formatDateForHex(new Date())}`;
-    const uploadedFile = await storage.createFile(
-      process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
-      fileId,
-      InputFile.fromBuffer(Buffer.from(buffer, 'base64'), fileName)
-    );
-    const url = await getImageUrl(uploadedFile.$id);
-    return url;
-  } catch (error) {
-    console.error("画像のアップロードに失敗したわ！💦", error);
-    return false;
-  }
-}
-
-export async function uploadBackground(buffer: string,fileName: string) {
-  try {
-    const { storage } = await createSessionClient();
-    const session = await getLoggedInUser();
-    if (!session) {
-      throw new Error("セッションが見つからないわ！💦");
-    }
-    const currentUser = await getActorByUserId(session.$id);
-    if (!currentUser) {
-      throw new Error("ユーザーが見つからないわ！💦");
-    }
-    const fileId = `background-${currentUser.actorId.split("/").pop()}-${formatDateForHex(new Date())}`;
-    const uploadedFile = await storage.createFile(
-      process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
-      fileId,
-      InputFile.fromBuffer(Buffer.from(buffer, 'base64'), fileName)
-    );
-    const url = await getImageUrl(uploadedFile.$id);
-    return url;
-  } catch (error) {
-    console.error("背景画像のアップロードに失敗したわ！💦", error);
-    return false;
-  }
-}
-
-/**
  * プロフィールの更新
  * @param actorId プロフィールを更新するユーザーのactorId
  * @param displayName 表示名
@@ -625,28 +497,9 @@ export async function readNotification(notificationId: string) {
  * @param activityId アクティビティID
  * @returns ポスト
  */
-export async function getPostFromActivityId(activityId:string): Promise<{
-  $id: string;
-  $createdAt: string;
-  $updatedAt: string;
-  content: string;
-  username: string;
-  activityId: string;
-  to: string;
-  cc: string[];
-  published: string;
-  inReplyTo: string | null;
-  replyCount: number;
-  attributedTo: string;
-  attachment: string[];
-  LikedActors: string[];
-  avatar?: string;
-  canDelete: boolean;
-  isLiked: boolean;
-}> {
+export async function getPostFromActivityId(activityId:string): Promise<Post> {
   try{
-  const { databases,account } = await createSessionClient();
-  const session = await account.get();
+  const { databases } = await createSessionClient();  
   const { documents } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_POSTS_COLLECTION_ID!,
@@ -658,24 +511,21 @@ export async function getPostFromActivityId(activityId:string): Promise<{
     process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
     documents[0].$id
   );
-  const post = {
-    $id: documents[0].$id,
-    $createdAt: documents[0].$createdAt,
-    $updatedAt: documents[0].$updatedAt,
+  const post : Post = {
+    id: documents[0].$id,
+    "@context": documents[0]["@context"],
+    type: documents[0].type,
     content: documents[0].content,
-    username: documents[0].username,
-    activityId: documents[0].activityId,
+    published: documents[0].published,
+    attributedTo: documents[0].attributedTo,
     to: documents[0].to,
     cc: documents[0].cc,
-    published: documents[0].published,
     inReplyTo: documents[0].inReplyTo,
-    replyCount: subdocument.replyCount,
-    attributedTo: documents[0].attributedTo,
     attachment: documents[0].attachment,
-    LikedActors: subdocument.LikedActors,
-    avatar: documents[0].avatar,
-    canDelete: documents[0].attributedTo.split("/").pop() === session.name,
-    isLiked: subdocument.LikedActors.map((actor:string)=>actor.split("/").pop() || "").includes(session.name),
+    replyCount: subdocument.replyCount,
+    tag: documents[0].tag,
+    replies: documents[0].replies,
+    summary: documents[0].summary,
   }
   return post;
 } catch (error) {

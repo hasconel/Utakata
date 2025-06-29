@@ -2,6 +2,7 @@ import { ActivityPubImage } from "@/types/activitypub/collections";
 import Modal from "@/components/ui/Modal";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
+import { convertToInternalUrl } from "@/lib/utils";
 
 /**
    * モーダルの内容
@@ -95,20 +96,25 @@ export default function ImageModalContent({ imagesTable, isModalOpen, setIsModal
             <div className="w-full h-full flex items-center justify-center">
               {imagesTable[currentImageIndex]?.mediaType.startsWith("image") ? (
                 <img
-                  src={imagesTable[currentImageIndex].url}
+                  src={convertToInternalUrl(imagesTable[currentImageIndex].url)}
                   alt={imagesTable[currentImageIndex].name || "画像"}
                   className="max-w-full max-h-full object-contain rounded-xl shadow-lg transition-all duration-300"
                   loading="lazy"
                 />
               ) : imagesTable[currentImageIndex]?.mediaType.startsWith("video") ? (
                 <video
-                  src={imagesTable[currentImageIndex].url}
+                  src={convertToInternalUrl(imagesTable[currentImageIndex].url)}
                   controls
                   autoPlay
                   className="max-w-full max-h-full object-contain rounded-xl shadow-lg transition-all duration-300"
                 >
                   お使いのブラウザは動画の再生に対応していないみたいだよ！💦
                 </video>
+              ) : imagesTable[currentImageIndex]?.mediaType.startsWith("audio") ? (
+                <audio
+                  src={convertToInternalUrl(imagesTable[currentImageIndex].url)}
+                  controls
+                />
               ) : null}
             </div>
 

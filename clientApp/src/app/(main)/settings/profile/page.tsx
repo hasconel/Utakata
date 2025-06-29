@@ -9,8 +9,40 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { Actor } from "@/lib/appwrite/database";
-import { uploadAvatar, updateProfile, uploadBackground } from "@/lib/appwrite/serverConfig";
+import {  updateProfile } from "@/lib/appwrite/serverConfig";
 import { X } from "lucide-react";
+
+/**
+画像のアップロード
+@param buffer 背景画像のバイナリデータ
+@param fileName 背景画像のファイル名
+@param type 背景画像のファイルのMIMEタイプ
+@returns 背景画像のURL
+*/
+async function uploadImage(buffer: string,fileName: string,type: string) {
+  try {
+    const uploadFile = await fetch("/api/files",{
+      method: "POST",
+      body: JSON.stringify({
+        file: {
+          bin: buffer,
+          name: fileName,
+          type: type,
+          width: 0,
+          height: 0,
+          blurhash: ""
+        }
+      })
+    })
+    const url = (await uploadFile.json()).url;
+    return url;
+  } catch (error) {
+    console.error("画像のアップロードに失敗したわ！💦", error);
+    return false;
+  }
+}
+
+
 export default function ProfileSettings() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +116,7 @@ export default function ProfileSettings() {
         const arrayBuffer = await avatarFormData.avatar.arrayBuffer();
         const base64 = Buffer.from(arrayBuffer).toString('base64');
         const avatarBase64 = base64;
-        const avatarUrl = await uploadAvatar(avatarBase64,avatarFormData.avatar.name);
+        const avatarUrl = await uploadImage(avatarBase64,avatarFormData.avatar.name,avatarFormData.avatar.type);
         if (avatarUrl) {
           uploadProfile.avatarUrl = avatarUrl;
         }
@@ -106,7 +138,7 @@ export default function ProfileSettings() {
         const arrayBuffer = await avatarFormData.background.arrayBuffer();
         const base64 = Buffer.from(arrayBuffer).toString('base64');
         const backgroundBase64 = base64;
-        const backgroundUrl = await uploadBackground(backgroundBase64,avatarFormData.background.name);
+        const backgroundUrl = await uploadImage(backgroundBase64,avatarFormData.background.name,avatarFormData.background.type);
         if (backgroundUrl) {
           uploadProfile.backgroundUrl = backgroundUrl;
         }

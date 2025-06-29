@@ -8,7 +8,6 @@ import { createSessionClient,  } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 import {  savePost, deliverActivity } from "@/lib/activitypub/post";
 import { getActorByUserId } from "@/lib/appwrite/database";
-import { Post } from "@/lib/appwrite/posts";
 import { ENV } from "@/lib/api/config";
 
 // CORSの設定を追加するよ！✨
@@ -46,16 +45,16 @@ export async function POST(request: Request) {
       throw new Error("アクターが見つからないよ！💦");
     }
 
-    const { content, visibility, images, inReplyTo } = await request.json();
+    const { content, visibility, images, inReplyTo, attributedTo } = await request.json();
     
     // 投稿を保存
     const { document, activity, parentActorId } = await savePost(
-      { content, visibility, inReplyTo },
+      { content, visibility, inReplyTo, attributedTo },
       {
         actorId: actor.actorId,
         preferredUsername: actor.preferredUsername,
         displayName: actor.displayName || "",
-        followers: actor.followers || [],
+        followers: actor.followers || "",
         avatarUrl: actor.avatarUrl || "",
       },
       images
@@ -63,10 +62,10 @@ export async function POST(request: Request) {
 
     // ActivityPubで配信
     await deliverActivity(activity, {
-      actorId: actor.actorId,
+      id: actor.actorId,
       privateKey: actor.privateKey,
-      followers: actor.followers || [],
-    }, parentActorId);
+      followers: actor.followers || "",
+    }, parentActorId || null);
 
     return NextResponse.json({ success: true, document }, {
       headers: {
@@ -100,14 +99,17 @@ export async function GET(request: Request) {
   LimitDate.setHours(LimitDate.getHours() - 84);
   const dateString = LimitDate.toISOString();
   const { searchParams } = new URL(request.url);
+  //console.log("searchParams", searchParams);
   const limit = searchParams.get("limit") || "20";
   const offset = searchParams.get("offset") || "0";
   const inReplyTo = searchParams.get("inReplyTo") ;
   const userId = searchParams.get("userId") ;
-  const searchReplyTo = inReplyTo? [`https://${ENV.DOMAIN}/posts/${inReplyTo}`] : "";
+  const searchReplyTo = inReplyTo? [`${ENV.DOMAIN}/posts/${inReplyTo}`] : "";
   const inReplyToQuery = inReplyTo? Query.equal('inReplyTo',searchReplyTo) : "";
   const attributedTo = searchParams.get("attributedTo") ;
-  const searchAttributedTo = attributedTo? [`https://${ENV.DOMAIN}/users/${attributedTo}`] : "";
+  //console.log("ENV.DOMAIN",ENV.DOMAIN);
+  //console.log("attributedTo",attributedTo);
+  const searchAttributedTo = attributedTo? [attributedTo] : "";
   const attributedToQuery = attributedTo? Query.equal('attributedTo',searchAttributedTo) : "";
   const lastId = searchParams.get("lastId") ;
   const lastIdQuery = lastId? Query.cursorAfter(lastId) :"";
@@ -132,8 +134,7 @@ export async function GET(request: Request) {
     queries.push(firstIdQuery)
   }
   try {
-    const { databases, account } = await createSessionClient(request);    
-    const currentUser = await account.get();
+    const { databases } = await createSessionClient(request);    
     if(userId){
       const currentUserActor = await getActorByUserId(userId);
       if(currentUserActor?.mutedUsers && currentUserActor.mutedUsers.length > 0){
@@ -146,34 +147,12 @@ export async function GET(request: Request) {
       ENV.POSTS_COLLECTION_ID,
       queries
     );
-    const postsAsPostArray: Post[] = [];
+    const postsAsPostArray: string[] = [];
     for(const post of posts.documents){
-      const subdocument = await databases.listDocuments(
-        ENV.DATABASE_ID,
-        ENV.POSTS_SUB_COLLECTION_ID,
-        [Query.equal("$id", post.$id)]
-      );
-      const postAsPost: Post = {
-        $id: post.$id,
-        $createdAt: post.$createdAt,
-        $updatedAt: post.$updatedAt,
-        content: post.content,
-        username: post.username,
-        activityId: post.activityId,
-        to: post.to,
-        cc: post.cc,
-        published: post.published,
-        inReplyTo: post.inReplyTo,
-        attributedTo: post.attributedTo,
-        attachment: post.attachment,
-        avatar: post.avatar || "",
-        LikedActors: subdocument.documents[0].LikedActors || [],
-        replyCount: subdocument.documents[0].replyCount || 0,
-        canDelete: post.attributedTo.split("/").pop() === currentUser?.name,
-        isLiked: subdocument.documents[0].LikedActors.map((actor:string)=>actor.split("/").pop() || "").includes(currentUser?.name),
-      }
-      postsAsPostArray.push(postAsPost);
+      const postId: string = post.activityId;
+      postsAsPostArray.push(postId);
     }
+
     return NextResponse.json({postsAsPostArray}, {
       headers: {
         'Access-Control-Allow-Origin': '*',

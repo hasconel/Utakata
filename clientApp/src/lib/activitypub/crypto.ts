@@ -5,7 +5,7 @@
  */
 import { createHash, createSign, createVerify } from "crypto";
 import { Errors } from "./errors";
-import { Actor } from "../appwrite/database";
+//import { Actor } from "../appwrite/database";
 import { decrypt } from "@/lib/appwrite/database";
 
 /**
@@ -31,6 +31,7 @@ export async function signRequest(url: string, body: any, privateKey: string, ke
       Date: new Date().toUTCString(),
       Digest: `SHA-256=${digest}`,
       "Content-Type": "application/activity+json",
+      "Accept": "application/activity+json",
     };
 
     // 署名対象の文字列を生成
@@ -117,7 +118,7 @@ function parseSignatureHeader(headers: Record<string, string>, method: string, u
  * @returns 署名が有効かどうか
  * @throws Error 署名検証エラー
  */
-export async function verifySignature(req: import("next/server").NextRequest, actor: Actor): Promise<boolean> {
+export async function verifySignature(req: import("next/server").NextRequest, actor: string): Promise<boolean> {
   try {
     // リクエストヘッダーを取得
     const headers = Object.fromEntries(req.headers);
@@ -126,10 +127,10 @@ export async function verifySignature(req: import("next/server").NextRequest, ac
     const {  signature, signingString } = parseSignatureHeader(headers, req.method || "POST", req.url);
     //console.log(keyId, signature, signingString);
     // 公開鍵を取得（actorIdからフェッチ）
-    const actorData = await fetch(actor.actorId, {
+    const actorData = await fetch(actor, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
     }).then(res => res.json());
-
+    //console.log("actorData",actorData);
     const publicKey = actorData.publicKey?.publicKeyPem;
     if (!publicKey) {
       throw new Error(Errors.PublicKeyFetchFailed);

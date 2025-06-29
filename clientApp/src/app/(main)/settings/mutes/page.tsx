@@ -51,9 +51,9 @@ export default function MutesPage() {
         if(user){
           mutedUsers.push({
             preferredUsername: user.preferredUsername,
-            displayName: user.displayName,
-            avatarUrl: user.avatarUrl,
-            actorId: user.actorId,
+            displayName: user.name,
+            avatarUrl: user.icon?.url || "",
+            actorId: user.id,
           });
         }
       }

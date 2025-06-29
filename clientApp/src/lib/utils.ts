@@ -6,7 +6,7 @@ import { twMerge } from "tailwind-merge";
  * @param date フォーマットする日付
  * @returns フォーマットされた日付文字列
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date: string): string {
   const d = new Date(date);
   return new Intl.DateTimeFormat('ja-JP', {
     year: 'numeric',
@@ -62,3 +62,22 @@ export function isValidPassword(password: string): boolean {
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
   return passwordRegex.test(password);
 } 
+
+// URLが内部ドメインか検証する関数！✨
+export function isInternalUrl(url: string): boolean {
+  if(url.startsWith(`${process.env.NEXT_PUBLIC_DOMAIN}`)){
+    return true;
+  }
+  //if(url.startsWith(`https://pbs.hasconel.com`)){
+  //  return true;
+  //}
+  return false;
+}
+
+// 外部メディアURLを内部ドメインに変換する関数！✨
+export function convertToInternalUrl(url: string): string {
+  if(isInternalUrl(url)) {
+    return url;
+  }
+  return `${process.env.NEXT_PUBLIC_DOMAIN}/api/image?url=${encodeURIComponent(url)}`;
+}

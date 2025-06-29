@@ -67,23 +67,54 @@ export async function decrypt(text: string): Promise<string> {
   decipher.setAuthTag(Buffer.from(authTag, "hex"));
   return decipher.update(encrypted, "hex", "utf8") + decipher.final("utf8");
 }
+
+export interface ActivityPubActor {
+  "@context": string[],
+  type: string,
+  id: string,
+  preferredUsername: string,
+  name?: string,
+  summary?: string,
+  icon?: {
+    "type": string,
+    "url": string,
+  },
+  image?: {
+    "type": string,
+    "url": string,
+  },
+  inbox: string,
+  outbox: string,
+  followers: string,
+  following: string,
+  publicKey: string,
+  privateKey: {
+    id: string,
+    type: string,
+    owner: string,
+    publicKeyPem: string,
+  }
+}
 export interface Actor {
     $id: string;
     actorId: string;
     preferredUsername: string;
     displayName?: string;
+    inbox: string;
+    outbox: string;
     publicKey: string;
     privateKey: string;
     userId: string;
     mutedUsers?: string[];
-    following?: string[];
+    following?: string;
     avatarUrl?: string;
     bio?: string;
-    followers?: string[];
     backgroundUrl?: string;
+    followers?: string;
   }
   export interface ActorSub extends Models.Document {
-    followers?: string[];
+    followersCount: number;
+    followingCount: number;
     }
 
 const ActorSchema = z.object({
@@ -91,11 +122,11 @@ const ActorSchema = z.object({
     actorId: z.string(),
     preferredUsername: z.string(),
     displayName: z.string().optional(), // 既存データ対応
-    followers: z.array(z.string()).optional(),
+    followers: z.string().optional(),
     privateKey: z.string(),
     userId: z.string(),
     mutedUsers: z.array(z.string()).optional(),
-    following: z.array(z.string()).optional(),
+    following: z.string().optional(),
     avatarUrl: z.string().optional(),
     bio: z.string().optional(),
   });
@@ -143,12 +174,14 @@ const ActorSchema = z.object({
           actorId: doc.actorId,
           preferredUsername: doc.preferredUsername,
           displayName: doc.displayName || doc.preferredUsername, // 移行用
+          inbox: doc.inbox,
+          outbox: doc.outbox,
+          following: doc.following,
+          followers: doc.followers,
           publicKey: doc.publicKey ,
           privateKey: doc.privateKey,
           userId: doc.userId,
           mutedUsers: doc.mutedUsers || [],
-          following: doc.following || [],
-          followers: actorSubs[0].followers || doc.followers || [],
           avatarUrl: doc.avatarUrl || "",
           bio: doc.bio || "",
           backgroundUrl: doc.backgroundUrl || "",
@@ -198,7 +231,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
     const encryptPrivateKey = encrypt(privateKey);
 
     // アクター作成
-    const actor : Actor = await databases.createDocument(
+    const actor  = await databases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_COLLECTION_ID!,
       userId,
@@ -206,11 +239,13 @@ export async function createActor(userId: string, preferredUsername: string, dis
         userId: userId,
         preferredUsername,
         displayName: displayName,
-        actorId: `https://${process.env.APPWRITE_DOMAIN}/users/${preferredUsername}`,
-        inbox: `https://${process.env.APPWRITE_DOMAIN}/users/${preferredUsername}/inbox`,
-        outbox: `https://${process.env.APPWRITE_DOMAIN}/users/${preferredUsername}/outbox`,
+        actorId: `${process.env.APPWRITE_DOMAIN}/users/${userId}`,
+        inbox: `${process.env.APPWRITE_DOMAIN}/users/${userId}/inbox`,
+        outbox: `${process.env.APPWRITE_DOMAIN}/users/${userId}/outbox`,
         publicKey:publicKey,
         privateKey: encryptPrivateKey,
+        following: `${process.env.APPWRITE_DOMAIN}/users/${userId}/following`,
+        followers: `${process.env.APPWRITE_DOMAIN}/users/${userId}/followers`,
         avatarUrl: ``,
         bio: "",
       },
@@ -228,22 +263,25 @@ export async function createActor(userId: string, preferredUsername: string, dis
         actorId: res.actorId,
         preferredUsername: res.preferredUsername,
         displayName: res.displayName,
-        followers: res.followers || [],
+        inbox: res.inbox,
+        outbox: res.outbox,
+        followers: res.actorId + "/followers",
         publicKey: res.publicKey,
         privateKey: res.privateKey,
         userId: res.userId,
         mutedUsers: res.mutedUsers || [],
-        following: res.following || [],
+        following: res.actorId + "/following",
         avatarUrl: res.avatarUrl || "",
         bio: res.bio || "",
       };
     });
-    const actorSub : ActorSub = await databases.createDocument(
+     await databases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
       actor.$id,
       {
-        followers: [],
+        followersCount: 0,
+        followingCount: 0,
       }
     );
 
@@ -256,19 +294,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
     });
 
     // クライアントに返す
-    return {
-      $id: actor.$id,
-      actorId: actor.actorId,
-      preferredUsername: actor.preferredUsername,
-      displayName: actor.displayName,
-      followers: actorSub.followers || [],
-      privateKey: actor.privateKey,
-      userId: actor.userId,
-      mutedUsers: actor.mutedUsers || [],
-      following: actor.following || [],
-      avatarUrl: actor.avatarUrl || "",
-      bio: actor.bio || "",
-    } as Actor;
+    return actor;
   } catch (err: any) {
     console.error("SignUp error:", {
       message: err.message,
@@ -294,15 +320,72 @@ export async function createActor(userId: string, preferredUsername: string, dis
 /**
  * アクターIDからアクターを取得！🔍
  * @param actorId アクターID
- * @returns Actorオブジェクト（見つからない場合はnull）
+ * @returns ActivityPubActorオブジェクト（見つからない場合はnull）
  * @throws Error データベースエラー
  */
-export async function getActorById(actorId: string): Promise<Actor | null> {
+export async function getActorById(actorId: string): Promise<ActivityPubActor | null> {
   const {databases} = await createSessionClient();
   const {documents} = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_ACTORS_COLLECTION_ID!,
     [Query.equal("actorId", [actorId])]
+  );
+  //console.log("actorId", actorId);
+
+  if (documents.length > 1) {
+    throw new Error("アクターが複数見つかったよ！💦");
+  }
+  if (documents.length === 0) {
+    return null;
+  }
+
+  const doc = documents[0];
+  if (!isActor(doc)) {
+    throw new Error("サブアクターの取得に失敗したよ！💦");
+  }
+  return {
+    "@context": ["https://www.w3.org/ns/activitystreams"],
+    id: doc.actorId,
+    type: "Person",
+    preferredUsername: doc.preferredUsername,
+    name: doc.displayName,
+    followers: doc.actorId + "/followers",
+    inbox: doc.inbox,
+    outbox: doc.outbox,
+    following: doc.actorId + "/following",
+    publicKey: doc.publicKey,
+    privateKey: {
+      id: `${doc.actorId}#main-key`,
+      type: "Key",
+      owner: doc.actorId,
+      publicKeyPem: doc.publicKey,
+    },
+    icon: {
+      type: "Image",
+      url: doc.avatarUrl,
+    },
+    image: {
+      type: "Image",
+      url: doc.backgroundUrl,
+    },
+    summary: doc.bio,
+    url: doc.actorId,
+  } as ActivityPubActor;  
+}
+
+
+/**
+ * アクターIDからアクターを取得！🔍
+ * @param preferredUsername アクターID
+ * @returns Actorオブジェクト（見つからない場合はnull）
+ * @throws Error データベースエラー
+ */
+export async function getActorByPreferredUsername(preferredUsername: string): Promise<Actor | null> {
+  const {databases} = await createSessionClient();
+  const {documents} = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+    [Query.equal("preferredUsername", [preferredUsername])]
   );
   //console.log("actorId", actorId);
 
@@ -326,7 +409,7 @@ export async function getActorById(actorId: string): Promise<Actor | null> {
     actorId: doc.actorId,
     preferredUsername: doc.preferredUsername,
     displayName: doc.displayName,
-    followers: actorSubs.followers,
+    followers: doc.actorId + "/followers",
     privateKey: doc.privateKey,
     userId: doc.userId,
     mutedUsers: doc.mutedUsers || [],
@@ -336,3 +419,4 @@ export async function getActorById(actorId: string): Promise<Actor | null> {
     backgroundUrl: doc.backgroundUrl,
   } as Actor;
 }
+

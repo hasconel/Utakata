@@ -3,11 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ReplyToPost from "../reply/ReplyToPost";
-import { Post } from "@/lib/appwrite/posts";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImagePlus, X, ToggleRight, ToggleLeft, Loader2 } from "lucide-react";
-import { fetchReplyToPost } from "@/lib/appwrite/client";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 
 /**
@@ -17,7 +15,7 @@ import { ActivityPubImage } from "@/types/activitypub/collections";
  * @property isReplyDisplay - リプライ表示の有効/無効
  */
 interface PostFormProps {
-  post?: { activityId: string; username: string };
+  post?: { activityId: string; preferredUsername: string; attributedTo: string };
   onClose?: () => void;
   isReplyDisplay?: boolean;
 }
@@ -42,13 +40,13 @@ interface PreviewUrl {
  */
 export default function PostForm({ post, onClose, isReplyDisplay = true }: PostFormProps) {
   // 投稿内容の状態！✨
-  const [content, setContent] = useState(post ? `@${post.username} ` : "");
+  const [content, setContent] = useState(post ? `@${post.preferredUsername} ` : "");
   // 公開範囲の状態！✨
   const [visibility, setVisibility] = useState<"public" | "followers">("followers");
   // エラーメッセージの状態！✨
   const [error, setError] = useState<string | null>(null);
   // リプライ先の投稿の状態！✨
-  const [replyToPost, setReplyToPost] = useState<Post | null>(null);
+  const [replyToPost, setReplyToPost] = useState<string | null>(null);
   // 画像ファイルの状態！✨
   const [images, setImages] = useState<File[]>([]);
   // 画像プレビューのURLの状態！✨
@@ -80,19 +78,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
    */
   useEffect(() => {
     if (!post?.activityId) return;
-    
-    const fetchPost = async () => {
-      try {
-        const postId = post.activityId.split("/").pop() || "";
-        const fetchedPost = await fetchReplyToPost(postId);
-        setReplyToPost(fetchedPost);
-      } catch (err) {
-        console.error("リプライ先の投稿の取得に失敗しました:", err);
-        setError("リプライ先の投稿を取得できませんでした💦");
-      }
-    };
-
-    fetchPost();
+    setReplyToPost(post.activityId);
   }, [post?.activityId]);
 
   /**
@@ -165,7 +151,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
   const uploadImage = async (image: File): Promise<ActivityPubImage> => {
     const base64ImageString = await fileToBase64(image);
     
-    const response = await fetch("/api/fileupload", {
+    const response = await fetch("/api/files", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -227,7 +213,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
           content: content.trim(),
           visibility,
           images: imageData,
-          inReplyTo: isReply ? post.activityId : undefined,
+          inReplyTo: isReply ? {id: post.activityId, to: post.attributedTo} : undefined,
         }),
       });
 
@@ -237,7 +223,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
       }
 
       // フォームをリセットするよ！✨
-      setContent(isReply ? `@${post.username} ` : "");
+      setContent(isReply ? `@${post.preferredUsername} ` : "");
       setImages([]);
       setPreviewUrls([]);
       setError(null);

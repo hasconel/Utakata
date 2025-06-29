@@ -6,6 +6,7 @@ import { createSessionClient } from "../appwrite/serverConfig";
 import { Query } from "node-appwrite";
 import { ACTIVITYSTREAMS_CONTEXT, PUBLIC, DOMAIN } from "./constants";
 import { ActivityPubNote, CreateActivity } from "@/types/activitypub/collections";
+import {isInternalUrl} from "@/lib/utils"
 
 /**
  * NoteとCreateアクティビティを生成！📝
@@ -22,16 +23,17 @@ export async function createNote(
   actorId: string,
   content: string,
   visibility: "public" | "followers",
-  followers: string[],
-  inReplyTo?: string
+  followers: string,
+  inReplyTo?: string,
+  attributedTo?: string
 ): Promise<{ note: ActivityPubNote; activity: CreateActivity }> {
   // 投稿IDを箱数から生成
-  const id = `https://${DOMAIN}/posts/${noteId}`;
+  const id = `${DOMAIN}/posts/${noteId}`;
   const published = new Date().toISOString();
-
+  // attributedToが存在する場合、宛先にリプライ先の投稿者を設定
+  const to = attributedTo ? attributedTo : visibility === "public" ? PUBLIC : followers;
   // 公開範囲を設定（publicならPublic、followersならフォロワーリスト）
-  const to = visibility === "public" ? PUBLIC : followers;
-  const cc = visibility === "public" ? followers : [];
+  const cc = visibility === "public" ? followers : "";
 
   // Noteオブジェクト（投稿本体）
   const note: ActivityPubNote = {
@@ -93,6 +95,9 @@ export async function updateReplyCount(inReplyTo: string) {
  */
 export async function fetchActorInbox(actorId: string): Promise<string | null> {
   try {
+    if(isInternalUrl(actorId)) {
+      return `${actorId}/inbox`;
+    }
     const actor = await fetch(actorId, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
     }).then(res => res.json());

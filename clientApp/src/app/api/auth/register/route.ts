@@ -67,12 +67,12 @@ export async function POST(req: NextRequest) {
 
     // ユーザー作成
     const user = await account.create(ID.unique(), email, password,preferredUsername);
-    console.log("User created:", { userId: user.$id, email });
+    //console.log("User created:", { userId: user.$id, email });
     // セッション作成
 
     // アクター作成とセッション作成
     const actor = await createActor(user.$id, preferredUsername, sanitizedDisplayName,email,password);
-    console.log("Actor created:", { actorId: actor.$id, preferredUsername });
+    //console.log("Actor created:", { actorId: actor.$id, preferredUsername });
 
     // 成功レスポンス
     return NextResponse.json(

@@ -1,39 +1,43 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { createPost } from "@/lib/activitypub/post";
-import { PostInput } from "@/types/common/post";
+import { useState, useCallback, useEffect } from "react";
+//import { isInternalUrl } from "@/lib/utils";
+import { fetchReplyToPost } from "@/lib/appwrite/client";
+import { Post } from "@/lib/appwrite/posts";
 
 /**
  * 投稿関連のフック！✨
- * 投稿の作成とかをキラキラに処理するよ！💖
+ * 投稿IDから投稿を取得する関数を提供するよ！💖
  */
-export function usePost() {
+export function usePost(postId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [data, setData] = useState<Post | null>(null);
   /**
    * 投稿を作成する関数！✨
    * @param input 投稿の入力値
    * @returns 投稿の結果
    */
-  const create = useCallback(async (input: PostInput) => {
+  const getPost = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await createPost(input);
-      return result;
+      const result = await fetchReplyToPost(postId);
+      setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "投稿に失敗したわ！💦");
+      setError(err instanceof Error ? err.message : "投稿に読み込みに失敗したわ！💦");
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [postId]);
+  useEffect(() => {
+    getPost();
+  }, [postId]);
 
   return {
-    create,
+    data,
     isLoading,
     error,
   };

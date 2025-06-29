@@ -7,8 +7,8 @@ import { Client, Databases, Account, Storage } from "node-appwrite";
 
 // クライアント設定！✨
 const client = new Client()
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
+  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+  .setProject(process.env.APPWRITE_PROJECT_ID!);
 
 // データベース設定！✨
 export const databases = new Databases(client);
@@ -27,9 +27,10 @@ export const ENV = {
   POSTS_COLLECTION_ID: process.env.APPWRITE_POSTS_COLLECTION_ID!,
   POSTS_SUB_COLLECTION_ID: process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
   NOTIFICATIONS_COLLECTION_ID: process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-  DOMAIN: process.env.APPWRITE_DOMAIN!,
+  DOMAIN: process.env.NEXT_PUBLIC_DOMAIN!,
   ENCRYPTION_KEY: process.env.APPWRITE_ENCRYPTION_KEY!,
-  ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!,
-  PROJECT_ID: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!,
-  STORAGE_ID: process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
+  ENDPOINT: process.env.APPWRITE_ENDPOINT!,
+  PROJECT_ID: process.env.APPWRITE_PROJECT_ID!,
+  STORAGE_ID: process.env.APPWRITE_STORAGE_ID!,
+  FOLLOWS_COLLECTION_ID: process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
 } as const; 

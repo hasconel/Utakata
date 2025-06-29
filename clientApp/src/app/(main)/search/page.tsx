@@ -35,10 +35,10 @@ export default function SearchPage() {
     try {
       const result = await meilisearch.index("posts").search(search);
       const filteredPosts = (result.hits as Post[]).filter((post) => 
-        post.$createdAt > new Date(Date.now() - 1000 * 60 * 60 * 84).toISOString()
+        post.published > new Date(Date.now() - 1000 * 60 * 60 * 84).toISOString()
       );
       const postlist = await Promise.all(filteredPosts.map(async (post) => {
-        const postData = await getPostFromActivityId(post.activityId);
+        const postData = await getPostFromActivityId(post.id);
         return postData;
       }));
       setPosts(postlist);
@@ -107,7 +107,7 @@ export default function SearchPage() {
         </div>
       )}
           {posts.map((post) => (
-            <PostCard key={post.$id} post={post} setIsModalOpen={setIsModalOpen} isModalOpen={isModalOpen} setModalImages={setModalImages} setModalIndex={setModalIndex} />
+            <PostCard key={post.id} post={post.id} setIsModalOpen={setIsModalOpen} isModalOpen={isModalOpen} setModalImages={setModalImages} setModalIndex={setModalIndex} />
           ))}
         </div>
       )}

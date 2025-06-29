@@ -1,19 +1,6 @@
-import { Client, Storage, ID, Account } from "appwrite";
 import { Post } from "./posts";
-import { ActivityPubImage } from "@/types/activitypub/collections";
 import { getLoggedInUser } from "./serverConfig";
-import { ENV } from "@/lib/api/config";
-/**
- * Appwriteのクライアント設定！✨
- * クライアントサイドで使う設定だよ！💖
- */
-export const client = new Client()
-  .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-  .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
-  .setSession("current");
-
-const storage = new Storage(client);
-
+import { isInternalUrl } from "../utils";
 
 /**
  * リプライ先の投稿を取得する関数！✨
@@ -21,7 +8,29 @@ const storage = new Storage(client);
  * @returns 投稿情報
  */
 export async function fetchReplyToPost(activityId: string): Promise<Post | null> {
-  const  documents  = await fetch(`/api/posts/${activityId}`).then(res => res.json())
+  if(isInternalUrl(activityId)){
+    const  response  = await fetch(`${activityId}`,{
+      method: "GET",
+      headers: {
+        "Accept": "application/activity+json",
+      },
+    });
+    if(!response.ok){
+      throw new Error("リプライ先の投稿取得に失敗したわ！");
+    }
+    const content = await response.body?.getReader().read();
+    const decoder = new TextDecoder();
+    const text = decoder.decode(content?.value || new Uint8Array(), { stream: true });
+    const json = JSON.parse(text);
+    //console.log("json",json);
+    return json as Post || null;
+  }
+  const  documents  = await fetch(`${activityId}`,{
+    method: "GET",
+    headers: {
+      "Accept": "application/activity+json",
+    },
+  }).then(res => res.json())
   return documents as Post || null;
 }
 
@@ -61,55 +70,6 @@ export async function getSession() {
   return response.json();
 }
 
-/**
- * 画像をアップロードする関数！✨
- * @param file 画像ファイル
- * @returns アップロード結果
- */
-export async function uploadImage(file: File) {
-  const session = await getSession();
-  console.log("session in uploadImage", session);
-  
-  // 新しいクライアントを作成！✨
-  const newClient = new Client()
-    .setEndpoint(ENV.ENDPOINT)
-    .setProject(ENV.PROJECT_ID)
-    .setSession(session.secret);
-  
-  // ストレージクライアントを作成！✨
-  const newStorage = new Storage(newClient);
-  
-  // セッションの確認！✨
-  const account = new Account(newClient);
-  try {
-    // ユーザー情報を取得してセッションを確認！✨
-    const user = await account.get();
-    console.log("user", user);
-  } catch (error) {
-    console.error("セッションエラー:", error);
-    throw new Error("セッションが無効だよ！💦 もう一度ログインしてね！✨");
-  }
-  
-  return await newStorage.createFile(
-    ENV.STORAGE_ID,
-    ID.unique(),
-    file
-  );
-}
-
-/**
- * 画像のURLを取得する関数！✨
- * @param fileId ファイルID
- * @returns 画像URL
- */
-export async function getImageUrl(fileId: string) {
-  return await storage.getFileView(
-    ENV.STORAGE_ID,
-    fileId
-  );
-}
-
-
 
 
 export async function getReplyPost(postId: string) {
@@ -121,67 +81,6 @@ export async function getReplyPost(postId: string) {
     },
   }).then(res => res.json())
 return documents.postsAsPostArray as Post[];
-}
-
-/**
- * ユーザーの投稿を取得する関数！✨
- * @param username ユーザー名
- * @returns ユーザーの投稿一覧
- */
-export async function getUserPosts(username: string): Promise<Post[]> {
-  try {
-    const response = await fetch(`/api/posts?attributedTo=${username}`).then(res => res.json());
-    return response.postsAsPostArray || [];
-  } catch (error) {
-    console.error("ユーザーの投稿取得に失敗したわ！", error);
-    return [];
-  }
-}
-
-/**
- * 画像のプレビューを取得する関数！✨
- * @param fileImageId 画像情報
- * @param height 高さ
- * @param width 幅
- * @returns プレビューURL
- */
-export async function getImagePreview(fileImageId: ActivityPubImage, ) {
-  if (!fileImageId || !fileImageId.url) {
-    console.error("画像情報が不正です");
-    return null;
-  }
-
-  const urlParts = fileImageId.url.split("/");
-  const fileId = urlParts[urlParts.length - 2];
-
-  if (!fileId) {
-    console.error("ファイルIDが見つかりません");
-    return null;
-  }
-
-  try {
-    return await storage.getFileView(process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!, fileId)
-    /**
-    storage.getFilePreview(
-      process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
-      fileId,
-      width,
-      height,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      ImageFormat.Webp
-    );
-    */
-  } catch (error) {
-    console.error("プレビューの取得に失敗しました:", error);
-    return null;
-  }
 }
 
 export async function RegisterUser(preferredUsername: string, displayName: string, email: string, password: string) {

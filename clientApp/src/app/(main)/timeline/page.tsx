@@ -7,10 +7,11 @@ import Alert from "@/components/ui/Alert";
 import { useTimeline } from "@/hooks/api/useApi";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { ActivityPubImage } from "@/types/activitypub/collections";
-import { Post } from "@/lib/appwrite/posts";
+//import { Post } from "@/lib/appwrite/posts";
 import { ApiError } from  "@/lib/api/client";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId ,Actor as ActorType} from "@/lib/appwrite/database";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 /**
  * タイムラインページ！✨
  * みんなの投稿が見れるよ！💖
@@ -24,11 +25,12 @@ export default function TimelinePage() {
   }, [user, isAuthLoading]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fetchMore, setFetchMore] = useState<boolean>(false);
-  const [firstId, setFirstId] = useState<string | null>(null);
-  const [lastId, setLastId] = useState<string | null>(null);
+  const [offset, setOffset] = useState<number>(0);
+  //const [firstId, setFirstId] = useState<string | null>(null);
+  //const [lastId, setLastId] = useState<string | null>(null);
   const [startY, setStartY] = useState(0);
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
-  const { data: posts, isLoading, error, refetch } = useTimeline(10, null,lastId,firstId);
+  const [allPosts, setAllPosts] = useState<string[]>([]);
+  const { data: posts, isLoading, error, refetch } = useTimeline(10, offset,null,null);
   const [actor, setActor] = useState<ActorType | null>(null);
   // セッションチェック！✨
   useEffect(() => {
@@ -57,18 +59,17 @@ export default function TimelinePage() {
   // 投稿を追加する処理！
   useEffect(() => {
     if (posts) {
-      return setAllPosts(prev => {
-        //prevの$idを取得
-        const prevIds = prev.map(post => post.$id);
-        // 新しい投稿をフィルタリングして追加！✨
-        if (prevIds.length === 0) setFetchMore(true);
-        const newPosts = posts.filter(post => !prevIds.includes(post.$id)).sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
-        if (newPosts.length < 10) setFetchMore(false);else setFetchMore(true);
-        if (firstId !== null) return [...newPosts, ...prev].sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
-        if (firstId === null) return [...prev, ...newPosts].sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime());
-        return [...prev, ...newPosts];
-      });
+      //console.log("posts",posts);
+      if(posts.length < 10) setFetchMore(false);else setFetchMore(true);
+      if(offset === 0) {
+        const newPosts = posts.filter(post => !allPosts.includes(post));
+        setAllPosts([...newPosts, ...allPosts]);
+      }else{
+        const newPosts = posts.filter(post => !allPosts.includes(post));
+        setAllPosts([...allPosts, ...newPosts]);
+      } 
     }
+    //console.log("allPosts",allPosts.length);
     return () => {
       setFetchMore(false);
     };
@@ -76,10 +77,7 @@ export default function TimelinePage() {
 
   // タイムラインのリロード！追加処理をする✨
   const handleTimelineReload = async () => {
-    if (allPosts && allPosts.length > 0) {
-      setLastId(null);
-      setFirstId(allPosts[0].$id);
-    }
+    setOffset(0);
     await refetch();
   };
 
@@ -87,8 +85,8 @@ export default function TimelinePage() {
   useEffect(() => {
     const handlePostCreated = () => {
       if (allPosts && allPosts.length > 0) {
-        setLastId(null);
-        setFirstId(allPosts[0].$id);
+        //setLastId(null);
+        //setFirstId(allPosts[0]);  
       }
       refetch();
     };
@@ -99,14 +97,14 @@ export default function TimelinePage() {
 
   // もっと見るボタンのハンドラー！✨
   const handleLoadMore =async () => {
-    setFirstId(null);
+    //setFirstId(null);
     if (allPosts && allPosts.length > 0) {
-      setLastId(allPosts[allPosts.length - 1].$id);
+      setOffset(offset + 10);
     }
     await refetch();
   };
   return (
-    <>
+    <>  
     <div className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" style={{backgroundImage: `url(${actor?.backgroundUrl})`}}/>
     <div 
       className="max-w-2xl mx-auto md:px-4  "
@@ -170,44 +168,7 @@ export default function TimelinePage() {
   );
 }
 
-/**
- * スケルトンローディングコンポーネント！✨
- * 投稿の読み込み中をキラキラに表示するよ！💖
- */
-const LoadingSkeleton = () => (
-  <div className="space-y-6">
-    {[...Array(3)].map((_, i) => (
-      <div key={i} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-100 dark:border-purple-900 animate-pulse">
-        {/* ユーザー情報のスケルトン！✨ */}
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-          <div className="flex-1">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/6"></div>
-          </div>
-        </div>
-        {/* 投稿内容のスケルトン！✨ */}
-        <div className="space-y-3">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-        </div>
-        {/* 画像のスケルトン！✨ */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-          <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-        </div>
-        {/* アクションボタンのスケルトン！✨ */}
-        <div className="mt-4 flex space-x-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
-const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | null, posts: Post[], error: ApiError | null}) => {
+const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | null, posts: string[], error: ApiError | null}) => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
@@ -252,7 +213,7 @@ const TimelineContent = ({  isLoading, posts,  error}: {isLoading: boolean | nul
         <div className="space-y-6">
           {Array.isArray(posts) && posts.map((post) => (
             <PostCard 
-              key={post.$id} 
+              key={post} 
               post={post} 
               setIsModalOpen={setIsModalOpen} 
               isModalOpen={isModalOpen} 

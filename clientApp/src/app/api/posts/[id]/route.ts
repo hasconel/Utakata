@@ -42,14 +42,17 @@ export async function GET(
       
       // ここで投稿データをActivityPubのNote形式に変換するよ！💖
       const postData = {
-        "@context": "https://www.w3.org/ns/activitystreams",
-        "id": post.activityId || `https://${process.env.NEXT_PUBLIC_APP_URL}/posts/${params.id}`,
+        "@context": ["https://www.w3.org/ns/activitystreams"],
+        "id": post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${params.id}`,
         "type": "Note",
         "content": post.content,
         "published": post.published,
+        "summary": null,
         "attributedTo": post.attributedTo,
         "to": post.to,
-        "cc": post.cc
+        "cc": post.cc,
+        "inReplyTo": post.inReplyTo,
+        "attachment": post.attachment,
       };
 
       return NextResponse.json(postData, {

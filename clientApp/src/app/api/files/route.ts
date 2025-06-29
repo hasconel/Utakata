@@ -6,8 +6,7 @@ import { NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { InputFile } from "node-appwrite/file";
-import { ID } from "node-appwrite";
-import { getImageUrl } from "@/lib/appwrite/client";
+import { ID, Permission, Role } from "node-appwrite";
 
 
 export async function POST(request: Request) {
@@ -16,6 +15,7 @@ export async function POST(request: Request) {
     if (!account) {
       throw new Error("セッションが見つからないよ！💦");
     }
+    const userId = (await account.get()).$id
     const { file } = await request.json();
     //console.log("file",file);
     let fileType : "Image" | "Video" | "Audio" = "Image";
@@ -25,13 +25,15 @@ export async function POST(request: Request) {
       fileType = "Audio";
     }
     const binnaryFile = Buffer.from(file.bin,"base64");  
+    
     const uploadedFile = await storage.createFile(
-        process.env.NEXT_PUBLIC_APPWRITE_STORAGE_ID!,
+        process.env.APPWRITE_STORAGE_ID!,
         ID.unique(),
-        InputFile.fromBuffer(binnaryFile,file.name)
+        InputFile.fromBuffer(binnaryFile,file.name),
+        [Permission.read(Role.users()),Permission.write(Role.user(userId)),Permission.delete(Role.user(userId))]
     );
     console.log("uploadedFile",uploadedFile);
-    const fileUrl = await getImageUrl(uploadedFile.$id);
+    const fileUrl = process.env.NEXT_PUBLIC_DOMAIN! + "/api/files/" + uploadedFile.$id ;
     
     const uploadedFiles : ActivityPubImage = {
         type: fileType,

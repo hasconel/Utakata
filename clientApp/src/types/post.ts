@@ -4,40 +4,26 @@
  */
 
 // 基本的な投稿の型！✨
-export interface BasePost {
-  $id: string;
-  $createdAt: string;
-  $updatedAt: string;
+export interface Post {
+  id: string;
+  "@context": string[];
+  type: string;
+  summary?: string;
   content: string;
-  username: string;
   published: string;
-  avatar?: string;
-}
-
-// アクティビティ関連の型！✨
-export interface ActivityPost extends BasePost {
-  activityId: string;
-  to: string;
-  cc: string[];
-  inReplyTo: string | null;
-  replyCount: number;
   attributedTo: string;
-}
-
-// 添付ファイル関連の型！✨
-export interface AttachmentPost extends ActivityPost {
-  attachment: string[];
-}
-
-// いいね関連の型！✨
-export interface LikePost extends AttachmentPost {
-  LikedActors?: string[];
-  isLiked: boolean;
-}
-
-// 削除権限関連の型！✨
-export interface Post extends LikePost {
-  canDelete: boolean;
+  inReplyTo: string | null;
+  to: string[];
+  cc: string[];
+  attachment?: string[];
+  tag?: string[];
+  replies?: {
+    "@context": string[];
+    id: string;
+    type: string;
+    content: string;
+  }[];
+  replyCount: number;
 }
 
 /**

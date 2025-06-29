@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 
 interface FollowButtonProps {
   userId: string;
-  isFollowing: boolean;
+  isFollowing: string | false;
   onFollow: (userId: string) => Promise<void>;
   onUnfollow: (userId: string) => Promise<void>;
 }
@@ -21,7 +21,7 @@ export default function FollowButton({ userId, isFollowing, onFollow, onUnfollow
     setIsLoading(true);
     try {
       if (isFollowing) {
-        await onUnfollow(userId);
+        await onUnfollow(isFollowing);
       } else {
         await onFollow(userId);
       }

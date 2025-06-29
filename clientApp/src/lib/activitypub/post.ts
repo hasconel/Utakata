@@ -27,7 +27,7 @@ const meilisearch = new MeiliSearch({
 const PostSchema = z.object({
   content: z.string().min(1, Errors.InvalidInput("コンテンツ")).max(500, Errors.InvalidInput("コンテンツは500文字以内")),
   visibility: z.enum(["public", "followers"], { errorMap: () => ({ message: Errors.InvalidInput("公開範囲") }) }),
-  inReplyTo: z.string().optional(),
+  inReplyTo: z.object({ id: z.string(), to: z.string() }).optional(),
 });
 
 /**
@@ -36,7 +36,8 @@ const PostSchema = z.object({
 export interface PostInput {
   content: string;
   visibility: "public" | "followers";
-  inReplyTo?: string;
+  inReplyTo?: { id: string; to: string };
+  attributedTo?: string;
 }
 
 /**
@@ -60,12 +61,12 @@ export async function validatePostInput(input: unknown): Promise<PostInput> {
  */
 export async function savePost(
   input: PostInput,
-  actor: { actorId: string; preferredUsername: string; displayName: string; followers: string[] ,avatarUrl:string},
+  actor: { actorId: string; preferredUsername: string; displayName: string; followers: string ,avatarUrl:string},
   images: ActivityPubImage[] = []
 ) {
   // NoteとCreateアクティビティを生成（utils.tsで定義）
   const uniqueID = require("node-appwrite").ID.unique();
-  const { note, activity } = await createNote(uniqueID, actor.actorId, input.content, input.visibility, actor.followers, input.inReplyTo);
+  const { note, activity } = await createNote(uniqueID, actor.actorId, input.content, input.visibility, actor.followers, input.inReplyTo?.id, input.inReplyTo?.to);
 
   // 画像を追加
   if (images.length > 0) {
@@ -75,17 +76,18 @@ export async function savePost(
   const { databases, account } = await createSessionClient();
   const session = await account.get();
   // リプライの場合、親投稿のreplyCountを更新
-  let parentActorId: string | null = null;
   if (input.inReplyTo) {
+    //console.log("input.inReplyTo",input.inReplyTo.id);
     const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, [
-      Query.equal("activityId", input.inReplyTo),
+      Query.equal("activityId", input.inReplyTo.id),
     ]);
+    //console.log("documents",documents);
     const parentPost = documents[0];
     if (parentPost) {
       await databases.updateDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, parentPost.$id, {
         replyCount: (parentPost.replyCount || 0) + 1,
       });
-      parentActorId = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, parentPost.$id).then(res=>res.attributedTo);
+      const parentActorId = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, parentPost.$id).then(res=>res.attributedTo);
       // parentActorIdがnullでない場合のみccに追加（型安全）
       if (parentActorId) {
         activity.cc = Array.isArray(activity.cc) ? [...activity.cc, parentActorId] : [activity.cc, parentActorId].filter((id): id is string => id !== null);
@@ -107,14 +109,11 @@ export async function savePost(
     }
   }
 
-  // toをAppwriteのstring型（100文字以内）に変換
-  const toString = Array.isArray(note.to) ? note.to.join(",") : note.to;
-  const maxLength = 1000;
-  const finalTo = toString.length > maxLength ? (Array.isArray(note.to) ? note.to[0] : note.to) : toString;
+  // toをAppwriteのstring[]型に変換
+  const finalTo = Array.isArray(note.to) ? note.to : note.to ? [note.to] : [];
 
-  // ccをAppwriteのstring[]型に変換、各要素を100文字以内に制限
-  const ccArray = Array.isArray(note.cc) ? note.cc : note.cc ? [note.cc] : [];
-  const finalCc = ccArray.filter(id => id.length <= maxLength);
+  // ccをAppwriteのstring[]型に変換
+  const finalCc = Array.isArray(note.cc) ? note.cc : note.cc ? [note.cc] : [];
 
   // displayNameをサニタイズ（XSS対策）
   const sanitizedDisplayName = sanitizeHtml(actor.displayName, {
@@ -144,7 +143,7 @@ export async function savePost(
     to: finalTo,
     cc: finalCc,
     published: note.published,
-    inReplyTo: input.inReplyTo || null,
+    inReplyTo: input.inReplyTo?.id || null,
     attributedTo: actor.actorId,
     attachment: imagesArray,
     avatar: actor.avatarUrl,
@@ -179,7 +178,7 @@ export async function savePost(
   };
   // メイリスケのインデックスに追加
   meilisearch.index("posts").addDocuments([document]);
-  return { document, activity, parentActorId };
+  return { document, activity, parentActorId: input.inReplyTo?.to };
 }
 
 /**
@@ -192,7 +191,7 @@ export async function savePost(
  */
 export async function deliverActivity(
   activity: any,
-  actor: { actorId: string; privateKey: string; followers: string[] },
+  actor: { id: string; privateKey: string; followers: string },
   parentActorId: string | null
 ) {
   // 配信先inboxを収集
@@ -203,6 +202,8 @@ export async function deliverActivity(
   }
   if (parentActorId) {
     const inbox = await fetchActorInbox(parentActorId);
+    //console.log("parentActorId",parentActorId);
+    //console.log("inbox",inbox);
     if (inbox) inboxes.add(inbox);
   }
 
@@ -211,8 +212,10 @@ export async function deliverActivity(
     Array.from(inboxes).map(async (inbox) => {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          const { headers } = await signRequest(inbox, activity, actor.privateKey, `${actor.actorId}#main-key`);
-          await fetch(inbox, {
+          //console.log("inboxに送信します",inbox);
+          const { headers } = await signRequest(inbox, activity, actor.privateKey, `${actor.id}#main-key`);
+          // inboxはフルURL
+          await fetch(`${inbox}`, {
             method: "POST",
             headers,
             body: JSON.stringify(activity),
@@ -253,16 +256,16 @@ export async function createPost(input: PostInput) {
       actorId: actor.actorId,
       preferredUsername: actor.preferredUsername,
       displayName: actor.displayName || "",
-      followers: actor.followers || [],
+      followers: actor.followers || "",
       avatarUrl: actor.avatarUrl || "",
     }
   );
 
   await deliverActivity(activity, {
-    actorId: actor.actorId,
+    id: actor.actorId,
     privateKey: actor.privateKey,
-    followers: actor.followers || [],
-  }, parentActorId);
+    followers: actor.followers || "",
+  }, parentActorId || null);
 
   return document;
 }
@@ -284,21 +287,21 @@ export async function deletePost(postId: string) {
   }
   const activity = {
     type: "Delete",
-    id: `https://${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}#delete`,
-    actor: actor.actorId,
+    id: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}#delete`,
+    actor: actor.id,
     to:["https://www.w3.org/ns/activitystreams#Public"],
     cc:[post.cc],
     published: new Date().toISOString(),
     object: {
-      id: `https://${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
-      url: `https://${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
+      id: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
+      url: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
       type:"Tombstone",
     }
   }
   await deliverActivity(activity, {
-    actorId: actor.actorId,
+    id: actor.id,
     privateKey: actor.publicKey,
-    followers: actor.followers || [],
+    followers: actor.followers || "",
   }, null);
   await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, postId);
 }
