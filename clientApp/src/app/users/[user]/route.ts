@@ -9,7 +9,6 @@ export async function GET(request: NextRequest, { params }: { params: { user: st
   const { user } = params;
   const actor = await getActorByUserId(user);
   if(!actor) return NextResponse.json({ error: "Actor not found" }, { status: 404 });
-
   const responseActivityPub = {
     "@context": "https://www.w3.org/ns/activitystreams",
     "type": "Person",

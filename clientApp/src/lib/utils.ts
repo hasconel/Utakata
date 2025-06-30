@@ -81,3 +81,11 @@ export function convertToInternalUrl(url: string): string {
   }
   return `${process.env.NEXT_PUBLIC_DOMAIN}/api/image?url=${encodeURIComponent(url)}`;
 }
+
+// 外部URLを内部URLに変換する関数！✨
+export function convertToExternalUrl(url: string): string {
+  if(isInternalUrl(url)) {
+    return url;
+  }
+  return `${process.env.NEXT_PUBLIC_DOMAIN}/api/actor?url=${encodeURIComponent(url)}`;
+}

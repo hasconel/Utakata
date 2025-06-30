@@ -9,7 +9,7 @@ export async function GET(request: Request, { params }: { params: { fileId: stri
   return new NextResponse(file, {
     headers: {
       "Content-Type": fileMeta.mimeType || "image/jpeg",
-      "Cache-Control": "public, max-age=3",
+      "Cache-Control": "public, max-age=3600",
     },
   });
 }

@@ -3,6 +3,7 @@ import { Query, ID } from "node-appwrite";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { signRequest } from "@/lib/activitypub/crypto";
 import { fetchActorInbox } from "@/lib/activitypub/utils";
+import { createFollowOutbox, deleteFollowOutbox } from "@/lib/api/follow";
 
 export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
   const header = request.headers;
@@ -68,17 +69,9 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
     return NextResponse.json({ error: "Actor not found" }, { status: 404 });
   }
   const Actor = ActorList[0];
-  const { documents: actorSubList } = await databases.listDocuments(
-    process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-    [Query.equal("$id", Actor.$id)]
-  );
-  if(actorSubList.length === 0){
-    return NextResponse.json({ error: "Actor not found" }, { status: 404 });
-  }
-  const actorSub = actorSubList[0];
-
+  // Undoの場合
   if(requestBody.type === "Undo"){
+    // フォロー解除の場合
     if(requestBody.object.type === "Follow"){
       const undoRequestBody = {
         "@context": "https://www.w3.org/ns/activitystreams",
@@ -86,29 +79,8 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
         actor: requestBody.actor,
         object: requestBody.object,
       }
-      const { documents: followList } = await databases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-        [Query.equal("id", requestBody.object.id)]
-      );
-      if(followList.length === 0){
-        return NextResponse.json({ error: "Follow not found" }, { status: 404 });
-      }
-            actorSub.followingCount = actorSub.followingCount - 1;
-      await databases.updateDocument(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-        actorSub.$id,
-        {
-          followingCount: actorSub.followingCount,
-        }
-      );
-      const deleteFollow = await databases.deleteDocument(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-        followList[0].$id
-      );
-      if(!deleteFollow){
+      const deleted = await deleteFollowOutbox(requestBody.object.id);
+      if(deleted !== requestBody.object.id){
         return NextResponse.json({ error: "Failed to delete follow" }, { status: 500 });
       }
       const inbox = await fetchActorInbox(requestBody.object.object);
@@ -132,6 +104,7 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
       }, { status: 200 });
     }
   }
+  // フォローの場合
   if(requestBody.type === "Follow"){
     const id = ID.unique();
     
@@ -142,15 +115,10 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
       actor: requestBody.actor,
       object: requestBody.object,
     }
-      await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-      id,
-      {
-        id: activity.id,
-        actor: requestBody.actor,
-        object: requestBody.object,
-      });
+    const follow = await createFollowOutbox(activity.id, requestBody.actor, requestBody.object);
+    if(follow !== activity.id){
+      return NextResponse.json({ error: "Failed to create follow" }, { status: 500 });
+    }
     const inbox = await fetchActorInbox(requestBody.object);
     if(!inbox){
       return NextResponse.json({ error: "Inbox not found" }, { status: 404 });
@@ -163,34 +131,6 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
     });
     if(!response.ok){
       return NextResponse.json({ error: "Failed to send activity" }, { status: 500 });
-    }
-    const Follow = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-      [Query.and([Query.equal("id", activity.id),Query.equal("actor", requestBody.actor),Query.equal("object", requestBody.object)])]
-    );
-
-    actorSub.followingCount = actorSub.followingCount + 1;
-    await databases.updateDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-      actorSub.$id,
-      {
-        followingCount: actorSub.followingCount,
-      }
-    );
-    if(Follow.documents.length === 0){
-      await databases.createDocument(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-        id,
-        {
-          id: activity.id,
-          actor: requestBody.actor,
-          object: requestBody.object,
-        }
-      );
-      return NextResponse.json({ actor: requestBody.actor,id: activity.id }, { status: 200 });
     }
     return NextResponse.json({
       actor: activity.actor,

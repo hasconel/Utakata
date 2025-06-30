@@ -2,11 +2,9 @@
  * ActivityPubのユーティリティ関数！✨
  * Note生成、リプライ処理、inbox取得をキラキラサポート！💖
  */
-import { createSessionClient } from "../appwrite/serverConfig";
-import { Query } from "node-appwrite";
 import { ACTIVITYSTREAMS_CONTEXT, PUBLIC, DOMAIN } from "./constants";
 import { ActivityPubNote, CreateActivity } from "@/types/activitypub/collections";
-import {isInternalUrl} from "@/lib/utils"
+import {isInternalUrl, convertToExternalUrl} from "@/lib/utils"
 
 /**
  * NoteとCreateアクティビティを生成！📝
@@ -32,7 +30,7 @@ export async function createNote(
   const published = new Date().toISOString();
   // attributedToが存在する場合、宛先にリプライ先の投稿者を設定
   const to = attributedTo ? attributedTo : visibility === "public" ? PUBLIC : followers;
-  // 公開範囲を設定（publicならPublic、followersならフォロワーリスト）
+  // 公開範囲を設定（publicならfollowers、followersなら空欄）
   const cc = visibility === "public" ? followers : "";
 
   // Noteオブジェクト（投稿本体）
@@ -64,30 +62,34 @@ export async function createNote(
 }
 
 /**
- * リプライの親投稿のreplyCountを更新！🔄
- * @param inReplyTo リプライ先の投稿ID
- * @returns 親投稿者のID（存在しない場合はnull）
+ * 
+ * @param followers : フォロワーのIDリスト（例：https://domain/users/username/followers）
+ * @returns actorId[]
  */
-export async function updateReplyCount(inReplyTo: string) {
-    const {databases} =await createSessionClient();
+export async function getFollowers(followersUrl: string) {
 
-  // 親投稿を検索（activityIdでインデックス使用）
-  const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [
-    Query.equal("activityId", inReplyTo),
-  ]);
-  const parentPost = documents[0];
-
-  if (parentPost) {
-    // replyCountをインクリメント
-    await databases.updateDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, parentPost.$id, {
-      replyCount: (parentPost.replyCount || 0) + 1,
-    });
-    return parentPost.attributedTo || parentPost.actorId;
-  }
-
-  return null;
+  const followers: string[] = [];
+    const followersList = await fetch(convertToExternalUrl(followersUrl), {
+      headers: { Accept: 'application/activity+json' },
+    }).then(res => res.json());
+    if(followersList.type === 'OrderedCollectionPage') {
+      const followersTop = await fetch(convertToExternalUrl(followersList.followersList.first),{
+        headers: { Accept: 'application/activity+json' },
+      }).then(res => res.json());
+      let followersPage = await fetch(convertToExternalUrl(followersTop.first),{
+        headers: { Accept: 'application/activity+json' },
+      }).then(res => res.json());
+      followers.push(followersPage.orderedItems.map((item: any) => item.id));
+      while(followersPage.next) {
+        const next = await fetch(convertToExternalUrl(followersPage.next),{
+          headers: { Accept: 'application/activity+json' },
+        }).then(res => res.json());
+        followers.push(...next.orderedItems.map((item: any) => item.id));
+        followersPage = next;
+      }
+    }
+  return followers;
 }
-
 /**
  * リモートアクターのinboxを取得！📬
  * @param actorId アクターのID（例：https://example.com/actor）
@@ -98,10 +100,10 @@ export async function fetchActorInbox(actorId: string): Promise<string | null> {
     if(isInternalUrl(actorId)) {
       return `${actorId}/inbox`;
     }
-    const actor = await fetch(actorId, {
+    const actor = await fetch(`api/actor?url=${encodeURIComponent(actorId)}`, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
     }).then(res => res.json());
-    return actor.inbox || null;
+    return actor.inbox;
   } catch {
     return null;
   }

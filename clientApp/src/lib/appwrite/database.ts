@@ -280,6 +280,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
       process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
       actor.$id,
       {
+        id: actor.actorId,
         followersCount: 0,
         followingCount: 0,
       }
@@ -413,7 +414,7 @@ export async function getActorByPreferredUsername(preferredUsername: string): Pr
     privateKey: doc.privateKey,
     userId: doc.userId,
     mutedUsers: doc.mutedUsers || [],
-    following: doc.following || [],
+    following: doc.following || `${process.env.NEXT_PUBLIC_DOMAIN}/users/${doc.preferredUsername}/following`,
     avatarUrl: doc.avatarUrl,
     bio: doc.bio,
     backgroundUrl: doc.backgroundUrl,

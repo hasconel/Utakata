@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { Query, Role } from "node-appwrite";
-import { createNote, fetchActorInbox } from "@/lib/activitypub/utils";
+import { createNote, fetchActorInbox, getFollowers } from "@/lib/activitypub/utils";
 import { signRequest } from "@/lib/activitypub/crypto";
 import { Errors } from "@/lib/activitypub/errors";
 import sanitizeHtml from "sanitize-html";
@@ -84,9 +84,6 @@ export async function savePost(
     //console.log("documents",documents);
     const parentPost = documents[0];
     if (parentPost) {
-      await databases.updateDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, parentPost.$id, {
-        replyCount: (parentPost.replyCount || 0) + 1,
-      });
       const parentActorId = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, parentPost.$id).then(res=>res.attributedTo);
       // parentActorIdがnullでない場合のみccに追加（型安全）
       if (parentActorId) {
@@ -109,10 +106,10 @@ export async function savePost(
     }
   }
 
-  // toをAppwriteのstring[]型に変換
+  // toをAppwriteのstring型に変換
   const finalTo = Array.isArray(note.to) ? note.to : note.to ? [note.to] : [];
 
-  // ccをAppwriteのstring[]型に変換
+  // ccをAppwriteのstring型に変換
   const finalCc = Array.isArray(note.cc) ? note.cc : note.cc ? [note.cc] : [];
 
   // displayNameをサニタイズ（XSS対策）
@@ -196,8 +193,10 @@ export async function deliverActivity(
 ) {
   // 配信先inboxを収集
   const inboxes = new Set<string>();
-  for (const follower of actor.followers) {
+  const followers = await getFollowers(actor.followers);
+  for (const follower of followers) {
     const inbox = await fetchActorInbox(follower);
+    //followerはuser/followerでアクセスするとページが表示される。
     if (inbox) inboxes.add(inbox);
   }
   if (parentActorId) {

@@ -24,6 +24,10 @@ const nextConfig = {
         protocol: 'http',
         hostname: '192.168.1.121',
       },
+      {
+        protocol: 'https',
+        hostname: 'utakata.hasconel.com',
+      },
     ],
   },
   reactStrictMode: true,

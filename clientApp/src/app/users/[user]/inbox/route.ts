@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverConfig";
 import { verifySignature } from "@/lib/activitypub/crypto";
+import { deleteFollowInbox, createFollowInbox } from "@/lib/api/follow";
 
 export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
   const username = params.user;
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
   }
   // actorがオブジェクト化されている場合はidを取得、そうでない場合はIdだろうということでそのまま
   const ActorId = activity.actor.id? activity.actor.id : activity.actor;
+  console.log(ActorId);
   // HTTPシグネチャの検証
   
   const verified = await verifySignature(request, ActorId);
@@ -73,56 +75,15 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
   const ObjectId = activity.object.id? activity.object.id : activity.object;
   // フォローの場合
   if(activity.type === "Follow"){
-    if(ObjectId===`${process.env.NEXT_PUBLIC_DOMAIN}/users/${username}`){
-      const { documents : FollowersCountList } = await adminDatabases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-        [Query.equal("$id", ObjectId.split("/").pop()!)]
-      );
-      if(FollowersCountList.length > 0){
-        const FollowersCount = FollowersCountList[0];
-        await adminDatabases.updateDocument(
-          process.env.APPWRITE_DATABASE_ID!,
-          process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-          FollowersCount.$id,
-          {
-            "followersCount": (FollowersCount.followersCount || 0) + 1
-          }
-        )
-      }
-    }
-    // activityIdが重複していないか確認
-    const { documents : followDocuments } = await adminDatabases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-      [Query.or([Query.equal("id", activity.id), Query.and([Query.equal("object", ObjectId), Query.equal("actor", ActorId)])])]
-    );
-    if(followDocuments.length === 0){
-    const follow = await adminDatabases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-      ID.unique(),
-      {
-        "id": activity.id,
-        "object": ObjectId,
-        "actor": ActorId,
-      }
-    )
-  
-    if(follow){
-      const Accept = {
-        "type": "Accept",
-        "actor": ActorId,
-        "object": activity,
-      }
-      return NextResponse.json(Accept, { status: 200 });
-    }}
-
+    const follow = await createFollowInbox(activity.id, ActorId, ObjectId);
+    if(follow === activity.id){
     return NextResponse.json({ 
       "type": "Accept",
       "actor": ActorId,
-      "id": activity.id,
+      "object": activity
      }, { status: 200 });
+    }
+    return NextResponse.json({ error: "Failed to create follow" }, { status: 400 });
   }
   // 投稿の場合
   if(activity.type === "Create"){
@@ -200,44 +161,8 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
   if(activity.type === "Undo"){
     // フォロー解除の場合
     if(activity.object.type === "Follow"){
-      if(activity.object.object===`${process.env.NEXT_PUBLIC_DOMAIN}/users/${username}`){
-        const { documents : FollowersCountList } = await adminDatabases.listDocuments(
-          process.env.APPWRITE_DATABASE_ID!,
-          process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-          [Query.equal("$id", activity.object.object.split("/").pop()!)]
-        );
-        if(FollowersCountList.length > 0){
-          const FollowersCount = FollowersCountList[0];
-          await adminDatabases.updateDocument(
-            process.env.APPWRITE_DATABASE_ID!,
-            process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-            FollowersCount.$id,
-            {followersCount: (FollowersCount.followersCount || 0) - 1}
-          )
-        }
-      }
-      const { documents : followDocuments } = await adminDatabases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-        [Query.equal("id", activity.object.id)]
-      );
-      if(followDocuments.length === 0){
-        return NextResponse.json({ 
-          "type": "Accept",
-          "actor": ActorId,
-          "object": activity,
-        }, { status: 200 });
-      }
-      if(followDocuments.length > 1){
-        return NextResponse.json({ error: "Multiple follows found" }, { status: 400 });
-      }
-      const follow = followDocuments[0];
-      const deleted = await adminDatabases.deleteDocument(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
-        follow.$id,
-      )
-      if(deleted){
+      const deleted = await deleteFollowInbox(activity.object.id, activity.object.object);
+      if(deleted === activity.object.id){
         const Accept = {
           "type": "Accept",
           "actor": ActorId,
