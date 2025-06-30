@@ -33,6 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: { user: st
       "type": "Image",
       "url": actor.backgroundUrl,
     },
+    "discoverable": true,
   }
   return NextResponse.json(responseActivityPub);
 }
