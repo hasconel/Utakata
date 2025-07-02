@@ -505,12 +505,6 @@ export async function getPostFromActivityId(activityId:string): Promise<Post> {
     process.env.APPWRITE_POSTS_COLLECTION_ID!,
     [Query.equal("activityId", activityId)]
   );
-  
-  const subdocument = await databases.getDocument(
-    process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
-    documents[0].$id
-  );
   const post : Post = {
     id: documents[0].$id,
     "@context": documents[0]["@context"],
@@ -522,7 +516,6 @@ export async function getPostFromActivityId(activityId:string): Promise<Post> {
     cc: documents[0].cc,
     inReplyTo: documents[0].inReplyTo,
     attachment: documents[0].attachment,
-    replyCount: subdocument.replyCount,
     tag: documents[0].tag,
     replies: documents[0].replies,
     summary: documents[0].summary,
