@@ -116,6 +116,8 @@ export async function GET(
 
 export async function DELETE( request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const url = new URL(request.url);
+    if(url.pathname.split("/").pop() !== params.id) return NextResponse.json({ error: "投稿を削除する権限がありません！💦" }, { status: 403 });
     const deleteActivityPub = await deletePostOutbox(`${process.env.NEXT_PUBLIC_DOMAIN}/posts/${params.id}`);
 
     return NextResponse.json({ 
