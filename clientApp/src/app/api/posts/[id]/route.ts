@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { deletePostOutbox } from "@/lib/activitypub/post";
-import { MeiliSearch } from "meilisearch";
-const meilisearch = new MeiliSearch({
-  host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
-  apiKey: process.env.MEILISEARCH_API_KEY!,
-});
 
 /**
  * 投稿を取得するAPIエンドポイント！✨
