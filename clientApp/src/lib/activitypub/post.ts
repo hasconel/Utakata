@@ -274,26 +274,27 @@ export async function createPost(input: PostInput) {
  * @param postId 投稿のID
  * @returns 削除の結果
  */
-export async function deletePost(postId: string) {
+export async function deletePostOutbox(postId: string) {
   const { databases } = await createSessionClient();
-  const post = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, postId);
+  const {documents: post} = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [Query.equal("activityId", postId)]);
+  const {documents: postsub} = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, [Query.equal("activityId", postId)]);
   if(!post){
     throw new Error("投稿が見つからないよ！💦");
   }
-  const actor = await getActorById(post.attributedTo);
+  const actor = await getActorById(post[0].attributedTo);
   if(!actor){
     throw new Error("アクターが見つからないよ！💦");
   }
   const activity = {
     type: "Delete",
-    id: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}#delete`,
+    id: `${postId}#delete`,
     actor: actor.id,
     to:["https://www.w3.org/ns/activitystreams#Public"],
-    cc:[post.cc],
+    cc:[post[0].cc],
     published: new Date().toISOString(),
     object: {
-      id: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
-      url: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
+      id: postId,
+      url: postId,
       type:"Tombstone",
     }
   }
@@ -302,5 +303,7 @@ export async function deletePost(postId: string) {
     privateKey: actor.publicKey,
     followers: actor.followers || "",
   }, null);
-  await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, postId);
+  await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, post[0].$id);
+  await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, postsub[0].$id);
+  await meilisearch.index("posts").deleteDocument(post[0].$id);
 }

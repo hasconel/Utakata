@@ -14,8 +14,8 @@ import { formatDate } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
 import { usePost } from "@/hooks/usePost";
 import { Loader2 } from "lucide-react";
-import { useActor } from "@/hooks/useActor";  
 import { useState, useEffect } from "react";
+import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
 
 interface PostRepliesProps {
   post: string;
@@ -27,19 +27,10 @@ interface PostRepliesProps {
  */
 export default function PostReplies({ post }: PostRepliesProps) {
   const { data: postData, isLoading: isPostLoading } = usePost(post);
-  const { getActor } = useActor();
-  const [actorData, setActorData] = useState<any>(null);
   const [images, setImages] = useState<ActivityPubImage[]>([]);
-  const [actor, setActor] = useState<string | null>(null);
   useEffect(() => {
-    if(postData?.attributedTo){
-      getActor(postData?.attributedTo).then(({actor,name}) => {
-        setActorData(actor);
-        setActor(name);
-      });
-    }
-    if(postData?.attachment){
-      setImages(postData?.attachment.map((image: string) => JSON.parse(image) as ActivityPubImage));
+    if(postData?.post?.attachment){
+      setImages(postData?.post?.attachment.map((image: string) => JSON.parse(image) as ActivityPubImage));
     }
   }, [postData]);
   if(isPostLoading){
@@ -48,13 +39,13 @@ export default function PostReplies({ post }: PostRepliesProps) {
     </div>
   }
   return (
-    <Link href={`/posts/${postData?.id}`}>  
+    <Link href={`/posts/${postData?.post?.id}`}>  
     <div className="flex flex-col pl-8 space-y-4 border-l-2 border-purple-200 dark:border-pink-900 bg-white dark:bg-gray-800 rounded-lg p-4 hover:bg-purple-50 dark:hover:bg-gray-900/50 transition-all duration-200">
       <div className="flex items-center">
         <Avatar
-          src={actorData?.icon?.url}
-          alt={actorData?.preferredUsername}
-          fallback={actorData?.preferredUsername?.charAt(0)}
+          src={postData?.actor?.icon?.url}
+          alt={postData?.actor?.preferredUsername}
+          fallback={postData?.actor?.preferredUsername?.charAt(0)}
           size="sm"
           variant="outline"
           className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
@@ -62,23 +53,23 @@ export default function PostReplies({ post }: PostRepliesProps) {
         <div className="flex flex-col items-start justify-start w-full ml-2">
         <div className="flex flex-row items-start justify-start w-full gap-1">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {actorData?.preferredUsername}
+            {postData?.actor?.preferredUsername}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            @{actor || actorData?.preferredUsername}
+            @{getActorDisplayPreferredUsername(postData?.actor)}
           </p>
         </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {formatDate(postData?.published || "")}
+            {formatDate(postData?.post?.published || "")}
           </div>
           </div>
           <div className="ml-auto">
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {getRelativeTime(postData?.published || "")}
+              {getRelativeTime(postData?.post?.published || "")}
             </span>  
           </div>
       </div>
-      <p className="text-gray-700 dark:text-gray-300 text-sm">{postData?.content}</p>
+      <p className="text-gray-700 dark:text-gray-300 text-sm">{postData?.post?.content}</p>
       {images.length > 0 && (
         <div className="flex justify-left grid-cols-4 gap-2">
           {images.map((image, index) => (

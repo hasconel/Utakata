@@ -1,15 +1,14 @@
 import { Post } from "./posts";
 import { getLoggedInUser } from "./serverConfig";
-import { isInternalUrl } from "../utils";
+import { convertToExternalUrl } from "../utils";
 
 /**
  * リプライ先の投稿を取得する関数！✨
  * @param activityId アクティビティID
- * @returns 投稿情報
+ * @returns 投稿情報とアクター情報
  */
-export async function fetchReplyToPost(activityId: string): Promise<Post | null> {
-  if(isInternalUrl(activityId)){
-    const  response  = await fetch(`${activityId}`,{
+export async function fetchReplyToPost(activityId: string): Promise<{ post: any; actor: any } | null> {
+    const  response  = await fetch(`${convertToExternalUrl(activityId)}`,{
       method: "GET",
       headers: {
         "Accept": "application/activity+json",
@@ -21,17 +20,15 @@ export async function fetchReplyToPost(activityId: string): Promise<Post | null>
     const content = await response.body?.getReader().read();
     const decoder = new TextDecoder();
     const text = decoder.decode(content?.value || new Uint8Array(), { stream: true });
-    const json = JSON.parse(text);
+    const post = JSON.parse(text);
+    const actor = await fetch(convertToExternalUrl(post.attributedTo),{
+      method: "GET",
+      headers: {
+        "Accept": "application/activity+json",
+      },
+    }).then(res => res.json());
     //console.log("json",json);
-    return json as Post || null;
-  }
-  const  documents  = await fetch(`${activityId}`,{
-    method: "GET",
-    headers: {
-      "Accept": "application/activity+json",
-    },
-  }).then(res => res.json())
-  return documents as Post || null;
+    return { post, actor };
 }
 
 /**

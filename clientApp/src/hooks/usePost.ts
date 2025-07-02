@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from "react";
 //import { isInternalUrl } from "@/lib/utils";
 import { fetchReplyToPost } from "@/lib/appwrite/client";
-import { Post } from "@/lib/appwrite/posts";
 
 /**
  * 投稿関連のフック！✨
@@ -12,9 +11,9 @@ import { Post } from "@/lib/appwrite/posts";
 export function usePost(postId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<Post | null>(null);
+  const [data, setData] = useState<{post: any, actor: any} | null>(null);
   /**
-   * 投稿を作成する関数！✨
+   * 投稿を取得する関数！✨
    * @param input 投稿の入力値
    * @returns 投稿の結果
    */

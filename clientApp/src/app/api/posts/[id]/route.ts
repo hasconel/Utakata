@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
-import { deletePost } from "@/lib/activitypub/post";
+import { deletePostOutbox } from "@/lib/activitypub/post";
 import { MeiliSearch } from "meilisearch";
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -114,44 +114,12 @@ export async function GET(
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE( request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { databases, account } = await createSessionClient(request);
-    const currentUser = await account.get();
-    const post = await databases.getDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      params.id
-    );
-
-    if (post.attributedTo.split("/").pop() !== currentUser?.name) {
-      return NextResponse.json(
-        { error: "投稿を削除する権限がありません！💦" },
-        { status: 403 }
-      );
-    }
-
-    // 投稿を削除するよ！✨
-    const deletepost = await databases.deleteDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      params.id
-    );
-    
-    const deletepostsub = await databases.deleteDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
-      params.id
-    );
-    
-    const deleteSearch = await meilisearch.index("posts").deleteDocument(params.id);
-    const deleteActivityPub = await deletePost(params.id);
+    const deleteActivityPub = await deletePostOutbox(`${process.env.NEXT_PUBLIC_DOMAIN}/posts/${params.id}`);
 
     return NextResponse.json({ 
       message: "投稿を削除しました！✨",
-      deletepost, 
-      deletepostsub, 
-      deleteSearch, 
       deleteActivityPub 
     });
   } catch (error) {

@@ -30,7 +30,8 @@ async function uploadImage(buffer: string,fileName: string,type: string) {
           type: type,
           width: 0,
           height: 0,
-          blurhash: ""
+          blurhash: "",
+          visibility: "public"
         }
       })
     })

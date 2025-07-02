@@ -4,8 +4,6 @@ import PostDetailCard from "@/components/features/post/card/PostDetailCard";
 //import { Post } from "@/lib/appwrite/posts";
 import PostForm from "@/components/features/post/form/PostForm";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { usePost } from "@/hooks/usePost";
-import { useActor } from "@/hooks/useActor";
 
 /**
  * 投稿詳細ページコンポーネント！✨
@@ -13,10 +11,7 @@ import { useActor } from "@/hooks/useActor";
  */
 export default function PostPage( { params }: { params: { post: string } }) {
     const { user, isLoading: isAuthLoading } = useAuth();
-    const { data: postData } = usePost(params.post);
-    const { getActor } = useActor();
-    const [actor, setActor] = useState<string | null>(null);
-    const [actorData, setActorData] = useState<any | null>(null);
+    const [post, setPost] = useState<any>(null)
     useEffect(() => {
         if (!user && !isAuthLoading) {
             window.location.href = "/login";
@@ -25,14 +20,6 @@ export default function PostPage( { params }: { params: { post: string } }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReplyOpen, setIsReplyOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
-    useEffect(() => {
-        if(postData){
-            getActor(postData?.attributedTo).then(({actor,name}) => {
-                setActor(name);
-                setActorData(actor);
-            });
-        }
-    }, [postData]);
     return (
         <div className="justify-center items-center mx-auto max-w-2xl bg-white dark:bg-gray-800 rounded-2xl py-2 px-4  shadow-lg">
                 <PostDetailCard 
@@ -43,13 +30,14 @@ export default function PostPage( { params }: { params: { post: string } }) {
                     isModalOpen={isModalOpen}
                     setModalImages={()=>{}}
                     setModalIndex={()=>{}}
+                    setPost={setPost}
                 />
             {isReplyOpen && !isDetailOpen && user && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl py-2 px-4 mb-2 ">
                 <PostForm post={{
                     activityId: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${params.post}`,
-                    preferredUsername: actor || "",
-                    attributedTo: actorData?.id || "",
+                    preferredUsername: post?.actor?.preferredUsername || "",
+                    attributedTo:post?.actor?.id || ""
                 }} onClose={()=>{setIsReplyOpen(false)}} isReplyDisplay={false} />
                 </div>
             )}

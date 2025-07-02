@@ -108,3 +108,11 @@ export async function fetchActorInbox(actorId: string): Promise<string | null> {
     return null;
   }
 }
+
+export function getActorDisplayPreferredUsername(actor: any) {
+  if(isInternalUrl(actor.id)) {
+    return actor.preferredUsername;
+  }
+  const url = new URL(actor.id);
+  return `${actor.preferredUsername}@${url.hostname}`;
+}

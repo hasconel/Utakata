@@ -23,7 +23,6 @@ export interface Post {
     type: string;
     content: string;
   }[];
-  replyCount: number;
 }
 
 /**

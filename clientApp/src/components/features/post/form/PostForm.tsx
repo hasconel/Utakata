@@ -10,7 +10,7 @@ import { ActivityPubImage } from "@/types/activitypub/collections";
 
 /**
  * 投稿フォームのプロパティ！✨
- * @property post - リプライ先の投稿情報（オプション）
+ * @property post {activityId: string 投稿のID, preferredUsername: string 投稿者のユーザー名, attributedTo: string 投稿者のID} - リプライ先の投稿情報（オプション）
  * @property onClose - フォームを閉じる時のコールバック（オプション）
  * @property isReplyDisplay - リプライ表示の有効/無効
  */
