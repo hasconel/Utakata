@@ -251,7 +251,7 @@ export default function PostDetailCard({
                 @{getActorDisplayPreferredUsername(postData?.actor)}
               </p>
             </Link>
-            <Link href={`${postData?.post?.attributedTo}`}>
+            <Link href={`${postData?.post?.id}`}>
               <p className="text-sm text-gray-500 dark:text-gray-400">
               {formatDate(postData?.post?.published)}
               </p>

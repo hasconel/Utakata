@@ -396,6 +396,36 @@ export async function unlikePost(postId: string) {
 } 
 
 /**
+ * 通知を作成する関数
+ * @param type 通知の種類
+ * @param from 通知を送信したユーザーのactorId
+ * @param to 通知を受信するユーザーのactorId
+ * @param target 通知の対象のアクティビティID
+ * @param message 通知のメッセージ
+ * @param read 通知が既読かどうか
+ */
+export async function createNotification(type: string, from: string, to: string, target: string, {/*message: string*/}, read: boolean) {
+  try {
+    const { databases } = await createAdminClient();
+    await databases.createDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+      ID.unique(),
+      { 
+        type,
+        from,
+        to,
+        target,
+        read
+      }
+    );
+    return true;
+  } catch (error) {
+    console.error("通知の作成に失敗したわ！💦", error);
+    return false;
+  }
+}
+/**
  * プロフィールの更新
  * @param actorId プロフィールを更新するユーザーのactorId
  * @param displayName 表示名
@@ -534,6 +564,8 @@ export async function getPostFromActivityId(activityId:string): Promise<Post> {
 export async function getTimelinePosts(limit: number = 10, offset: number = 0) {
   try {
     const { databases } = await createSessionClient();
+    
+    // メインの投稿を取得
     const { documents } = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,
@@ -543,12 +575,24 @@ export async function getTimelinePosts(limit: number = 10, offset: number = 0) {
         Query.offset(offset)
       ]
     );
-    const posts : Post[] = await Promise.all(documents.map(async (document) => {
-      const subdocument = await databases.getDocument(
+
+    // サブドキュメントをバッチで取得（N+1問題を解決）
+    const subDocumentPromises = documents.map(document =>
+      databases.getDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
         document.$id
-      );
+      ).catch(() => ({
+        replyCount: 0,
+        LikedActors: []
+      }))
+    );
+
+    const subDocuments = await Promise.all(subDocumentPromises);
+
+    // 投稿データを構築
+    const posts: Post[] = documents.map((document, index) => {
+      const subdocument = subDocuments[index];
       return {
         $id: document.$id,
         $createdAt: document.$createdAt,
@@ -560,13 +604,14 @@ export async function getTimelinePosts(limit: number = 10, offset: number = 0) {
         cc: document.cc,
         published: document.published,
         inReplyTo: document.inReplyTo,
-        replyCount: subdocument.replyCount,
+        replyCount: subdocument.replyCount || 0,
         attributedTo: document.attributedTo,
         attachment: document.attachment,
-        LikedActors: subdocument.LikedActors,
+        LikedActors: subdocument.LikedActors || [],
         avatar: document.avatar,
       } as unknown as Post;
-    }));
+    });
+
     return posts;
   } catch (error) {
     throw new Error('タイムラインの取得に失敗したよ！💦');

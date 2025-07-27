@@ -285,6 +285,12 @@ export async function deletePostOutbox(postId: string) {
   if(!actor){
     throw new Error("アクターが見つからないよ！💦");
   }
+  const{documents: user} = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [Query.equal("actorId", actor.id)]);
+  if(!user){
+    throw new Error("公開鍵が見つからないよ！💦");
+  }
+  const privateKey = user[0].privateKey;
+
   const activity = {
     type: "Delete",
     id: `${postId}#delete`,
@@ -300,7 +306,7 @@ export async function deletePostOutbox(postId: string) {
   }
   await deliverActivity(activity, {
     id: actor.id,
-    privateKey: actor.publicKey,
+    privateKey: privateKey,
     followers: actor.followers || "",
   }, null);
   await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, post[0].$id);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import PostForm from "../form/PostForm";
 //import { Post } from "@/lib/appwrite/posts";
@@ -83,29 +83,31 @@ export const LikeButton = ({ postId, initialLikes = 0 ,isPostLiked}: { postId: s
  * @param setModalImages モーダルの画像を設定
  * @param setModalIndex モーダルのインデックスを設定
  */
-export default function PostCard({ post, setIsModalOpen, isModalOpen ,setModalImages, setModalIndex}: { post: string, setIsModalOpen: (isOpen: boolean) => void, isModalOpen: boolean, setModalImages: (images: ActivityPubImage[]) => void, setModalIndex: (index: number) => void }) {
+const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages, setModalIndex}: { 
+  post: string, 
+  setIsModalOpen: (isOpen: boolean) => void, 
+  isModalOpen: boolean, 
+  setModalImages: (images: ActivityPubImage[]) => void, 
+  setModalIndex: (index: number) => void 
+}) => {
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [, setReplyPosts] = useState<any[]>([]);
   const [relativeTime, setRelativeTime] = useState<string>("");
   const { data: postData, isLoading: isPostLoading } = usePost(post);
-  //const [postData, setPostData] = useState<Post | null>(null);
   const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
-  
 
   useEffect(() => {
     if(postData){
+      const updateRelativeTime = () => {
+        const published = new Date(postData?.post?.published || "");
+        setRelativeTime(getRelativeTime(published));
+      };
 
-    const updateRelativeTime = () => {
-      const published = new Date(postData?.post?.published || "");
-      setRelativeTime(getRelativeTime(published));
-    };
-
-    updateRelativeTime();
-    const interval = setInterval(updateRelativeTime, 60000); // 1分ごとに更新
+      updateRelativeTime();
+      const interval = setInterval(updateRelativeTime, 60000); // 1分ごとに更新
 
       return () => clearInterval(interval);
-    
     }
     return () => {
       setRelativeTime("");
@@ -115,15 +117,15 @@ export default function PostCard({ post, setIsModalOpen, isModalOpen ,setModalIm
   function ReplyPosts() {
     getReplyPost(postData?.post?.inReplyTo || "").then((data) => setReplyPosts(data));
   }
+  
   if(isPostLoading){
     return <LoadingSkeleton />;
   }
 
   return (
     <>
-
-          {postData?.post?.id && (
-              <div className="flex flex-col gap-2">
+      {postData?.post?.id && (
+        <div className="flex flex-col gap-2">
       <div 
         className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-white/80 dark:border-gray-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0"
         onClick={() => {setIsDetailOpen(true); {postData?.post?.replyCount > 0 ? ReplyPosts() : ""}}}
@@ -230,4 +232,8 @@ export default function PostCard({ post, setIsModalOpen, isModalOpen ,setModalIm
       )}
     </>
   );
-}
+});
+
+PostCard.displayName = 'PostCard';
+
+export default PostCard;

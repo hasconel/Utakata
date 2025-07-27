@@ -1,6 +1,10 @@
 /**
  * ファイルアップロードのAPI！✨
  * ファイルをアップロードするよ！💖
+ * file.visibility: public, unlisted, private
+ * public: 公開
+ * unlisted: 未収載(ユーザーのみ閲覧可能)
+ * private: 非公開(未実装)
  */
 import { NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
@@ -25,12 +29,18 @@ export async function POST(request: Request) {
       fileType = "Audio";
     }
     const binnaryFile = Buffer.from(file.bin,"base64");  
-    
+    const Query = [Permission.write(Role.user(userId)),Permission.delete(Role.user(userId))];
+    if(file.visibility === "public"){
+      Query.push(Permission.read(Role.any()));
+    }
+    if(file.visibility === "unlisted"){
+      Query.push(Permission.read(Role.users()));
+    }
     const uploadedFile = await storage.createFile(
         process.env.APPWRITE_STORAGE_ID!,
         ID.unique(),
         InputFile.fromBuffer(binnaryFile,file.name),
-        [Permission.read(Role.users()),Permission.write(Role.user(userId)),Permission.delete(Role.user(userId))]
+        Query
     );
     console.log("uploadedFile",uploadedFile);
     const fileUrl = process.env.NEXT_PUBLIC_DOMAIN! + "/api/files/" + uploadedFile.$id ;
