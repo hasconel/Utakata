@@ -8,13 +8,14 @@ import { deletePostOutbox } from "@/lib/activitypub/post";
  */
 export async function GET(  
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const header = request.headers;
   const acceptHeader = header.get("Accept");
   // ActivityPubリクエストの場合はJSON形式で返す！✨
   if (acceptHeader === "application/activity+json") {
-    if (!params.id) {
+    if (!id) {
       return NextResponse.json(
         { error: "Post ID is required" }, 
         { status: 400 }
@@ -26,7 +27,7 @@ export async function GET(
       const post = await databases.getDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_POSTS_COLLECTION_ID!,
-        params.id
+        id
       );
       if (!post) {
         return NextResponse.json(
@@ -38,7 +39,7 @@ export async function GET(
       // ここで投稿データをActivityPubのNote形式に変換するよ！💖
       const postData = {
         "@context": ["https://www.w3.org/ns/activitystreams"],
-        "id": post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${params.id}`,
+        "id": post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`,
         "type": "Note",
         "content": post.content,
         "published": post.published,
@@ -71,12 +72,12 @@ export async function GET(
     const post = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      params.id
+      id
     );
     const subdocument = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
-      params.id
+      id
     );
 
     const isLiked: boolean = subdocument.LikedActors.map((actor: string) => actor.split("/").pop() || "").includes(currentUser?.name);
@@ -109,11 +110,12 @@ export async function GET(
   }
 }
 
-export async function DELETE( request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE( request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const url = new URL(request.url);
-    if(url.pathname.split("/").pop() !== params.id) return NextResponse.json({ error: "投稿を削除する権限がありません！💦" }, { status: 403 });
-    const deleteActivityPub = await deletePostOutbox(`${process.env.NEXT_PUBLIC_DOMAIN}/posts/${params.id}`);
+    if(url.pathname.split("/").pop() !== id) return NextResponse.json({ error: "投稿を削除する権限がありません！💦" }, { status: 403 });
+    const deleteActivityPub = await deletePostOutbox(`${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`);
 
     return NextResponse.json({ 
       message: "投稿を削除しました！✨",

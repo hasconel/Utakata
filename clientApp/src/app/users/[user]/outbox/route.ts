@@ -5,12 +5,12 @@ import { signRequest } from "@/lib/activitypub/crypto";
 import { fetchActorInbox } from "@/lib/activitypub/utils";
 import { createFollowOutbox, deleteFollowOutbox } from "@/lib/api/follow";
 
-export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user: username } = await params;
   const header = request.headers;
   if(header.get("Accept") !== "application/activity+json"){
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
   }
-  const username = params.user;
   if (!username) {
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
@@ -49,10 +49,11 @@ export async function GET(request: NextRequest, { params }: { params: { user: st
   });
 }
 
-export async function POST(request: NextRequest, { params }: { params: { user: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user } = await params;
   const requestBody = await request.json();
 
-  if(requestBody.actor !== `${process.env.NEXT_PUBLIC_DOMAIN}/users/${params.user}`){
+  if(requestBody.actor !== `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}`){
     return NextResponse.json({ error: "Actor not found" }, { status: 404 });
   }
   const { databases ,account} = await createSessionClient();
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest, { params }: { params: { user: s
     const activity = {
       "@context": "https://www.w3.org/ns/activitystreams",
       type: requestBody.type,
-      id: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${params.user}/outbox/${id}`,
+      id: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}/outbox/${id}`,
       actor: requestBody.actor,
       object: requestBody.object,
     }

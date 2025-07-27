@@ -1,12 +1,12 @@
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user } = await params;
   const headers = request.headers;
   if(!headers.get("Accept")?.includes("application/activity+json") && !headers.get("Accept")?.includes('application/ld+json; profile="https://www.w3.org/ns/activitystreams"')) {
-    return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/@${params.user}`, request.url));
+    return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/@${user}`, request.url));
   }
-  const { user } = params;
   const actor = await getActorByUserId(user);
   if(!actor) return NextResponse.json({ error: "Actor not found" }, { status: 404 });
   const responseActivityPub = {
@@ -38,12 +38,12 @@ export async function GET(request: NextRequest, { params }: { params: { user: st
   return NextResponse.json(responseActivityPub);
 }
 
-export async function POST(request: NextRequest, { params }: { params: { user: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user } = await params;
   const headers = request.headers;
   if(!headers.get("Accept")?.includes("application/activity+json")) {
-    return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/@${params.user}`, request.url));
+    return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/@${user}`, request.url));
   }
   // 処理はすべて/users/[user]/inbox/route.tsに移行しているので転送する
-  const { user } = params;
   return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}/inbox`, request.url));
 }

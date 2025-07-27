@@ -1,8 +1,8 @@
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request, { params }: { params: { fileId: string } }) {
-  const { fileId } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ fileId: string }> }) {
+  const { fileId } = await params;
   const { storage } = await createSessionClient(request);
   const fileMeta = await storage.getFile(process.env.APPWRITE_STORAGE_ID!, fileId);
   const file = await storage.getFileView(process.env.APPWRITE_STORAGE_ID!, fileId);

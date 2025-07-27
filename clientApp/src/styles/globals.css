@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -51,10 +49,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-gray-200 dark:border-gray-700;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100;
   }
 }
 
@@ -104,6 +102,17 @@
   }
 }
 
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
@@ -112,59 +121,58 @@
   animation: glow 2s ease-in-out infinite;
 }
 
-/* カスタムアニメーション */
-@layer utilities {
+.animate-sparkle {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+/* ダークモード対応！✨ */
+@media (prefers-color-scheme: dark) {
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
 }
 
+/* スクロールバーのカスタマイズ！✨ */
 @keyframes float {
-  0% {
-    transform: translateY(0px);
+  0%, 100% {
+    transform: translateY(0);
   }
   50% {
     transform: translateY(-10px);
   }
-  100% {
-    transform: translateY(0px);
-  }
 }
 
-/* グローバルスタイル */
-@layer base {
-  body {
-    @apply bg-gradient-to-b from-pink-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-}
-
-/* カスタムスクロールバー */
+/* カスタムスクロールバー！✨ */
 @layer utilities {
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.purple.400') theme('colors.gray.200');
+  }
+
   ::-webkit-scrollbar {
-    width: 0.5rem;
+    width: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+    background: theme('colors.gray.200');
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+    background: theme('colors.purple.400');
+    border-radius: 4px;
   }
 
-  /* 選択テキストのスタイル */
   ::selection {
-    @apply bg-pink-200 dark:bg-pink-900 text-pink-900 dark:text-pink-100;
+    background: theme('colors.purple.200');
+    color: theme('colors.purple.900');
   }
 
-  /* フォーカスリングのカスタマイズ */
   :focus-visible {
-    @apply outline-none ring-2 ring-pink-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900;
+    outline: 2px solid theme('colors.purple.500');
+    outline-offset: 2px;
   }
 
-  /* プレースホルダーのスタイル */
   ::placeholder {
-    @apply text-gray-400 dark:text-gray-500;
+    color: theme('colors.gray.400');
   }
 } 

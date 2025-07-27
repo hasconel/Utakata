@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es6",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "types": [],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -35,5 +36,5 @@
     "alwaysStrict": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "**/node_modules/istanbul-lib-coverage/**", "**/node_modules/istanbul-lib-report/**", "**/node_modules/istanbul-reports/**", "**/node_modules/mdast/**", "**/node_modules/stack-utils/**", "**/node_modules/unist/**"]
 }

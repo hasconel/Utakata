@@ -2,8 +2,8 @@ import {NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 
-export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
-  const username = params.user;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user: username } = await params;
   const { searchParams } = new URL(request.url);
   const page = searchParams.get("page");
   const target = searchParams.get("target");

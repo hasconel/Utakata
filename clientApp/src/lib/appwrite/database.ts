@@ -311,7 +311,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
       throw new Error(Errors.RegistrationFailed + " 権限エラーだよ！管理者に連絡してね！💦");
     }
     if (err instanceof z.ZodError) {
-      throw new Error(err.errors.map((e) => e.message).join(", "));
+      throw new Error(err.issues.map((e) => e.message).join(", "));
     }
 
     throw new Error(Errors.RegistrationFailed);

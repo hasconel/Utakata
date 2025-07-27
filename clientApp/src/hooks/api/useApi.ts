@@ -82,10 +82,10 @@ export function useApi<T>(
     }
     
     abortControllerRef.current = new AbortController();
-    
+    /*
     // パフォーマンス計測開始
     const startTime = performance.now();
-    
+    */
     try {
       setIsLoading(true);
       setError(null);
@@ -96,10 +96,11 @@ export function useApi<T>(
         if (cachedData) {
           setData(cachedData);
           options.onSuccess?.(cachedData);
-          
+          /*
           // キャッシュヒットの計測
           const cacheTime = performance.now() - startTime;
           console.log(`🚀 Cache hit: ${options.cacheKey} (${cacheTime.toFixed(2)}ms)`);
+          */
           return;
         }
       }
@@ -114,10 +115,11 @@ export function useApi<T>(
       setData(result);
       options.onSuccess?.(result);
       
+      /*
       // API呼び出し時間の計測
       const apiTime = performance.now() - startTime;
       console.log(`⚡ API call: ${options.cacheKey || 'unknown'} (${apiTime.toFixed(2)}ms)`);
-      
+      */
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return; // キャンセルされた場合は何もしない
@@ -127,9 +129,11 @@ export function useApi<T>(
       setError(apiError);
       options.onError?.(apiError);
       
+      /*
       // エラー時の計測
       const errorTime = performance.now() - startTime;
       console.error(`❌ API error: ${options.cacheKey || 'unknown'} (${errorTime.toFixed(2)}ms)`, err);
+      */
     } finally {
       setIsLoading(false);
     }

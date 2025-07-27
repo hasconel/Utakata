@@ -4,8 +4,8 @@ import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverCon
 import { verifySignature } from "@/lib/activitypub/crypto";
 import { deleteFollowInbox, createFollowInbox } from "@/lib/api/follow";
 
-export async function GET(request: NextRequest, { params }: { params: { user: string } }) {
-  const username = params.user;
+export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user: username } = await params;
   const header = request.headers;
   if(header.get("Accept") !== "application/activity+json"){
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
@@ -48,8 +48,8 @@ export async function GET(request: NextRequest, { params }: { params: { user: st
   });
 }
 
-export async function POST(request: NextRequest, { params }: { params: { user: string } }) {
-  const username = params.user;
+export async function POST(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
+  const { user: username } = await params;
   const header = request.headers;
   const activity = await request.json();
 

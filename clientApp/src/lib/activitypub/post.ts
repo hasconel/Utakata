@@ -26,7 +26,7 @@ const meilisearch = new MeiliSearch({
  */
 const PostSchema = z.object({
   content: z.string().min(1, Errors.InvalidInput("コンテンツ")).max(500, Errors.InvalidInput("コンテンツは500文字以内")),
-  visibility: z.enum(["public", "followers"], { errorMap: () => ({ message: Errors.InvalidInput("公開範囲") }) }),
+  visibility: z.enum(["public", "followers"]),
   inReplyTo: z.object({ id: z.string(), to: z.string() }).optional(),
 });
 

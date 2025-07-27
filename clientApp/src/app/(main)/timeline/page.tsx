@@ -49,7 +49,7 @@ const useTimelineManager = () => {
   const { data: posts, isLoading, error, refetch } = useTimeline(10, offset || 0, null, null);
   
   // プリフェッチ用のフック（次のページのデータを事前に読み込み）
-  const { data: nextPosts } = useTimeline(10, (offset || 0) + 10, null, null, null);
+  //const { data: nextPosts } = useTimeline(10, (offset || 0) + 10, null, null, null);
 
   useEffect(() => {
     if (!Array.isArray(posts)) return;

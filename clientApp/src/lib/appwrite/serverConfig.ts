@@ -27,7 +27,7 @@ export async function createSessionClient(cookie?: Request) {
       session = cookie.headers.get("cookie")?.split("; ")[0].split("=")[1];
       //console.log("session", session);
     } else {
-      session = cookies().get("my-custom-session")?.value;
+      session = (await cookies()).get("my-custom-session")?.value;
     }
     if (session) {
       client.setSession(session);

@@ -7,7 +7,8 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   try {
-    const session = cookies().get("my-custom-session");
+    const cookiesList = await cookies();
+    const session = cookiesList.get("my-custom-session");
     if (!session) {
       return NextResponse.json(
         { error: "セッションが見つからないよ！💦" },
