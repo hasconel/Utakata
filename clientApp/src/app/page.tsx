@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { useRouter } from "next/navigation";
 
 interface CTAButtonProps {
   href: string;
@@ -29,18 +28,16 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const { user, isLoading: isAuthLoading } = useAuth();
   const [redirect, setRedirect] = useState<string | null>(null);
-  const router = useRouter();
   useEffect(() => {
     if (user && !isAuthLoading) {
       setRedirect("/timeline");
     }
-    if(redirect) {
-      router.push(redirect);
-    }
     setIsLoading(false);
   }, [user, isAuthLoading]);
   //console.log(user);
-
+  if(redirect) {
+        window.location.href = redirect;
+  }
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -57,7 +54,7 @@ export default function HomePage() {
       </div>
     ) : (
     <>
-    <div>
+    <div className="flex flex-col items-center justify-center min-h-screen">
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24">
         <div className="relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>

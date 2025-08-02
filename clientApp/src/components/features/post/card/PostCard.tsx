@@ -14,8 +14,8 @@ import Link from "next/link";
 import ContentsCard from "@/components/ui/ContentsCard";
 import { likePost, unlikePost } from "@/lib/appwrite/serverConfig";
 import PostDetailCard from "./PostDetailCard";
-import { usePost } from "@/hooks/usePost";
-  import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { usePostCache } from "@/hooks/post/usePostCache";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
 
 // いいねボタンのコンポーネント！✨
@@ -94,8 +94,27 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [, setReplyPosts] = useState<any[]>([]);
   const [relativeTime, setRelativeTime] = useState<string>("");
-  const { data: postData, isLoading: isPostLoading } = usePost(post);
+  const { getPostWithActor,  } = usePostCache();
+  const [postData, setPostData] = useState<any>(null);
+  const [isPostLoading, setIsPostLoading] = useState(true);
   const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
+
+  // Post情報を取得
+  useEffect(() => {
+    const fetchPost = async () => {
+      setIsPostLoading(true);
+      try {
+        const data = await getPostWithActor(post);
+        setPostData(data);
+      } catch (error) {
+        console.error("Post取得エラー:", error);
+      } finally {
+        setIsPostLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [post, getPostWithActor]);
 
   useEffect(() => {
     if(postData){
@@ -125,9 +144,9 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
   return (
     <>
       {postData?.post?.id && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 w-full">
       <div 
-        className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-white/80 dark:border-gray-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0"
+        className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-white/80 dark:border-gray-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0 w-full"
         onClick={() => {setIsDetailOpen(true); {postData?.post?.replyCount > 0 ? ReplyPosts() : ""}}}
       >
         {/* キラキラな背景エフェクト！✨ */}

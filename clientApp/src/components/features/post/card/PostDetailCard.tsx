@@ -15,7 +15,7 @@ import { getRelativeTime } from "@/lib/utils/date";
 import { LikeButton } from "./PostCard";
 import { Button } from "@/components/ui/Button";
 import  {getActorById,ActivityPubActor} from "@/lib/appwrite/database";
-import { usePost } from "@/hooks/usePost";
+import { usePostCache } from "@/hooks/post/usePostCache";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { Loader2 } from "lucide-react";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
@@ -177,11 +177,30 @@ export default function PostDetailCard({
 }) {
  // const [replyPosts,setReplyPosts] = useState<Post[]>([]);
   const [isLikedUsersOpen, setIsLikedUsersOpen] = useState(false);
-  const { data: postData, isLoading: isPostLoading } = usePost(post);
+  const { getPostWithActor } = usePostCache();
+  const [postData, setPostData] = useState<any>(null);
+  const [isPostLoading, setIsPostLoading] = useState(true);
   const [canDelete, setCanDelete] = useState<boolean>(false);
   const { user } = useAuth();
   const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
   const [relativeTime, setRelativeTime] = useState<string>("");
+
+  // Post情報を取得
+  useEffect(() => {
+    const fetchPost = async () => {
+      setIsPostLoading(true);
+      try {
+        const data = await getPostWithActor(post);
+        setPostData(data);
+      } catch (error) {
+        console.error("Post取得エラー:", error);
+      } finally {
+        setIsPostLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [post, getPostWithActor]);
   const ContentsDocment = postData?.post?.content ? (
     <div className="space-y-2">
       {postData?.post?.content.split("\n").map((line: any, index: any) => (

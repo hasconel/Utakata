@@ -2,13 +2,17 @@
 import { useState } from "react";
 import LinkCard from "./LinkCard";
 import { useTheme } from "@/lib/theme/ThemeContext";
+
 /**
  * URLを埋め込みコンテンツに変換するコンポーネント！✨
  * ニコニコ動画、YouTube、X（旧Twitter）のURLを対応する埋め込みプレーヤーに変換するよ！💖
  */
 const UrlInText = ({ arg }: { arg: string }) => {
   const [, setError] = useState<string | null>(null);
+  
+  // テーマを取得（ThemeProviderの外ではデフォルトテーマを使用）
   const { theme } = useTheme();
+
   // URLが空の場合は何も表示しない
   if (arg == null) {
     return <></>;

@@ -3,7 +3,7 @@
 //import { Post } from "@/lib/appwrite/posts";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Avatar, } from "@/components/ui/Avatar";
-import { usePost } from "@/hooks/usePost";
+import { usePostCache } from "@/hooks/post/usePostCache";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -21,8 +21,28 @@ import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
  * @param post リプライ先の投稿ID (https://example.com/posts/123)
  */
 export default function ReplyToPost({ post }: ReplyToPostProps) {
-  const { data: postData, isLoading: isPostLoading } = usePost(post);
+  const { getPostWithActor } = usePostCache();
+  const [postData, setPostData] = useState<any>(null);
+  const [isPostLoading, setIsPostLoading] = useState(true);
   const [images, setImages] = useState<ActivityPubImage[]>([]);
+
+  // Post情報を取得
+  useEffect(() => {
+    const fetchPost = async () => {
+      setIsPostLoading(true);
+      try {
+        const data = await getPostWithActor(post);
+        setPostData(data);
+      } catch (error) {
+        console.error("Post取得エラー:", error);
+      } finally {
+        setIsPostLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [post, getPostWithActor]);
+
   useEffect(() => {
     if(postData){
       setImages(postData?.post?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
