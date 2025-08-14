@@ -111,8 +111,14 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
       }).then((res) => res.json()).then((res) => {
         if(res.postsAsPostArray){
           if(res.postsAsPostArray.length<10) setFetchMore(false);else setFetchMore(true);
-          const filteredData = res.postsAsPostArray.filter((post:string)=>!posts.includes(post));
-          setPosts([...posts,...filteredData]);
+          // Setを使った高速検索でフィルタリングを最適化
+          const existingPostsSet = new Set(posts);
+          const filteredData = res.postsAsPostArray.filter((post:string) => !existingPostsSet.has(post));
+          // 重複を完全に除去してから状態を更新
+          setPosts(prevPosts => {
+            const allPosts = [...prevPosts, ...filteredData];
+            return Array.from(new Set(allPosts)); // 重複を完全に除去
+          });
           getUserPostCount(targetActor?.id).then((res) => setPostCount(res));
         }
       });
@@ -245,8 +251,16 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
             まだ投稿がないわ！💦
           </p>
         ) : (
-          posts.map((post) => (
-            <PostCard key={post} post={post}  setIsModalOpen={setIsModalOpen} isModalOpen={isModalOpen} setModalImages={setModalImages} setModalIndex={setModalIndex} />
+          // 重複を除去してからマップ
+          Array.from(new Set(posts)).map((post, index) => (
+            <PostCard 
+              key={`${post}-${index}`} 
+              post={post}  
+              setIsModalOpen={setIsModalOpen} 
+              isModalOpen={isModalOpen} 
+              setModalImages={setModalImages} 
+              setModalIndex={setModalIndex} 
+            />
           ))
         )}            {fetchMore && (
           <div className="flex justify-center mt-8">

@@ -97,55 +97,127 @@ export async function GET(request: Request) {
   const LimitDate = new Date(date);
   LimitDate.setHours(LimitDate.getHours() - 84);
   const dateString = LimitDate.toISOString();
-  const { searchParams } = new URL(request.url);
-  //console.log("searchParams", searchParams);
-  const limit = searchParams.get("limit") || "20";
-  const offset = searchParams.get("offset") || "0";
-  const inReplyTo = searchParams.get("inReplyTo") ;
-  const userId = searchParams.get("userId") ;
-  const searchReplyTo = inReplyTo? [`${ENV.DOMAIN}/posts/${inReplyTo}`] : "";
-  const inReplyToQuery = inReplyTo? Query.equal('inReplyTo',searchReplyTo) : "";
-  const attributedTo = searchParams.get("attributedTo") ;
-  //console.log("ENV.DOMAIN",ENV.DOMAIN);
-  //console.log("attributedTo",attributedTo);
-  const searchAttributedTo = attributedTo? [attributedTo] : "";
-  const attributedToQuery = attributedTo? Query.equal('attributedTo',searchAttributedTo) : "";
-  const lastId = searchParams.get("lastId") ;
-  const lastIdQuery = lastId? Query.cursorAfter(lastId) :"";
-  const firstId = searchParams.get("firstId") ;
-  const firstIdQuery = firstId? Query.cursorBefore(firstId) :"";
-  const queries = [
-    Query.orderDesc("$createdAt"),
-    Query.limit(parseInt(limit)),
-    Query.offset(parseInt(offset)),
-    Query.greaterThan("$createdAt",dateString)
-  ]
-  if (inReplyTo) {
-    queries.push(inReplyToQuery)
+  
+  // クエリビルダークラスでクエリ構築を最適化！✨
+  class PostQueryBuilder {
+    private queries: any[] = [];
+    
+    addPagination(limit: number, offset: number) {
+      this.queries.push(Query.limit(limit), Query.offset(offset));
+      return this;
+    }
+    
+    addTimeFilter(dateString: string) {
+      this.queries.push(Query.greaterThan("$createdAt", dateString));
+      return this;
+    }
+    
+    addOrdering() {
+      this.queries.push(Query.orderDesc("$createdAt"));
+      return this;
+    }
+    
+    addInReplyTo(inReplyTo: string | null) {
+      if (inReplyTo) {
+        const searchReplyTo = `${ENV.DOMAIN}/posts/${inReplyTo}`;
+        this.queries.push(Query.equal('inReplyTo', searchReplyTo));
+      }
+      return this;
+    }
+    
+    addAttributedTo(attributedTo: string | null) {
+      if (attributedTo) {
+        this.queries.push(Query.equal('attributedTo', attributedTo));
+      }
+      return this;
+    }
+    
+    addCursorPagination(lastId: string | null, firstId: string | null) {
+      if (lastId) {
+        this.queries.push(Query.cursorAfter(lastId));
+      }
+      if (firstId) {
+        this.queries.push(Query.cursorBefore(firstId));
+      }
+      return this;
+    }
+    
+    addMutedUsersFilter(mutedUsers: string[]) {
+      if (mutedUsers && mutedUsers.length > 0) {
+        this.queries.push(Query.notEqual("attributedTo", mutedUsers));
+      }
+      return this;
+    }
+    
+    build() {
+      return this.queries;
+    }
   }
-  if (attributedTo) {
-    queries.push(attributedToQuery)
+  
+  // URLからクエリパラメータを直接パース
+  let limit: string = "20";
+  let offset: string = "0";
+  let inReplyTo: string | null = null;
+  let userId: string | null = null;
+  let attributedTo: string | null = null;
+  let lastId: string | null = null;
+  let firstId: string | null = null;
+  
+  try {
+    const url = new URL(request.url);
+    limit = url.searchParams.get("limit") || "20";
+    offset = url.searchParams.get("offset") || "0";
+    inReplyTo = url.searchParams.get("inReplyTo");
+    userId = url.searchParams.get("userId");
+    attributedTo = url.searchParams.get("attributedTo");
+    lastId = url.searchParams.get("lastId");
+    firstId = url.searchParams.get("firstId");
+  } catch (error) {
+    console.error("URLパースエラー:", error);
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
   }
-  if (lastId) {
-    queries.push(lastIdQuery)
-  }
-  if (firstId) {
-    queries.push(firstIdQuery)
-  }
+  
+  // クエリビルダーを使用してクエリを構築
+  const queryBuilder = new PostQueryBuilder()
+    .addOrdering()
+    .addPagination(parseInt(limit), parseInt(offset))
+    .addTimeFilter(dateString)
+    .addInReplyTo(inReplyTo)
+    .addAttributedTo(attributedTo)
+    .addCursorPagination(lastId, firstId);
+    
+  const queries = queryBuilder.build();
   try {
     const { databases } = await createSessionClient(request);    
+    let posts: any;
+    
+    // ミュートユーザーフィルターをクエリビルダーで追加
     if(userId){
       const currentUserActor = await getActorByUserId(userId);
       if(currentUserActor?.mutedUsers && currentUserActor.mutedUsers.length > 0){
-        queries.push(Query.notEqual("attributedTo", currentUserActor.mutedUsers))
+        queryBuilder.addMutedUsersFilter(currentUserActor.mutedUsers);
+        // 更新されたクエリを取得
+        const updatedQueries = queryBuilder.build();
+        posts = await databases.listDocuments(
+          ENV.DATABASE_ID,
+          ENV.POSTS_COLLECTION_ID,
+          updatedQueries
+        );
+      } else {
+        posts = await databases.listDocuments(
+          ENV.DATABASE_ID,
+          ENV.POSTS_COLLECTION_ID,
+          queries
+        );
       }
+    } else {
+      posts = await databases.listDocuments(
+        ENV.DATABASE_ID,
+        ENV.POSTS_COLLECTION_ID,
+        queries
+      );
     }
-
-    const posts = await databases.listDocuments(
-      ENV.DATABASE_ID,
-      ENV.POSTS_COLLECTION_ID,
-      queries
-    );
+    
     const postsAsPostArray: string[] = [];
     for(const post of posts.documents){
       const postId: string = post.activityId;

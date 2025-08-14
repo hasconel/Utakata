@@ -3,6 +3,9 @@ import "../styles/globals.css";
 import { ThemeProvider } from "@/lib/theme/ThemeContext";
 import { Header } from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+//import PerformanceDashboard from "@/components/performance/PerformanceDashboard";
+//import OfflineStatus from "@/components/offline/OfflineStatus";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,6 +31,12 @@ export default function RootLayout({
     <html lang="ja" suppressHydrationWarning className={inter.variable}>
       <head>
         <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <meta name="theme-color" content="#8b5cf6" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Utakata" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${inter.className} antialiased ` }>
         <ThemeProvider>
@@ -45,6 +54,9 @@ export default function RootLayout({
             </div>
           </div>
         </ThemeProvider>
+        <ServiceWorkerRegistration />
+        {/*<PerformanceDashboard />*/}
+        {/*<OfflineStatus />*/}
       </body>
     </html>
   );

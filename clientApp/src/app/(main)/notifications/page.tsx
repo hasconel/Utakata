@@ -10,7 +10,6 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     getUserNotifications().then(notifications => {
-      console.log(notifications);
       setNotifications(notifications.map((notification:any)=>({
         ...notification,
         read: notification.read,

@@ -24,18 +24,21 @@ export async function GET(
     // ここでPostデータをactivitypubのNoteに変換してJSONで返す
     try {
       const { databases } = await createSessionClient(request);
+      
       const post = await databases.getDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_POSTS_COLLECTION_ID!,
         id
       );
       if (!post) {
+        console.log("post not found",id);
         return NextResponse.json(
           { error: "Post not found" }, 
           { status: 404 }
         );
       }
       
+
       // ここで投稿データをActivityPubのNote形式に変換するよ！💖
       const postData = {
         "@context": ["https://www.w3.org/ns/activitystreams"],

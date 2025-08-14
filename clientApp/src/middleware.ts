@@ -13,16 +13,23 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  //console.log("pathname", pathname);
   const acceptHeader = request.headers.get('Accept');
-  //console.log("pathname", pathname);
+  
+  // デバッグ用ログ（必要に応じてコメントアウト）
+  // console.log("Middleware - pathname:", pathname);
+  // console.log("Middleware - searchParams:", request.nextUrl.searchParams.toString());
+  // console.log("Middleware - Accept header:", acceptHeader);
 
   // 投稿詳細ページのパスをチェック！✨
-  if (pathname && pathname.startsWith('/posts/') && pathname.split('/').length === 3) {
+  if (pathname && pathname.startsWith('/posts/') ) {
     // Acceptヘッダーがapplication/activity+jsonもしくはapplication/ld+json; profile="https://www.w3.org/ns/activitystreams"の場合はAPI Routeにルーティング！✨
     if (acceptHeader === 'application/activity+json' || acceptHeader === 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"') {
-      const postId = pathname.split('/').pop();
-      const apiUrl = new URL(`/api/posts/${postId}`, request.url);
+      // クエリパラメータを保持してAPI Routeにリライト
+      const apiUrl = new URL(`/api${pathname}`, request.url);
+      // 元のURLのクエリパラメータをコピー
+      request.nextUrl.searchParams.forEach((value, key) => {
+        apiUrl.searchParams.set(key, value);
+      });
       return NextResponse.rewrite(apiUrl);
     }
     
@@ -31,14 +38,24 @@ export async function middleware(request: NextRequest) {
   }
   //console.log("pathname", pathname,pathname.split('/').length,pathname.startsWith("/users/"));
   // ユーザープロフィールページのパスをチェック！✨
-  if (pathname && pathname.startsWith("/users/") && pathname.split('/').length === 3) {
-    if (acceptHeader !== 'application/activity+json' && acceptHeader !== 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"') {
+  if (pathname && pathname.startsWith("/users/") ) {
+    // acceptHeaderがapplication/activity+jsonもしくはapplication/ld+json; profile="https://www.w3.org/ns/activitystreams"の場合はユーザープロフィールページにリダイレクト！✨
+    if (acceptHeader !== 'application/activity+json' && acceptHeader !== 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' && pathname.split('/').length === 3) {
       //console.log("pathname", pathname);
       const actor = await getActorByUserId(pathname.split('/').pop()!);
       if(actor) return NextResponse.redirect(new URL(`/@${actor.preferredUsername}`, request.url));
+    }else{
+      // クエリパラメータを保持してAPI Routeにリライト
+      const apiUrl = new URL(`${pathname}`, request.url);
+      // 元のURLのクエリパラメータをコピー
+      request.nextUrl.searchParams.forEach((value, key) => {
+        apiUrl.searchParams.set(key, value);
+      });
+      return NextResponse.rewrite(apiUrl);
     }
     return NextResponse.next();
   }
+
 
   //console.log("No matching route, continuing normally");
   return NextResponse.next();

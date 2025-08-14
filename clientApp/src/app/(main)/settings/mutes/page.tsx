@@ -45,18 +45,34 @@ export default function MutesPage() {
         throw new Error("ユーザーIDが取得できないよ！💦");
       }
       const data = await getActorByUserId(userId);
-      const mutedUsers =[];
-      for(const actorId of data?.mutedUsers || []){
-        const user = await getActorById(actorId);
-        if(user){
-          mutedUsers.push({
-            preferredUsername: user.preferredUsername,
-            displayName: user.name,
-            avatarUrl: user.icon?.url || "",
-            actorId: user.id,
-          });
+      
+      // 並列処理で高速化！✨
+      const mutedUsersPromises = (data?.mutedUsers || []).map(async (actorId) => {
+        try {
+          const user = await getActorById(actorId);
+          if(user){
+            return {
+              preferredUsername: user.preferredUsername,
+              displayName: user.name,
+              avatarUrl: user.icon?.url || "",
+              actorId: user.id,
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error(`ユーザー ${actorId} の取得に失敗:`, error);
+          return null;
         }
-      }
+      });
+      
+      // Promise.allで並列実行
+      const mutedUsersResults = await Promise.allSettled(mutedUsersPromises);
+      const mutedUsers = mutedUsersResults
+        .filter((result): result is PromiseFulfilledResult<any> => 
+          result.status === 'fulfilled' && result.value !== null
+        )
+        .map(result => result.value);
+      
       setMutedUsers(mutedUsers);
     } catch (error) {
       console.error("ミュートリストの取得に失敗したよ！💦", error);

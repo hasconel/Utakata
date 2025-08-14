@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:dev": "NODE_ENV=development next build",
+    "check-env": "node scripts/check-env.js",
     "lint": "next lint"
   },
   "dependencies": {

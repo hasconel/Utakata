@@ -4,9 +4,18 @@ import { Query } from "node-appwrite";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
   const { user: username } = await params;
-  const { searchParams } = new URL(request.url);
-  const page = searchParams.get("page");
-  const target = searchParams.get("target");
+  // URLからクエリパラメータを直接パース
+  let page: string | null = null;
+  let target: string | null = null;
+  
+  try {
+    const url = new URL(request.url);
+    page = url.searchParams.get("page");
+    target = url.searchParams.get("target");
+  } catch (error) {
+    console.error("URLパースエラー:", error);
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
   const header = request.headers;
   if(header.get("Accept") !== "application/activity+json"){
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });

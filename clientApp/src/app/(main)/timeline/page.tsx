@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import PostForm from "@/components/features/post/form/PostForm";
 import PostCard from "@/components/features/post/card/PostCard";
 import Alert from "@/components/ui/Alert";
@@ -58,26 +58,35 @@ const useTimelineManager = () => {
     setFetchMore(hasMorePosts);
     
     setAllPosts(prevPosts => {
+      // Setを使った高速検索でフィルタリングを最適化
+      const existingPostsSet = new Set(prevPosts);
+      
       if (offset === 0) {
-        const newPosts = posts.filter(post => !prevPosts.includes(post));
+        const newPosts = posts.filter(post => !existingPostsSet.has(post));
         return [...newPosts, ...prevPosts];
       } else {
-        const newPosts = posts.filter(post => !prevPosts.includes(post));
+        const newPosts = posts.filter(post => !existingPostsSet.has(post));
         return [...prevPosts, ...newPosts];
       }
     });
   }, [posts, offset]);
 
+  // useRefで安定した参照を確保
+  const refetchRef = useRef(refetch);
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
   const handleTimelineReload = useCallback(async () => {
     setOffset(0);
     setAllPosts([]);
-    await refetch();
-  }, []); // refetchは安定した参照なので依存関係から除外
+    await refetchRef.current();
+  }, []);
 
   const handleLoadMore = useCallback(async () => {
     setOffset(prevOffset => prevOffset + 10);
-    await refetch();
-  }, []); // refetchは安定した参照なので依存関係から除外
+    await refetchRef.current();
+  }, []);
 
   return {
     allPosts,
@@ -112,8 +121,8 @@ const useUserAndActor = () => {
   return { user, isAuthLoading, actor };
 };
 
-// コンポーネント: プルリフレッシュインジケーター
-const PullRefreshIndicator = ({ isRefreshing }: { isRefreshing: boolean }) => {
+// コンポーネント: プルリフレッシュインジケーター（メモ化）
+const PullRefreshIndicator = React.memo(({ isRefreshing }: { isRefreshing: boolean }) => {
   if (!isRefreshing) return null;
 
   return (
@@ -123,7 +132,7 @@ const PullRefreshIndicator = ({ isRefreshing }: { isRefreshing: boolean }) => {
       </div>
     </div>
   );
-};
+});
 
 // コンポーネント: タイムラインヘッダー
 const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => (
@@ -166,7 +175,7 @@ const EmptyState = () => (
   </div>
 );
 
-// コンポーネント: 投稿リスト
+// コンポーネント: 投稿リスト（シンプル版）
 const PostList = ({ 
   posts, 
   setIsModalOpen, 
@@ -180,7 +189,7 @@ const PostList = ({
   setModalImages: (images: ActivityPubImage[]) => void;
   setModalIndex: (index: number) => void;
 }) => (
-  <div className="space-y-6">
+  <div className="space-y-4">
     {Array.isArray(posts) && posts.map((post) => (
       <PostCard 
         key={post} 

@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/Button";
 import { MobileMenu } from "./MobileMenu";
 import { useEffect, useState } from "react";
 import { getUnreadNotifications } from "@/lib/appwrite/serverConfig";
+//import NotificationPermission from "@/components/NotificationPermission";
 //import ThemeToggle from "@/components/ui/ThemeToggle";
 /**
  * ヘッダーコンポーネント！✨
- * ナビゲーションとかをキラキラに表示するよ！💖
+ * ナビゲーションとかをキラキラに表示するよ！💖「「
  */
 export function Header() {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -38,6 +39,8 @@ export function Header() {
           <nav className="hidden md:flex items-center space-x-2">
             {user && !isAuthLoading && (
               <>
+                {/* 通知許可要求 */}
+                {/*<NotificationPermission />*/}
                 <Link href="/notifications">
                   <Button variant="ghost" size="sm" className="relative">
                     <Bell className="h-5 w-5" />
