@@ -176,8 +176,8 @@ const ActorSchema = z.object({
           displayName: doc.displayName || doc.preferredUsername, // 移行用
           inbox: doc.inbox,
           outbox: doc.outbox,
-          following: doc.following,
-          followers: doc.followers,
+          following: doc.following || doc.actorId + "/following",
+          followers: doc.followers || doc.actorId + "/followers",
           publicKey: doc.publicKey ,
           privateKey: doc.privateKey,
           userId: doc.userId,
