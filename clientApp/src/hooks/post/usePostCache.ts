@@ -55,9 +55,7 @@ export function usePostCache() {
       if (!response.ok) {
         throw new Error(`Post取得エラー: ${response.status}`);
       }
-
       const post = await response.json();
-      
       // Actor情報を取得（キャッシュ優先）
       let actor: ActivityPubActor | null = null;
       if (post.attributedTo) {

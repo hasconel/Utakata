@@ -12,7 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
-import { usePost } from "@/hooks/usePost";
+import { usePostCache } from "@/hooks/post/usePostCache";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
@@ -26,11 +26,27 @@ interface PostRepliesProps {
  * かわいいデザインでリプライ先の投稿を表示するよ！💖
  */
 export default function PostReplies({ post }: PostRepliesProps) {
-  const { data: postData, isLoading: isPostLoading } = usePost(post);
+  const { getPostWithActor } = usePostCache();
+  const [postData, setPostData] = useState<any>(null);
+  const [isPostLoading, setIsPostLoading] = useState(true);
   const [images, setImages] = useState<ActivityPubImage[]>([]);
   useEffect(() => {
-    if(postData?.post?.attachment){
-      setImages(postData?.post?.attachment.map((image: string) => JSON.parse(image) as ActivityPubImage));
+    const fetchPost = async () => {
+      setIsPostLoading(true);
+      try {
+        const data = await getPostWithActor(post);
+        setPostData(data);
+      } catch (error) { 
+        console.error("Post取得エラー:", error);
+      } finally {
+        setIsPostLoading(false);
+      }
+    };
+    fetchPost();
+  }, [post, getPostWithActor]);
+  useEffect(() => {
+    if(postData){
+      setImages(postData?.post?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
     }
   }, [postData]);
   if(isPostLoading){
@@ -44,7 +60,7 @@ export default function PostReplies({ post }: PostRepliesProps) {
       <div className="flex items-center">
         <Avatar
           src={postData?.actor?.icon?.url}
-          alt={postData?.actor?.preferredUsername}
+          alt={postData?.actor?.preferredUsername || ""}
           fallback={postData?.actor?.preferredUsername?.charAt(0)}
           size="sm"
           variant="outline"
@@ -53,7 +69,7 @@ export default function PostReplies({ post }: PostRepliesProps) {
         <div className="flex flex-col items-start justify-start w-full ml-2">
         <div className="flex flex-row items-start justify-start w-full gap-1">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {postData?.actor?.preferredUsername}
+            {postData?.actor?.name || postData?.actor?.preferredUsername}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             @{getActorDisplayPreferredUsername(postData?.actor)}

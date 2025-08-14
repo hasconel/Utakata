@@ -219,7 +219,8 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `${isReply ? "リプライ" : "投稿"}に失敗しました💦`);
+        console.log(errorData);
+        throw new Error(errorData.error || `${isReply ? "リプライ" : "投稿"}に失敗しました💦`);
       }
 
       // フォームをリセットするよ！✨
@@ -388,13 +389,13 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
               </>
             ) : isReply ? (
               <>
-                <span className="animate-bounce">💭</span>
-                リプライ！💖
+                <span className="text-transparent bg-clip-text bg-purple-700 dark:bg-pink-300">💭</span>
+                リプライ！
               </>
             ) : (
               <>
-                <span className="animate-bounce hidden sm:block">✨</span>
-                投稿する！💖
+                <span className="hidden sm:block text-transparent bg-clip-text bg-purple-700 dark:bg-pink-300">✨</span>
+                投稿する！
               </>
             )}
           </Button>

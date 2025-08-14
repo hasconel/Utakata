@@ -59,7 +59,6 @@ export async function POST(request: Request) {
       },
       images
     );
-
     // ActivityPubで配信
     await deliverActivity(activity, {
       id: actor.actorId,

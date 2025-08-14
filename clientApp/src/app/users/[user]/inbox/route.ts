@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverConfig";
 import { verifySignature } from "@/lib/activitypub/crypto";
-import { deleteFollowInbox, createFollowInbox } from "@/lib/api/follow";
+import { Permission, Role } from "node-appwrite";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
   const { user: username } = await params;
@@ -11,6 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
   }
   if (!username) {
+    
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
 
@@ -52,16 +53,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { user: username } = await params;
   const header = request.headers;
   const activity = await request.json();
-
-  if(header.get("Accept") !== "application/activity+json"){
-    return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
+  //console.log("activity",activity)
+  if(header.get("Content-Type") !== "application/activity+json"){
+    return NextResponse.json({ error: "Content-Type header is required" }, { status: 400 });
   }
   if (!username) {
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
   // actorがオブジェクト化されている場合はidを取得、そうでない場合はIdだろうということでそのまま
   const ActorId = activity.actor.id? activity.actor.id : activity.actor;
-  console.log(ActorId);
+  //console.log(ActorId);
   // HTTPシグネチャの検証
   
   const verified = await verifySignature(request, ActorId);
@@ -75,8 +76,51 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const ObjectId = activity.object.id? activity.object.id : activity.object;
   // フォローの場合
   if(activity.type === "Follow"){
-    const follow = await createFollowInbox(activity.id, ActorId, ObjectId);
-    if(follow === activity.id){
+    // 先に通知を作ってしまう
+    const notification = await adminDatabases.createDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+      ID.unique(),
+      {
+        "id": activity.id,
+        "type": "Follow",
+        "from": ActorId,
+        "to": process.env.NEXT_PUBLIC_DOMAIN+"/users/"+username,
+        "target": ObjectId,
+        "read": false
+      },[
+        Permission.read(Role.user(username)),
+        Permission.update(Role.user(username)),
+      ]);
+    if(!notification){
+      return NextResponse.json({ error: "Failed to create notification" }, { status: 400 });
+    }
+    const follow = await adminDatabases.createDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+      ID.unique(),
+      {
+        "id": activity.id,
+        "actor": ActorId,
+        "object": ObjectId
+      }
+    )
+    if(follow){
+      const { documents : actorSub } = await adminDatabases.listDocuments(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+        [Query.equal("id", ObjectId)]
+      );
+      if(actorSub.length === 1){
+        await adminDatabases.updateDocument(
+          process.env.APPWRITE_DATABASE_ID!,
+          process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+          actorSub[0].$id,
+          {
+            "followersCount": actorSub[0].followersCount + 1
+          }
+        );
+      }
     return NextResponse.json({ 
       "type": "Accept",
       "actor": ActorId,
@@ -90,6 +134,36 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Noteの場合
     if(activity.object.type === "Note"){
       const NoteId = activity.object.id;
+      // 先に通知を作ってしまう
+      if(activity.object.inReplyTo && activity.object.to.includes(process.env.NEXT_PUBLIC_DOMAIN! + "/users/" + username)){
+        const notification = await adminDatabases.createDocument(
+          process.env.APPWRITE_DATABASE_ID!,
+          process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+          ID.unique(),
+          {
+            "id": activity.id,
+            "type": "Reply",
+            "from": ActorId,
+            "to": process.env.NEXT_PUBLIC_DOMAIN+"/users/"+username,
+            "target": NoteId,
+            "read": false
+          },[
+            Permission.read(Role.user(username)),
+            Permission.update(Role.user(username)),
+          ]);
+        if(!notification){
+          return NextResponse.json({ error: "Failed to create notification" }, { status: 400 });
+        }
+      }
+      // 自分のドメインの場合はAcceptを返す
+      if(NoteId.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)){
+        const Accept = {
+          "type": "Accept",
+          "actor": ActorId,
+          "object": activity,
+        }
+        return NextResponse.json(Accept, { status: 200 });
+      }
       // NoteのIdが重複していないか確認
       const { documents : noteDocuments } = await adminDatabases.listDocuments(
         process.env.APPWRITE_DATABASE_ID!,
@@ -134,6 +208,60 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   // いいねの場合
   if(activity.type === "Like"){
+    // 先に通知を作ってしまう
+    const notification = await adminDatabases.createDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+      ID.unique(),
+      {
+        "id": activity.id,
+        "type": "Like",
+        "from": ActorId,
+        "to": process.env.NEXT_PUBLIC_DOMAIN+"/users/"+username,
+        "target": ObjectId,
+        "read": false
+      },[
+        Permission.read(Role.user(username)),
+        Permission.update(Role.user(username)),
+      ]);
+    if(!notification){
+      return NextResponse.json({ error: "Failed to create notification" }, { status: 400 });
+    }
+    // いいねのオブジェクトがstringの場合
+    if(typeof activity.object === "string"){
+      const { documents : likeDocuments } = await adminDatabases.listDocuments(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_LIKES_COLLECTION_ID!,
+        [Query.equal("id", activity.id)]
+      );
+      if(likeDocuments.length > 0){
+        return NextResponse.json({ 
+          "type": "Accept",
+          "actor": ActorId,
+          "object": activity,
+        }, { status: 200 });
+      }
+      // いいねを作成
+      const newLike = await adminDatabases.createDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_LIKES_COLLECTION_ID!,
+        ID.unique(),
+        {
+          "id": activity.id,
+          "actor": ActorId,
+          "object": ObjectId,
+        }
+      )
+      if(newLike){
+        const Accept = {
+          "type": "Accept",
+          "actor": ActorId,
+          "object": activity,
+        }
+        return NextResponse.json(Accept, { status: 200 });
+      }
+      return NextResponse.json({ error: "Failed to create like" }, { status: 400 });
+    }
     if(activity.object.type === "Note"){
       const actorId = activity.object.attributedTo===activity.actor? activity.actor : activity.actor.id;
     const like = await adminDatabases.createDocument(
@@ -161,8 +289,52 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if(activity.type === "Undo"){
     // フォロー解除の場合
     if(activity.object.type === "Follow"){
-      const deleted = await deleteFollowInbox(activity.object.id, activity.object.object);
-      if(deleted === activity.object.id){
+      const { documents : notificationDocuments } = await adminDatabases.listDocuments(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+        [Query.equal("id", activity.object.id)]
+      );
+      if(notificationDocuments.length > 0){
+        await adminDatabases.deleteDocument(
+          process.env.APPWRITE_DATABASE_ID!,
+          process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+          notificationDocuments[0].$id
+        );
+      }
+      const { documents : followDocuments } = await adminDatabases.listDocuments(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+        [Query.equal("id", activity.object.id)]
+      );
+      if(followDocuments.length === 0){
+        return NextResponse.json({ error: "Follow not found" }, { status: 404 });
+      }
+      if(followDocuments.length > 1){
+        return NextResponse.json({ error: "Multiple follows found" }, { status: 400 });
+      }
+      const follow = followDocuments[0];
+      const deleted = await adminDatabases.deleteDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+        follow.$id
+      );
+      if(deleted){
+        const { documents : actorSub } = await adminDatabases.listDocuments(
+          process.env.APPWRITE_DATABASE_ID!,
+          process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+          [Query.equal("id", follow.object)]
+        );
+        if(actorSub.length === 1){
+          await adminDatabases.updateDocument(
+            process.env.APPWRITE_DATABASE_ID!,
+            process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+            actorSub[0].$id,
+            {
+              "followersCount": actorSub[0].followersCount - 1
+            }
+          );
+        }
+        //
         const Accept = {
           "type": "Accept",
           "actor": ActorId,
@@ -177,8 +349,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const { documents : likeDocuments } = await adminDatabases.listDocuments(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_LIKES_COLLECTION_ID!,
-        [Query.equal("id", activity.id)]
+        [Query.equal("id", activity.object.id)]
       );
+      const { documents : notificationDocuments } = await adminDatabases.listDocuments(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+        [Query.equal("id", activity.object.id)]
+      );
+      if(notificationDocuments.length > 0){
+        await adminDatabases.deleteDocument(
+          process.env.APPWRITE_DATABASE_ID!,
+          process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+          notificationDocuments[0].$id
+        );
+      }
       if(likeDocuments.length === 0){
         return NextResponse.json({ error: "Like not found" }, { status: 404 });
       }

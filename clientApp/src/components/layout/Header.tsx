@@ -1,12 +1,12 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { useNotification } from "@/hooks/user/useNotification";
 import { Button } from "@/components/ui/Button";
 import { MobileMenu } from "./MobileMenu";
 import { useEffect, useState } from "react";
+import { getUnreadNotifications } from "@/lib/appwrite/serverConfig";
 //import ThemeToggle from "@/components/ui/ThemeToggle";
 /**
  * ヘッダーコンポーネント！✨
@@ -14,11 +14,15 @@ import { useEffect, useState } from "react";
  */
 export function Header() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { unreadCount } = useNotification();
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [ topAnchor, setTopAnchor ] = useState("/");
   useEffect(() => {
     if (user && !isAuthLoading) {
       setTopAnchor("/timeline");
+      // 未読通知の数を取得
+      getUnreadNotifications().then((res) => {
+        setUnreadCount(res);
+      });
     }
   }, [user, isAuthLoading]);
   return (
@@ -46,17 +50,17 @@ export function Header() {
                 </Link>
                 <Link href="/search">
                   <Button variant="ghost" size="sm">
-                    検索
+                    <Search className="h-5 w-5" />
                   </Button>
                 </Link>
                 <Link href={`/users/${user.name}`}>
                   <Button variant="ghost" size="sm">
-                    プロフィール
+                    <User className="h-5 w-5" />
                   </Button>
                 </Link>
                 <Link href="/settings">
                   <Button variant="ghost" size="sm">
-                    設定
+                    <Settings className="h-5 w-5" />
                   </Button>
                 </Link>
               </>

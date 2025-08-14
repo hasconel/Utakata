@@ -11,7 +11,7 @@ import { signRequest } from "@/lib/activitypub/crypto";
 import { Errors } from "@/lib/activitypub/errors";
 import sanitizeHtml from "sanitize-html";
 import { ActivityPubImage } from "@/types/activitypub/collections";
-import { ID, Permission } from "node-appwrite";
+import { Permission } from "node-appwrite";
 import { MeiliSearch } from "meilisearch";
 import { getActorByUserId, getActorById } from "@/lib/appwrite/database";
 
@@ -75,36 +75,6 @@ export async function savePost(
   const imagesArray = images.map(image => JSON.stringify(image));
   const { databases, account } = await createSessionClient();
   const session = await account.get();
-  // リプライの場合、親投稿のreplyCountを更新
-  if (input.inReplyTo) {
-    //console.log("input.inReplyTo",input.inReplyTo.id);
-    const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, [
-      Query.equal("activityId", input.inReplyTo.id),
-    ]);
-    //console.log("documents",documents);
-    const parentPost = documents[0];
-    if (parentPost) {
-      const parentActorId = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, parentPost.$id).then(res=>res.attributedTo);
-      // parentActorIdがnullでない場合のみccに追加（型安全）
-      if (parentActorId) {
-        activity.cc = Array.isArray(activity.cc) ? [...activity.cc, parentActorId] : [activity.cc, parentActorId].filter((id): id is string => id !== null);
-        // リプライ通知を作成
-        await databases.createDocument(
-          process.env.APPWRITE_DATABASE_ID!,
-          process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-          ID.unique(),
-          {
-            type: "reply",
-            from: actor.actorId,
-            to: parentActorId,
-            target: note.id,
-            message: `${actor.displayName}さんがあなたの投稿にリプライしました！`,
-            read: false
-          }
-        );
-      }
-    }
-  }
 
   // toをAppwriteのstring型に変換
   const finalTo = Array.isArray(note.to) ? note.to : note.to ? [note.to] : [];

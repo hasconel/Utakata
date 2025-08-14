@@ -29,7 +29,16 @@ export async function createNote(
   const id = `${DOMAIN}/posts/${noteId}`;
   const published = new Date().toISOString();
   // attributedToが存在する場合、宛先にリプライ先の投稿者を設定
-  const to = attributedTo ? attributedTo : visibility === "public" ? PUBLIC : followers;
+  const to = [];
+  if(attributedTo){
+    to.push(attributedTo);
+  }
+  if(visibility === "public"){
+    to.push(PUBLIC);
+  }
+  if(visibility === "followers"){
+    to.push(followers);
+  }
   // 公開範囲を設定（publicならfollowers、followersなら空欄）
   const cc = visibility === "public" ? followers : "";
 
@@ -110,6 +119,7 @@ export async function fetchActorInbox(actorId: string): Promise<string | null> {
 }
 
 export function getActorDisplayPreferredUsername(actor: any) {
+  //console.log( "actor", actor)
   if(isInternalUrl(actor.id)) {
     return actor.preferredUsername;
   }

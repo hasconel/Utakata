@@ -3,7 +3,6 @@ import { Notification as NotificationType } from "@/lib/appwrite/posts";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { getActorById } from "@/lib/appwrite/database";
-import { getPostFromActivityId as fetchPostFromActivityId } from "@/lib/appwrite/serverConfig";
 import { useState, useEffect } from "react";
 import ReplyToPost from "../post/reply/ReplyToPost";
 import PostReplies from "../post/reply/PostReplies";
@@ -18,12 +17,9 @@ export default function Notification({ notification }: { notification: Notificat
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if(notification.target){
+        if(notification.type === "Reply" || notification.type === "Like"){
             setIsLoading(true);
-            fetchPostFromActivityId(notification.target).then((post)=>{
-                setPost(post);
-                setIsLoading(false);
-            });
+            setPost(notification.target);
         }
         if(notification.from){
             setIsLoading(true);
@@ -42,11 +38,11 @@ export default function Notification({ notification }: { notification: Notificat
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 dark:border-pink-500"></div>
                     </div>
                 ) : (
-                    notification.type === "like" && (
-                    <div className="flex items-center gap-4 p-4">
-                        <div className="flex-shrink-0">
+                    notification.type === "Like" && (
+                    <div className="flex items-center gap-2 p-2 md:px-4">
+                        <div className="hidden md:block">
                             <Avatar                
-                                src={actor?.avatarUrl}
+                                src={actor?.icon?.url}
                                 alt={actor?.name}
                                 fallback={actor?.displayName?.charAt(0)}
                                 size="lg"
@@ -54,21 +50,22 @@ export default function Notification({ notification }: { notification: Notificat
                                 variant="default"
                                 className="ring-2 ring-purple-500/20 dark:ring-pink-500/20 hover:ring-purple-500/40 dark:hover:ring-pink-500/40 transition-all duration-300"
                             />
+                            <span className="text-2xl bg-purple-500 dark:bg-pink-500 text-transparent bg-clip-text">✨️</span>
                         </div>
                         <div className="flex-grow">
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="font-bold text-purple-600 dark:text-pink-400">{actor?.name}</span>
-                                <span className="text-2xl ">💖</span>
+                                <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actor?.name}</a></span>
+                                <span className="text-gray-600 dark:text-gray-300">があなたの投稿をいいねしてくれたよ！</span>
                             </div>
                             {post && <ReplyToPost post={post} />}
                         </div>
                     </div>
                 ))}
-                {notification.type === "follow" && (
-                    <div className="flex items-center gap-4 p-4">
-                        <div className="flex-shrink-0">
+                {notification.type === "Follow" && (
+                    <div className="flex items-center gap-2 p-2 md:px-4">
+                        <div className="hidden md:block">
                             <Avatar      
-                                src={actor?.avatarUrl}
+                                src={actor?.icon?.url}
                                 alt={actor?.name}
                                 attributedTo={actor?.actorId}
                                 fallback={actor?.displayName?.charAt(0)}
@@ -79,18 +76,17 @@ export default function Notification({ notification }: { notification: Notificat
                         </div>
                         <div className="flex-grow">
                             <div className="flex items-center gap-2">
-                                <span className="font-bold text-purple-600 dark:text-pink-400">{actor?.name}</span>
-                                <span className="text-2xl animate-pulse">✨</span>
+                                <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actor?.name}</a></span>
                                 <span className="text-gray-600 dark:text-gray-300">がフォローしてくれたよ！</span>
                             </div>
                         </div>
                     </div>
                 )}
-                {notification.type === "reply" && (
-                    <div className="flex items-center gap-4 p-4">
-                        <div className="flex-shrink-0">
+                {notification.type === "Reply" && (
+                    <div className="flex items-center gap-2 p-2 md:px-4">
+                        <div className="hidden md:block">
                             <Avatar                
-                                src={actor?.avatarUrl}
+                                src={actor?.icon?.url}
                                 alt={actor?.name}
                                 fallback={actor?.displayName?.charAt(0)}
                                 size="lg"
@@ -101,8 +97,8 @@ export default function Notification({ notification }: { notification: Notificat
                         </div>
                         <div className="flex-grow">
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="font-bold text-purple-600 dark:text-pink-400">{actor?.name}</span>
-                                <span className="text-2xl ">💭</span>
+                                <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actor?.name}</a></span>
+                                <span >があなたの投稿にリプライしてくれたよ！</span>
                             </div>
                             {post && <PostReplies post={post} />}
                         </div>

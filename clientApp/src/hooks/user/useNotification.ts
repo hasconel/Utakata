@@ -7,18 +7,18 @@ import { useState, useEffect } from "react";
 import { getUnreadNotifications } from "@/lib/appwrite/serverConfig";
 
 export function useNotification() {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const unreadNotifications = await getUnreadNotifications();
-        setNotifications(unreadNotifications);
+        const unreadNotifications = await getUnreadNotifications()
+        setUnreadCount(unreadNotifications);
       } catch (err) {
         setError(err instanceof Error ? err.message : "通知の取得に失敗したよ！💦");
-        setNotifications([]);
+        setUnreadCount(0);
       } finally {
         setIsLoading(false);
       }
@@ -28,9 +28,8 @@ export function useNotification() {
   }, []);
 
   return {
-    notifications,
+    unreadCount,
     isLoading,
     error,
-    unreadCount: notifications.length,
   };
 } 

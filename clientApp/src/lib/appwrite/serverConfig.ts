@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getActorByUserId } from "./database";
 import { MeiliSearch } from "meilisearch";
 import { Post } from "@/lib/appwrite/posts";
+import { signRequest } from "../activitypub/crypto";
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
   apiKey: process.env.MEILISEARCH_API_KEY!,
@@ -140,52 +141,148 @@ export async function interpolate(template: string, values: Record<string, strin
   return template.replace(/{{([^}]+)}}/g, (_, key: string) => values[key] || '');
 }
 
-
-
-
-// フォロー解除
-export async function unfollowUser(userId: string){
+// フォロー
+export async function followUser(userId: string){
   try {
     const { account, databases } = await createSessionClient();
     const session = await account.get();
-    
-    // フォロー解除するユーザーの情報を取得
-    const { documents: [targetUser] } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      [Query.equal("actorId", [`${userId}`])]
-    );
-    // 自分のユーザー情報を取得
-    const { documents: [currentUser] } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      [Query.equal("actorId", [`https://${process.env.APPWRITE_DOMAIN}/users/${session.name}`])]
-    );
-    if (!targetUser) {
-      return { error: "ユーザーが見つからないわ！💦" };
+    const currentUser = await getActorByUserId(session.$id);
+    if (!currentUser) {
+      throw new Error("ユーザーが見つからないわ！💦");
     }
-
-    // フォロー解除処理
-    await databases.updateDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      currentUser.$id,
-      {
-        following: (currentUser.following || []).filter((id: string) => id !== `targetUser.actorId`)
-      }
-    );
-
-    // フォロワーから削除
-    await databases.updateDocument(
+    const activity = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Follow",
+      "id": `${currentUser.actorId}/inbox/${ID.unique()}`,
+      "actor": currentUser.actorId,
+      "object": userId,
+      "published": new Date().toISOString()
+    };
+    const actorInbox = userId+"/inbox";
+    const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+    const response = await fetch(actorInbox, {
+      method: "POST",
+      headers: headers.headers,
+      body: JSON.stringify(activity)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`アクティビティの送信に失敗したわ！💦:${error.error}`);
+    }
+    const { documents: [actorSub] } = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-      targetUser.$id,
-      {
-        followers: (targetUser.followers || []).filter((id: string) => id !== `currentUser.actorId`)
-      }
+      [Query.equal("id", currentUser.actorId)]
     );
-    //console.log("フォロワーから削除成功！✨");
-    return { message: "フォロー解除成功！✨" };
+    if(actorSub){
+      await databases.updateDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+        actorSub.$id,
+        {
+          "followingCount": actorSub.followingCount + 1
+        }
+      );
+    }
+    const { documents: [follow] } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+      [Query.equal("object", userId), Query.equal("actor", currentUser.actorId)]
+    );
+    if(follow){
+      return follow.id;
+    }
+    const newFollow = await databases.createDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+      ID.unique(),
+      {
+        "id": activity.id,
+        "actor": currentUser.actorId,
+        "object": userId,
+      }
+    )
+    if(!newFollow){
+      throw new Error("フォローの作成に失敗したわ！💦");
+    }
+    return newFollow.id;
+  } catch (error) {
+    console.error("フォローに失敗したわ！💦", error);
+    return { error: "フォローに失敗したわ！💦" };
+  }
+}
+
+// フォロー解除
+export async function unfollowUser(activityId: string){
+  try {
+    const { account, databases } = await createSessionClient();
+    const session = await account.get();
+    const currentUser = await getActorByUserId(session.$id);
+    if (!currentUser) {
+      throw new Error("ユーザーが見つからないわ！💦");
+    }
+    const { documents: [follow] } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+      [Query.equal("id", activityId)]
+    );
+    if(!follow){
+      throw new Error("フォローが見つからないわ！💦");
+    }
+    const actorInbox = follow.object+"/inbox";
+    const activity = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Undo",
+      "id": `${currentUser.actorId}/inbox/${ID.unique()}`,
+      "actor": currentUser.actorId,
+      "object": {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "type": "Follow",
+        "id": activityId,
+        "actor": follow.actor,
+        "object": follow.object,
+        "published": follow.$createdAt
+      },
+      "published": new Date().toISOString()
+    };
+    const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+    const response = await fetch(actorInbox, {
+      method: "POST",
+      headers: headers.headers,
+      body: JSON.stringify(activity)
+    });
+    if (!response.ok) {
+      throw new Error(`アクティビティの送信に失敗したわ！💦`);
+    }
+    const { documents: [actorSub] } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+      [Query.equal("id", follow.actor)]
+    );
+    if(actorSub){
+      await databases.updateDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
+        actorSub.$id,
+        {
+          "followingCount": actorSub.followingCount - 1
+        }
+      );
+    }
+    const { documents: [deletedFollow] } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+      [Query.equal("id", activityId)]
+    );
+    if(deletedFollow){
+      await databases.deleteDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
+        deletedFollow.$id
+      );
+      return true;
+    }
+    return true;
   } catch (error) {
     console.error("フォロー解除に失敗したわ！💦", error);
     return { error: "フォロー解除に失敗したわ！💦" };
@@ -294,13 +391,48 @@ export async function deletePost(postId: string) {
     return false;
   }
 }
-
+/**
+ * ライクを確認する。
+ * @param postId ライクを確認する投稿の$id
+ * @returns ライクが存在するかどうか
+ */
+export async function checkLike(postId: string) {
+  try {
+    const { databases, account } = await createSessionClient();
+    const session = await account.get();
+    const currentUser = await getActorByUserId(session.$id);
+    if (!currentUser) {
+      throw new Error("ユーザーが見つからないわ！💦");
+    }
+    
+    // 現在のユーザーがいいねしてるかチェック
+    const { documents } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_LIKES_COLLECTION_ID!,
+      [Query.equal("object", postId), Query.equal("actor", currentUser.actorId)]
+    );
+    
+    // 投稿に対する総いいね数を取得
+    const { total } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_LIKES_COLLECTION_ID!,
+      [Query.equal("object", postId)]
+    );
+    
+    //console.log(`checkLike結果: postId=${postId}, isLiked=${documents.length > 0}, likeCount=${total}`);
+    
+    return { isLiked: documents.length > 0, likeCount: total };
+  } catch (error) {
+    //console.error("checkLikeエラー:", error);
+    return { isLiked: false, likeCount: 0 };
+  }
+}
 /**
  * ライク処理
  * @param postId ライクする投稿の$id
  * @returns ライク成功かどうか
  */
-export async function likePost(postId: string) {
+export async function likePost(postId: string ,actorInbox: string) {
   try {
     const { databases } = await createSessionClient();
     const session = await getLoggedInUser();
@@ -311,40 +443,39 @@ export async function likePost(postId: string) {
     if (!currentUser) {
       throw new Error("ユーザーが見つからないわ！💦");
     }
-    // 投稿の情報を取得
-    const post = await databases.getDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      postId
-    );
-    if (!post) {
-      throw new Error("投稿が見つからないわ！💦");
-    }
 
-    // ライク処理
-    await databases.updateDocument(
+    const activity = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Like",
+      "id": `${currentUser.actorId}/inbox/${ID.unique()}`,
+      "actor": currentUser.actorId,
+      "object": postId,
+      "published": new Date().toISOString()
+    };
+    const newLike = await databases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
-      postId,
-      {
-        LikedActors: [...(post.LikedActors || []), currentUser.actorId]
-      }
-    );
-
-    await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+      process.env.APPWRITE_LIKES_COLLECTION_ID!,
       ID.unique(),
       {
-        type: "like",
-        from: currentUser.actorId,
-        to: post.attributedTo,
-        target: post.activityId,
-        message: `${currentUser.displayName}さんがあなたの投稿をいいねしました！`,
-        read: false
-      },
+        "id": activity.id,
+        "actor": currentUser.actorId,
+        "object": postId,
+      }
     )
+    if(!newLike){
+      throw new Error("ライクの作成に失敗したわ！💦");  
+    }
+    const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+    const response = await fetch(actorInbox, {
+      method: "POST",
+      headers: headers.headers,
+      body: JSON.stringify(activity)
+    });
+    if (!response.ok) {
+      throw new Error("アクティビティの送信に失敗したわ！💦");
+    }
 
+    
     return true;
   } catch (error) {
     console.error("ライクに失敗したわ！💦", error);
@@ -352,12 +483,23 @@ export async function likePost(postId: string) {
   }
 }
 
+export async function getUserPostCount(userId: string) {
+  const { databases } = await createSessionClient();
+  const { total } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_POSTS_COLLECTION_ID!,
+    [Query.equal("attributedTo", userId)]
+  );
+  return total;
+}
+
 /**
  * ライク解除
  * @param postId ライク解除する投稿の$id
+ * @param actorInbox ライク解除する投稿のactorInbox
  * @returns ライク解除成功かどうか
  */
-export async function unlikePost(postId: string) {
+export async function unlikePost(postId: string, actorInbox: string) {
   try {
     const { databases } = await createSessionClient();
     const session = await getLoggedInUser();
@@ -369,24 +511,47 @@ export async function unlikePost(postId: string) {
       throw new Error("ユーザーが見つからないわ！💦");
     }
     // 投稿の情報を取得
-    const { documents: [post] } = await databases.listDocuments(
+    const { documents: likes } = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,  
-      [Query.equal("$id", [postId])]
+      process.env.APPWRITE_LIKES_COLLECTION_ID!,
+      [Query.equal("object", postId), Query.equal("actor", currentUser.actorId)]
     );
-    if (!post) {
-      throw new Error("投稿が見つからないわ！💦");
-    } 
-
-    // ライク解除処理
-    await databases.updateDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
-      postId, 
-      {
-        LikedActors: (post.LikedActors || []).filter((actor: string) => actor !== currentUser.actorId)
+    if (likes.length === 0) {
+      throw new Error("ライクが見つからないわ！💦");
+    }
+    for (const like of likes) {
+      const activity = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        "type": "Undo",
+        "id": `${currentUser.actorId}/inbox/${ID.unique()}`,
+        "actor": currentUser.actorId,
+        "object": {
+          "@context": "https://www.w3.org/ns/activitystreams",
+          "type": "Like",
+          "id": like.id,
+          "actor": like.actor,
+          "object": like.object,
+          "published": like.$createdAt
+        },
+        "published": new Date().toISOString()
+      };
+      const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+      const response = await fetch(actorInbox, {
+        method: "POST",
+        headers: headers.headers,
+        body: JSON.stringify(activity)
+      });
+      if (!response.ok) {
+        throw new Error("アクティビティの送信に失敗したわ！💦");
       }
-    );
+      if(!like.id.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)){
+      await databases.deleteDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_LIKES_COLLECTION_ID!,
+        like.$id
+      );
+      }
+    }
 
     return true;  
   } catch (error) {
@@ -486,25 +651,26 @@ export async function updateProfile( displayName?: string, bio?: string, avatarU
  * @returns 通知一覧
  */
 export async function getUserNotifications() {
-  const { databases,account } = await createSessionClient();
+  const { databases ,account} = await createSessionClient();
   const session = await account.get();
   const { documents } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-    [Query.equal("to", `https://${process.env.APPWRITE_DOMAIN}/users/${session.name}`),Query.orderDesc("$createdAt"),Query.greaterThan("$updatedAt",new Date(Date.now()-1000*60*60*84).toISOString())]
+    [Query.orderDesc("$createdAt"),Query.greaterThan("$updatedAt",new Date(Date.now()-1000*60*60*84).toISOString()),Query.equal("to", process.env.NEXT_PUBLIC_DOMAIN+"/users/"+session.$id)]
   );
+  
   return documents
 }
 
 export async function getUnreadNotifications() {
   const { databases ,account} = await createSessionClient();
   const session = await account.get();
-  const { documents } = await databases.listDocuments(
+  const { total } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-    [Query.equal("read", false),Query.equal("to", `https://${process.env.APPWRITE_DOMAIN}/users/${session.name}`)]
+    [Query.equal("read", false),Query.equal("to", `${process.env.NEXT_PUBLIC_DOMAIN}/users/${session.$id}`),Query.greaterThan("$createdAt",new Date(Date.now()-1000*60*60*84).toISOString())]
   );
-  return documents;
+  return total;
 }
 
 /**
@@ -514,11 +680,24 @@ export async function getUnreadNotifications() {
  */
 export async function readNotification(notificationId: string) {
   const { databases } = await createSessionClient();
+  const { documents } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+    [Query.equal("$id", notificationId)]
+  );
+  if(documents.length === 0){
+    throw new Error("通知が見つからないわ！💦");
+  }
   await databases.updateDocument(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-    notificationId,
-    { read: true }
+    documents[0].$id,
+    { id: documents[0].id,
+      type: documents[0].type,
+      from: documents[0].from,
+      to: documents[0].to,
+      target: documents[0].target,
+      read: true }
   );
 }
 

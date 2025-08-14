@@ -19,6 +19,7 @@ import { usePostCache } from "@/hooks/post/usePostCache";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { Loader2 } from "lucide-react";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
+import { checkLike } from "@/lib/appwrite/serverConfig";
 
 // いいねしたユーザーの一覧を表示するボタン！✨
 const LikedUsersButton = ({ likeCount, onClick }: { 
@@ -184,6 +185,8 @@ export default function PostDetailCard({
   const { user } = useAuth();
   const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
   const [relativeTime, setRelativeTime] = useState<string>("");
+  const [isPostLiked, setIsPostLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
   // Post情報を取得
   useEffect(() => {
@@ -192,6 +195,12 @@ export default function PostDetailCard({
       try {
         const data = await getPostWithActor(post);
         setPostData(data);
+        if(post.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)) {
+          checkLike(post).then((res) => {
+            setIsPostLiked(res.isLiked);
+            setLikeCount(res.likeCount);
+          });
+        }
       } catch (error) {
         console.error("Post取得エラー:", error);
       } finally {
@@ -308,8 +317,11 @@ export default function PostDetailCard({
             </button>
             <LikeButton 
               postId={postData?.post?.id || ""} 
-              isPostLiked={false} 
-              initialLikes={0} 
+              isPostLiked={isPostLiked} 
+              initialLikes={likeCount} 
+              actorInbox={postData?.actor?.inbox || ""}
+              onLikeChange={setIsPostLiked}
+              onLikeCountChange={setLikeCount}
             />
             <LikedUsersButton 
               likeCount={0} 

@@ -10,6 +10,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     getUserNotifications().then(notifications => {
+      console.log(notifications);
       setNotifications(notifications.map((notification:any)=>({
         ...notification,
         read: notification.read,
@@ -17,7 +18,7 @@ export default function NotificationsPage() {
         from: notification.from,
         to: notification.to,
         target: notification.target,
-        message: notification.message,
+        id: notification.id,
         $id: notification.$id,
         $createdAt: notification.$createdAt,
         $updatedAt: notification.$updatedAt,
@@ -40,8 +41,8 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-8 border border-purple-100 dark:border-purple-900">
+    <div className="max-w-2xl mx-auto px-2 py-4">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-2 md:p-6 mb-8 border border-purple-100 dark:border-purple-900">
         <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4">
           通知 ✨
         </h1>
@@ -56,7 +57,7 @@ export default function NotificationsPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             {notifications
               .sort((a,b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime())
               .map((notification) => (

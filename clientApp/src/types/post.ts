@@ -33,10 +33,10 @@ export interface Notification {
   $id: string;
   $createdAt: string;
   $updatedAt: string;
-  type: string; // like, follow, reply, mention
+  type: string; // Like, Follow, Reply, Mention
   from: string; // アクターID
   to: string; // アクターID
   target: string; // 投稿ID
-  message?: string; // メッセージ
   read: boolean; // 既読かどうか
+  id: string; // 投稿ID
 } 

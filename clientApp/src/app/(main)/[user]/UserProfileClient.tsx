@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import FollowButton from "@/components/features/user/FollowButton";
 import MuteButton from "@/components/features/user/MuteButton";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { muteUser, unmuteUser } from "@/lib/appwrite/serverConfig";
+import { muteUser, unmuteUser, getUserPostCount, followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { useActor } from "@/hooks/useActor";
@@ -32,6 +32,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
   const [modalIndex, setModalIndex] = useState(0);
   const [offset, setOffset] = useState<number>(0);
   const [fetchMore, setFetchMore] = useState(false);
+  const [postCount, setPostCount] = useState<number>(0);
 
   useEffect(() => {
     if(!userParam.startsWith("%40")){
@@ -112,6 +113,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
           if(res.postsAsPostArray.length<10) setFetchMore(false);else setFetchMore(true);
           const filteredData = res.postsAsPostArray.filter((post:string)=>!posts.includes(post));
           setPosts([...posts,...filteredData]);
+          getUserPostCount(targetActor?.id).then((res) => setPostCount(res));
         }
       });
     }
@@ -125,20 +127,8 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
 
   const handleFollow = async (userId: string) => {
     try {
-      const activity = {
-        type: "Follow",
-        actor: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}`,
-        object: userId,
-      }
-      const response = await fetch(`/users/${user?.$id}/outbox`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/activity+json",
-          "Accept": "application/activity+json",
-        },
-        body: JSON.stringify(activity),
-      }).then(res => res.json());
-      setIsFollowing(response.id);
+      const response = await followUser(userId);
+      setIsFollowing(response);
     } catch (error) {
       console.error("フォローに失敗したわ！", error);
     }
@@ -146,25 +136,10 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
 
   const handleUnfollow = async (activityId: string) => {
     try {
-      const activity = {
-        type: "Undo",
-        actor: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}`,
-        object: {
-          type: "Follow",
-          id: activityId,
-          actor: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}`,
-          object: targetActor?.id,
-        },
+      const response = await unfollowUser(activityId);
+      if(response){
+        setIsFollowing(false);
       }
-      const response = await fetch(`/users/${user?.$id}/outbox`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/activity+json",
-          "Accept": "application/activity+json",
-        },
-        body: JSON.stringify(activity),
-      }).then(res => res.json());
-      setIsFollowing(response.id);
     } catch (error) {
       console.error("フォロー解除に失敗したわ！", error);
     }
@@ -226,7 +201,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
               @{targetActor?.preferredUsername}
             </p>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              {posts.length}件の投稿 ✨
+              {postCount}件の投稿 ✨
             </p>
           </div>
           <div className="flex items-center space-x-4">

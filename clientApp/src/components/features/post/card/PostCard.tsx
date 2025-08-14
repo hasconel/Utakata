@@ -17,29 +17,59 @@ import PostDetailCard from "./PostDetailCard";
 import { usePostCache } from "@/hooks/post/usePostCache";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
+import { checkLike } from "@/lib/appwrite/serverConfig";
 
 // いいねボタンのコンポーネント！✨
-export const LikeButton = ({ postId, initialLikes = 0 ,isPostLiked}: { postId: string; initialLikes?: number ,isPostLiked: boolean }) => {
+export const LikeButton = ({ 
+  postId, 
+  initialLikes, 
+  isPostLiked, 
+  actorInbox,
+  onLikeChange,
+  onLikeCountChange
+}: { 
+  postId: string; 
+  initialLikes: number; 
+  isPostLiked: boolean; 
+  actorInbox: string;
+  onLikeChange: (isLiked: boolean) => void;
+  onLikeCountChange: (count: number) => void;
+}) => {
   const [isLiked, setIsLiked] = useState(isPostLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [isAnimating, setIsAnimating] = useState(false);
   
+  // 親の状態が変わったら同期
+  useEffect(() => {
+    setIsLiked(isPostLiked);
+  }, [isPostLiked]);
+  
+  useEffect(() => {
+    setLikeCount(initialLikes);
+  }, [initialLikes]);
+  
   const handleLike = async () => {
     if (isAnimating) return;
     
+    const newIsLiked = !isLiked;
     setIsAnimating(true);
-    setIsLiked(!isLiked);
+    setIsLiked(newIsLiked);
 
     try {
       if (isLiked) {
-        const response = await unlikePost(postId);
-        setLikeCount(prev => prev - 1);
+        const response = await unlikePost(postId, actorInbox);
         if (!response) throw new Error("ライク解除に失敗したわ！💦");
+        const newCount = likeCount - 1;
+        setLikeCount(newCount);
+        onLikeCountChange(newCount);
       } else {
-        const response = await likePost(postId);
-        setLikeCount(prev => prev + 1);
+        const response = await likePost(postId, actorInbox);
         if (!response) throw new Error("ライクに失敗したわ！💦");
+        const newCount = likeCount + 1;
+        setLikeCount(newCount);
+        onLikeCountChange(newCount);
       }
+      onLikeChange(newIsLiked);
     } catch (error) {
       console.error("ライクに失敗したわ！", error);
       setIsLiked(isLiked);
@@ -47,7 +77,8 @@ export const LikeButton = ({ postId, initialLikes = 0 ,isPostLiked}: { postId: s
 
     setTimeout(() => setIsAnimating(false), 500);
   };
-
+  
+  //console.log("LikeButton - isLiked:", isLiked, "likeCount:", likeCount);
   return (
     <button
       onClick={(e) => {
@@ -62,7 +93,7 @@ export const LikeButton = ({ postId, initialLikes = 0 ,isPostLiked}: { postId: s
     >
       <div className="flex items-center gap-1">
         <span className={`transition-all duration-300 ${isAnimating ? 'animate-bounce' : ''}`}>
-          {isLiked ? '💖' : '🤍'}
+          {isLiked ? <span className="text-transparent bg-clip-text bg-purple-500 dark:bg-pink-500">✨️</span> : <span className="text-transparent bg-clip-text bg-gray-400 dark:bg-gray-200">✨️</span>}
         </span>
         {likeCount > 0 && (
           <span className="text-sm font-medium">
@@ -97,15 +128,24 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
   const { getPostWithActor,  } = usePostCache();
   const [postData, setPostData] = useState<any>(null);
   const [isPostLoading, setIsPostLoading] = useState(true);
+  const [isPostLiked, setIsPostLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
   const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
 
   // Post情報を取得
   useEffect(() => {
     const fetchPost = async () => {
-      setIsPostLoading(true);
+      setIsPostLoading(true); 
       try {
         const data = await getPostWithActor(post);
         setPostData(data);
+      if(post.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)) {
+      checkLike(post).then((res) => {
+        setIsPostLiked(res.isLiked);
+        setLikeCount(res.likeCount);
+        //console.log("isPostLiked", isPostLiked, "likeCount", likeCount);
+      });
+      }
       } catch (error) {
         console.error("Post取得エラー:", error);
       } finally {
@@ -122,7 +162,6 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
         const published = new Date(postData?.post?.published || "");
         setRelativeTime(getRelativeTime(published));
       };
-
       updateRelativeTime();
       const interval = setInterval(updateRelativeTime, 60000); // 1分ごとに更新
 
@@ -197,7 +236,7 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
                 />
               </div>
           ):(
-              <ContentsCard arg={postData?.post?.content || ""} />
+              <ContentsCard arg={postData?.post?.content || "" } />
           )}
         </div>
 
@@ -218,7 +257,14 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
                 </span>
               )}
             </button>
-            <LikeButton postId={postData?.post?.id || ""} initialLikes={0} isPostLiked={false} />
+              <LikeButton 
+                postId={post} 
+                initialLikes={likeCount} 
+                isPostLiked={isPostLiked} 
+                actorInbox={postData?.actor?.inbox || ""} 
+                onLikeChange={setIsPostLiked}
+                onLikeCountChange={setLikeCount}
+              />
           </div>
         </div>
       </div>
