@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { unmuteUser } from "@/lib/appwrite/serverConfig";
 import { UserCard } from "@/components/features/user/UserCard";
 import { Button } from "@/components/ui/Button";
-import { getActorByUserId, getActorById } from "@/lib/appwrite/database";
+import { getActorById, getMutedUsers } from "@/lib/appwrite/database";
 import { useAuth } from "@/hooks/auth/useAuth";
 interface User {
   preferredUsername: string;
@@ -44,10 +44,10 @@ export default function MutesPage() {
       if(!userId){
         throw new Error("ユーザーIDが取得できないよ！💦");
       }
-      const data = await getActorByUserId(userId);
+      const data = await getMutedUsers();
       
       // 並列処理で高速化！✨
-      const mutedUsersPromises = (data?.mutedUsers || []).map(async (actorId) => {
+      const mutedUsersPromises = (data || []).map(async (actorId) => {
         try {
           const user = await getActorById(actorId);
           if(user){

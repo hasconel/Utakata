@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { ActivityPubActor } from "@/types/activitypub";
 import { getActorByUserId } from "@/lib/appwrite/database";
-import { Actor } from "@/lib/appwrite/database";
 import {  updateProfile } from "@/lib/appwrite/serverConfig";
 import { X } from "lucide-react";
 
@@ -47,7 +47,7 @@ async function uploadImage(buffer: string,fileName: string,type: string) {
 export default function ProfileSettings() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [actor, setActor] = useState<Actor | null>(null);
+  const [actor, setActor] = useState<ActivityPubActor | null>(null);
   const { user, isLoading: isAuthLoading } = useAuth();
   useEffect(() => {
     if (!user && !isAuthLoading) {
@@ -82,7 +82,7 @@ export default function ProfileSettings() {
           setAvatarFormData(prev => ({
             ...prev,
             displayName: actor.displayName || "",
-            bio: actor.bio || "",
+            bio: actor.summary || "",
           }));
           }
         }
@@ -233,7 +233,7 @@ export default function ProfileSettings() {
   return (
       <>{actor && (<>
 
-        <div className="w-full h-full bg-cover bg-center z-[-1] bg-fixed absolute top-0 left-0" style={backgroundPreviewUrl !== "" ? {backgroundImage: `url(${backgroundPreviewUrl || actor?.backgroundUrl})`} : {}}/>
+        <div className="w-full h-full bg-cover bg-center z-[-1] bg-fixed absolute top-0 left-0" style={backgroundPreviewUrl !== "" ? {backgroundImage: `url(${backgroundPreviewUrl || actor?.image?.url})`} : {}}/>
         <div className="border border-white dark:border-gray-800 max-w-2xl mx-auto p-6 space-y-8 bg-gradient-to-br from-white/90 via-gray-100/60 to-gray-100/30 dark:from-gray-800/90 dark:via-gray-600/50 dark:to-gray-900/30 rounded-2xl shadow-lg backdrop-blur-md">
           <div className="text-center">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -249,7 +249,7 @@ export default function ProfileSettings() {
             <div className="flex flex-col items-center space-y-4 p-6 bg-purple-200/50 dark:bg-purple-900/50 rounded-xl border border-purple-200 dark:border-purple-800">
               <div className="relative group">
                 <Avatar
-                  src={avatarPreviewUrl? avatarPreviewUrl : actor?.avatarUrl}
+                  src={avatarPreviewUrl? avatarPreviewUrl : actor?.icon?.url}
                   alt={actor?.displayName || ""}
                   fallback={(actor?.displayName || "U").charAt(0)}
                   size="lg"
@@ -328,9 +328,9 @@ export default function ProfileSettings() {
                 </div>
                 )}</div>
 
-                {actor?.backgroundUrl && (
+                {actor?.image?.url && (
                   <button className=" bg-black p-2 mt-2 bg-opacity-50 rounded-full flex items-center justify-center z-10 text-white hover:bg-red-500 hover:text-white disabled:hidden" 
-                  disabled={!actor.backgroundUrl}
+                  disabled={!actor.image?.url}
                   onClick={() => {
                     setAvatarFormData(prev => ({
                       ...prev,

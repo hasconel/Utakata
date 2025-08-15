@@ -6,9 +6,10 @@ import { Avatar } from "@/components/ui/Avatar";
 import PostCard from "@/components/features/post/card/PostCard";
 import { Button } from "@/components/ui/Button";
 import FollowButton from "@/components/features/user/FollowButton";
+import { muteUser, unmuteUser } from "@/lib/appwrite/serverConfig";
 import MuteButton from "@/components/features/user/MuteButton";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { muteUser, unmuteUser, getUserPostCount, followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
+import { getUserPostCount, followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { useActor } from "@/hooks/useActor";
@@ -18,7 +19,6 @@ import { useActor } from "@/hooks/useActor";
  * かわいいデザインでユーザーの情報と投稿を表示するよ！💖
  */
 export default function UserProfileClient({ userParam }: { userParam: string }) {
-  
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { getActor, isLoading: isActorLoading } = useActor();

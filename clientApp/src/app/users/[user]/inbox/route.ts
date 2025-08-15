@@ -64,8 +64,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const ActorId = activity.actor.id? activity.actor.id : activity.actor;
   //console.log(ActorId);
   // HTTPシグネチャの検証
-  
+
   const verified = await verifySignature(request, ActorId);
+  
   if(!verified){
     return NextResponse.json({ error: "Signature verification failed" }, { status: 400 });
   }

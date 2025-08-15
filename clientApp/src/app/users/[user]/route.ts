@@ -12,26 +12,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const responseActivityPub = {
     "@context": "https://www.w3.org/ns/activitystreams",
     "type": "Person",
-    "id": actor.actorId,
+    "id": actor.id,
     "preferredUsername": actor.preferredUsername,
     "name": actor.displayName,
-    "summary": actor.bio,
+    "summary": actor.summary,
     "icon": {
       "type": "Image",
-      "url": actor.avatarUrl,
+      "url": actor.icon?.url,
     },
     "inbox": actor.inbox|| `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}/inbox`,
     "outbox": actor.outbox|| `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}/outbox`,
     "followers": actor.followers|| `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}/followers`,
     "following": actor.following|| `${process.env.NEXT_PUBLIC_DOMAIN}/users/${user}/following`,
-    "publicKey": {
-      "id": `${actor.actorId}#main-key`,
-      "owner": actor.actorId,
-      "publicKeyPem": actor.publicKey,
-    },
+    "publicKey": actor.publicKey,
     "image": {
       "type": "Image",
-      "url": actor.backgroundUrl,
+      "url": actor.image?.url,
     },
     "discoverable": true,
   }

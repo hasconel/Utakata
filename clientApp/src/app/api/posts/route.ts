@@ -7,10 +7,10 @@ import {  NextResponse } from "next/server";
 import { createSessionClient,  } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 import {  savePost, deliverActivity } from "@/lib/activitypub/post";
-import { getActorByUserId } from "@/lib/appwrite/database";
 import { ENV } from "@/lib/api/config";
-import { ActivityPubNote } from "@/types/activitypub";
-
+import { ActivityPubNoteInClient } from "@/types/activitypub";
+import { Post } from "@/types/appwrite";
+import { Models } from "node-appwrite";
 
 // CORSの設定を追加するよ！✨
 export async function OPTIONS() {
@@ -31,20 +31,23 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   try {
     // セッションクライアントを作成
-    const { account } = await createSessionClient(request);
+    const { account, databases } = await createSessionClient(request);
     if (!account) {
       throw new Error("セッションが見つからないよ！💦");
     }
 
     // ログインユーザーを取得
-    const user = await account.get();
-    if (!user) {
+    const userId = await account.get();
+    if (!userId) {
       throw new Error("ユーザーが見つからないよ！💦");
     }
-
-    const actor = await getActorByUserId(user.$id);
-    if (!actor) {
-      throw new Error("アクターが見つからないよ！💦");
+    const user = await databases.getDocument(
+      process.env.APPWRITE_DATABASE_ID || "",
+      process.env.APPWRITE_ACTORS_COLLECTION_ID || "",
+      userId.$id
+    );
+    if (!user) {
+      throw new Error("ユーザーが見つからないよ！💦");
     }
     const { content, visibility, images, inReplyTo, attributedTo } = await request.json();
     
@@ -52,19 +55,16 @@ export async function POST(request: Request) {
     const { document, activity } = await savePost(
       { content, visibility, inReplyTo, attributedTo },
       {
-        actorId: actor.actorId,
-        preferredUsername: actor.preferredUsername,
-        displayName: actor.displayName || "",
-        followers: actor.followers || "",
-        avatarUrl: actor.avatarUrl || "",
+        userId: user.$id,
       },
-      images
+      images,
+      databases
     );
     // ActivityPubで配信
     await deliverActivity(activity, {
-      id: actor.actorId,
-      privateKey: actor.privateKey,
-      followers: actor.followers || "",
+      id: user.actorId,
+      privateKey: user.privateKey,
+      followers: user.actorId + "/followers",
     });
     console.log("success");
     return NextResponse.json({ success: true, document }, {
@@ -195,7 +195,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "ログインしてないよ！💦" }, { status: 400 });
     }
     userId = process.env.NEXT_PUBLIC_DOMAIN + "/users/" + user.$id;
-    const         posts = await databases.listDocuments(
+    const         posts : Models.DocumentList<Post> = await databases.listDocuments(
       ENV.DATABASE_ID,
       ENV.POSTS_COLLECTION_ID,
       queries
@@ -228,21 +228,20 @@ export async function GET(request: Request) {
   }
 }
 
-
 /**
  * 投稿をActivityPubのNote形式に変換する関数！✨
  */
 const convertPostsToNotes = async (posts: any[], databases: any, userId: string ) => {
   
-  const notes :ActivityPubNote[] = [];
+  const notes :ActivityPubNoteInClient[] = [];
   const actors :any[] = [];
   try{
   for (const post of posts) {
     if(post.attributedTo){
       if(!actors.find((actor) => actor.id === post.attributedTo)){
         const {documents : [actorDocument]} = await databases.listDocuments(
-          ENV.DATABASE_ID,
-          ENV.ACTORS_COLLECTION_ID,
+          process.env.APPWRITE_DATABASE_ID || "",
+          process.env.APPWRITE_ACTORS_COLLECTION_ID || "",
           [Query.equal("actorId", post.attributedTo)]
         );
         const actor = {
@@ -269,7 +268,7 @@ const convertPostsToNotes = async (posts: any[], databases: any, userId: string 
       }
     }
     const {total: totalLikes} = await databases.listDocuments(
-      ENV.DATABASE_ID,
+      process.env.APPWRITE_DATABASE_ID || "",
       process.env.APPWRITE_LIKES_COLLECTION_ID || "",
       [Query.equal("object", post.activityId)]
     );
@@ -278,15 +277,15 @@ const convertPostsToNotes = async (posts: any[], databases: any, userId: string 
       //console.log("userId", userId);
       //console.log("post.activityId", post.activityId);
       const {total: totalIsLiked} = await databases.listDocuments(
-        ENV.DATABASE_ID,
+        process.env.APPWRITE_DATABASE_ID || "",
         process.env.APPWRITE_LIKES_COLLECTION_ID || "",
         [Query.equal("object", post.activityId), Query.equal("actor", userId)]
       );
       //console.log("totalIsLiked", totalIsLiked);
       isLiked = totalIsLiked > 0;
     }
-    const note :ActivityPubNote = {
-      "@context": "https://www.w3.org/ns/activitystreams",
+    const note :ActivityPubNoteInClient = {
+      "@context": ["https://www.w3.org/ns/activitystreams"],
       "type": "Note",
       "id": post.activityId,
       "attributedTo":  post.attributedTo,
@@ -314,6 +313,7 @@ const convertPostsToNotes = async (posts: any[], databases: any, userId: string 
       },
       "_isLiked": isLiked,
       "_user": actors.find((actor) => actor.id === post.attributedTo) || null,
+      _canDelete: post.attributedTo === userId,
     }
     notes.push(note);
     }

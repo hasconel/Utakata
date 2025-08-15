@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { getRelativeTime } from "@/lib/utils/date";
 import { ActivityPubImage } from "@/types/activitypub/collections";
-import { ActivityPubNote } from "@/types/activitypub";
+import { ActivityPubNoteInClient } from "@/types/activitypub";
 import { getReplyPost } from "@/lib/appwrite/client";
 import ContentsCard from "@/components/ui/ContentsCard";
 import { likePost, unlikePost } from "@/lib/appwrite/serverConfig";
@@ -112,7 +112,7 @@ export const LikeButton = ({
  * @param setModalIndex モーダルのインデックスを設定
  */
 const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages, setModalIndex}: { 
-  post: ActivityPubNote, // ActivityPubのNote形式の投稿データ
+  post: ActivityPubNoteInClient, // ActivityPubのNote形式の投稿データ
   setIsModalOpen: (isOpen: boolean) => void, 
   isModalOpen: boolean, 
   setModalImages: (images: ActivityPubImage[]) => void, 
@@ -160,6 +160,9 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
       getReplyPost(postData.post.inReplyTo).then((data) => {
         if (data && data.length > 0) {
           setReplyPosts(data);
+          if(data.length > 0){
+            console.log("replyPosts",replyPosts);
+          }
           //console.log("✅ リプライ投稿を取得:", data.length, "件");
         }
       }).catch((error) => {

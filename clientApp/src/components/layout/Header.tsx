@@ -2,21 +2,23 @@
 
 import { Bell, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
-import { useAuth } from "@/hooks/auth/useAuth";
 import { Button } from "@/components/ui/Button";
 import { MobileMenu } from "./MobileMenu";
 import { useEffect, useState } from "react";
 import { getUnreadNotifications } from "@/lib/appwrite/serverConfig";
+import { useAuth } from "@/hooks/auth/useAuth";
 //import NotificationPermission from "@/components/NotificationPermission";
 //import ThemeToggle from "@/components/ui/ThemeToggle";
+
 /**
  * ヘッダーコンポーネント！✨
- * ナビゲーションとかをキラキラに表示するよ！💖「「
+ * ナビゲーションとかをキラキラに表示するよ！💖
  */
 export function Header() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [ topAnchor, setTopAnchor ] = useState("/");
+  
   useEffect(() => {
     if (user && !isAuthLoading) {
       setTopAnchor("/timeline");
@@ -26,6 +28,7 @@ export function Header() {
       });
     }
   }, [user, isAuthLoading]);
+  
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 dark:supports-[backdrop-filter]:backdrop-blur-sm flex items-center justify-center">
       <div className="container flex h-14 items-center justify-between">
@@ -56,7 +59,7 @@ export function Header() {
                     <Search className="h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href={`/users/${user.name}`}>
+                <Link href={`/users/${user.$id}`}>
                   <Button variant="ghost" size="sm">
                     <User className="h-5 w-5" />
                   </Button>

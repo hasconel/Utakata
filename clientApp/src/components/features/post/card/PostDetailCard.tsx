@@ -7,20 +7,20 @@ import ImageModal from "../modal/ImageModal";
 //import PostReplies from "../reply/PostReplies";
 import ContentsCard from "@/components/ui/ContentsCard";
 import { ActivityPubImage } from "@/types/activitypub/collections";
+import { ActivityPubActor, ActivityPubNoteInClient } from "@/types/activitypub";
 import Link from "next/link";
+
 //import { fetchReplyToPost} from "@/lib/appwrite/client";  
 import ReplyToPost from "@/components/features/post/reply/ReplyToPost";
 import { formatDate,  } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
-import { LikeButton } from "./PostCard";
+import { LikeButton } from "./PostCard";  
 import { Button } from "@/components/ui/Button";
-import  {getActorById,ActivityPubActor} from "@/lib/appwrite/database";
-import { usePostCache } from "@/hooks/post/usePostCache";
-import { useAuth } from "@/hooks/auth/useAuth";
+import  {getActorById} from "@/lib/appwrite/database"; 
+//import { useAuth } from "@/hooks/auth/useAuth";
 import { Loader2, X } from "lucide-react";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
-import { checkLike } from "@/lib/appwrite/serverConfig";
-import { getLikedActivities } from "@/lib/appwrite/serverConfig";
+import { getInternalPostWithActor,getLikedActivities } from "@/lib/appwrite/serverConfig";
 
 // いいねしたユーザーの一覧を表示するボタン！✨
 const LikedUsersButton = ({ likeCount, onClick }: { 
@@ -56,13 +56,16 @@ const LikedUsersModal = ({
     setUsers([]);
     if (isOpen && postId) {
       async function getLikedActors(){
+        //console.log("postId",postId);
         const likedActivities = await getLikedActivities(postId);
-      likedActivities.forEach(async (activity: any) => {
-        const user = await getActorById(activity.actor);
-        if(user && !users.some((u) => u.id === user.id)){
-          setUsers((prev) => [...prev, user]);
-        } 
-      });
+        
+        // forEachをfor...ofに変更して順次処理に
+        for (const activity of likedActivities) {
+          const user = await getActorById(activity.actor);
+          if(user && !users.some((u) => u.id === user.id)){
+            setUsers((prev) => [...prev, user]);
+          } 
+        }
       }
       getLikedActors();
     }
@@ -122,7 +125,7 @@ const DeleteButton = ({ postId, onDelete }: { postId: string; onDelete?: () => v
     setIsDeleting(true);
     
     try {
-      const response = await fetch(`/api/posts/${postId}`, { 
+      const response = await fetch(`/api/posts/${postId.split("/").pop()}`, { 
         method: 'DELETE' 
       });
       
@@ -234,6 +237,7 @@ const NotFoundError = ({ postId }: { postId: string }) => (
   </div>
 );
 
+
 // 投稿詳細カードのメインコンポーネント！✨
 export default function PostDetailCard({
   post,
@@ -256,42 +260,29 @@ export default function PostDetailCard({
 }) {
  // const [replyPosts,setReplyPosts] = useState<Post[]>([]);
   const [isLikedUsersOpen, setIsLikedUsersOpen] = useState(false);
-  const { getPostWithActor } = usePostCache();
-  const [postData, setPostData] = useState<any>(null);
+  const [postData, setPostData] = useState<ActivityPubNoteInClient | null>(null);
   const [isPostLoading, setIsPostLoading] = useState(true);
-  const [canDelete, setCanDelete] = useState<boolean>(false);
-  const { user } = useAuth();
-  const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
+  const [canDelete, setCanDelete] = useState<boolean>(false); 
+  const images = postData?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
   const [relativeTime, setRelativeTime] = useState<string>("");
   const [isPostLiked, setIsPostLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [likeCount, setLikeCount] = useState(0);  
 
   // Post情報を取得
   useEffect(() => {
     const fetchPost = async () => {
       setIsPostLoading(true);
       try {
-        const data = await getPostWithActor(post);
-        
+        const data = await getInternalPostWithActor(post);
+        console.log("data",data);
         // データが取得できない場合は404エラーとして扱う
-        if (!data || !data.post) {
+        if (!data) {
           //console.log("❌ 投稿が見つかりません:", post);
           setPostData(null);
           return;
         }
         
         setPostData(data);
-        
-        if(post.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)) {
-          try {
-            const likeResult = await checkLike(post);
-            setIsPostLiked(likeResult.isLiked);
-            setLikeCount(likeResult.likeCount);
-          } catch (error) {
-            //console.error("❌ Like状態の取得に失敗:", error);
-            // エラーが発生しても投稿の表示は継続
-          }
-        }
       } catch (error) {
         //console.error("Post取得エラー:", error);
         setPostData(null);
@@ -307,10 +298,10 @@ export default function PostDetailCard({
     }
 
     fetchPost();
-  }, [post, getPostWithActor]);
-  const ContentsDocment = postData?.post?.content ? (
+  }, [post]);
+  const ContentsDocment = postData?.content ? (
     <div className="space-y-2">
-      {postData?.post?.content.split("\n").map((line: any, index: any) => (
+      {postData?.content.split("\n").map((line: any, index: any) => (
         <p key={index} className="text-gray-800 dark:text-gray-200">{line}</p>
       ))}
     </div>
@@ -318,15 +309,14 @@ export default function PostDetailCard({
   
   useEffect(() => {
     //console.log("postData?.attributedTo",postData?.attributedTo);
-    if(`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}` === postData?.post?.attributedTo){
-      //console.log("canDelete",canDelete);
-      setCanDelete(true);
-    }
-  }, [user,postData]);
+    setCanDelete(postData?._canDelete || false);
+    setIsPostLiked(postData?._isLiked || false);
+    setLikeCount(postData?.likes?.totalItems || 0);
+  }, [postData]);
 
   useEffect(() => {
     const updateRelativeTime = () => {
-      const published = new Date(postData?.post?.published || "");
+      const published = new Date(postData?.published || "");
       setRelativeTime(getRelativeTime(published));
     };
     if(postData){
@@ -348,38 +338,38 @@ export default function PostDetailCard({
   }
   
   // 投稿が見つからない場合は404エラーを表示
-  if(!postData || !postData.post || !postData.post.published){
+  if(!postData || !postData.published){
     return <NotFoundError postId={post} />;
   }
   return (
     <div >
       <div className="space-y-6 m-4">
-        {postData?.post?.inReplyTo && (
+        {postData?.inReplyTo && (
           <div className="">
-            <ReplyToPost post={postData?.post?.inReplyTo} />
+            <ReplyToPost post={postData?.inReplyTo} />
           </div>
         )}
         <div className="flex items-center">
           <Avatar
-            src={postData?.actor?.icon?.url}
-            alt={postData?.actor?.preferredUsername}
-            fallback={postData?.actor?.preferredUsername?.charAt(0)}
+            src={postData?._user?.icon?.url}
+            alt={postData?._user?.preferredUsername}
+            fallback={postData?._user?.preferredUsername?.charAt(0)}
             size="lg"
-            variant={postData?.post?.to?.includes("https://www.w3.org/ns/activitystreams#Public") ? "outline" : "default"}
+            variant={postData?.to?.includes("https://www.w3.org/ns/activitystreams#Public") ? "outline" : "default"}
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
           <div className="ml-4">
-            <Link href={`/@${getActorDisplayPreferredUsername(postData?.actor)}`}>
+            <Link href={`/@${getActorDisplayPreferredUsername(postData?._user)}`}>
               <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {postData?.actor?.name}
+                {postData?._user?.displayName}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                @{getActorDisplayPreferredUsername(postData?.actor)}
+                @{getActorDisplayPreferredUsername(postData?._user)}
               </p>
             </Link>
-            <Link href={`${postData?.post?.id}`}>
+            <Link href={`${postData?.id}`}>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-              {formatDate(postData?.post?.published)}
+              {formatDate(postData?.published)}
               </p>
             </Link>
           </div>
@@ -397,7 +387,7 @@ export default function PostDetailCard({
             <ImageModal images={images} setIsModalOpen={setIsModalOpen} isModalOpen={isModalOpen} ModalSwitch={false} setModalImages={setModalImages} setModalIndex={setModalIndex} />
           </div>
         ) : (
-          <ContentsCard arg={postData?.post?.content || ""} />
+          <ContentsCard arg={postData?.content || ""} />
         )}
 
         <div className="flex items-center justify-between">
@@ -408,16 +398,16 @@ export default function PostDetailCard({
                 setIsReplyOpen(true);
               }}
               className="text-purple-600 dark:text-pink hover:text-purple-700 dark:hover:text-pink-600 hover:scale-105 transition-all duration-200 flex items-center gap-1.5 group"
-              aria-label={`@${getActorDisplayPreferredUsername(postData?.actor)} にリプライ`}
+              aria-label={`@${getActorDisplayPreferredUsername(postData?._user)} にリプライ`}
             >
               <span className="group-hover:animate-bounce">💭</span>
               <span>言及する</span>
             </button>
             <LikeButton 
-              postId={postData?.post?.id || ""} 
+              postId={postData?.id || ""} 
               isPostLiked={isPostLiked} 
               initialLikes={likeCount} 
-              actorInbox={postData?.actor?.inbox || ""}
+              actorInbox={postData?._user?.inbox || ""}
               onLikeChange={setIsPostLiked}
               onLikeCountChange={setLikeCount}
             />
@@ -428,14 +418,14 @@ export default function PostDetailCard({
           </div>
           {canDelete && (
             <DeleteButton 
-              postId={postData?.post?.id.split("/").pop() || ""} 
+              postId={postData?.id || ""} 
               onDelete={() => {
                 // 投稿削除完了時の処理
                 setIsDetailOpen(false);
                 setIsModalOpen(false);
                 // 投稿一覧から削除された投稿を除外
                 window.dispatchEvent(new CustomEvent('postDeleted', { 
-                  detail: { postId: postData?.post?.id } 
+                    detail: { postId: postData?.id } 
                 }));
               }}
             />
@@ -447,7 +437,7 @@ export default function PostDetailCard({
           onClose={() => {
             setIsLikedUsersOpen(false);
           }}  
-          postId={postData?.post?.id || ""} 
+            postId={post} 
         />
 
         {/**postData?.replyCount > 0 && (

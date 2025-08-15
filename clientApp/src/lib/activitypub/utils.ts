@@ -21,12 +21,12 @@ export async function createNote(
   actorId: string,
   content: string,
   visibility: "public" | "followers",
-  followers: string,
   inReplyTo?: string,
   attributedTo?: string
 ): Promise<{ note: ActivityPubNote; activity: CreateActivity }> {
   // 投稿IDを箱数から生成
   const id = `${DOMAIN}/posts/${noteId}`;
+  const followers = actorId + "/followers";
   const published = new Date().toISOString();
   // attributedToが存在する場合、宛先にリプライ先の投稿者を設定
   const to = [];

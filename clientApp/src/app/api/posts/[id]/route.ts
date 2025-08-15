@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { deletePostOutbox } from "@/lib/activitypub/post";
-
+import { Post as AppwritePost} from "@/types/appwrite";
+import { ActivityPubNote } from "@/types/activitypub";
 /**
  * 投稿を取得するAPIエンドポイント！✨
  * Acceptヘッダーによって振る舞いを変えるよ！💖
@@ -26,17 +27,18 @@ export async function GET(
     
     // ここでPostデータをactivitypubのNoteに変換してJSONで返す
     try {
-      const { databases, account } = await createSessionClient(request);
-      const user = await account.get();
+      const { databases } = await createSessionClient(request);  
       //　ログインしているユーザーのIDを取得
       //console.log("user", user);
       // 投稿が見つからなかった場合は404エラーを返す
       //console.log("id", id);
-      const post = await databases.getDocument(
+      const post  = await databases.getDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_POSTS_COLLECTION_ID!,
         id
-      ).catch((error) => {
+      ).then((post) => {
+        return post as AppwritePost;
+      }).catch(() => {
         //console.error("投稿が見つからなかったよ！💦", error);
         return NextResponse.json(
           { error: "投稿が見つからなかったよ！💦" },
@@ -46,18 +48,17 @@ export async function GET(
       if (post instanceof NextResponse) return post;
 
       // ここで投稿データをActivityPubのNote形式に変換するよ！💖
-      const postData = {
+      const postData : ActivityPubNote = {
         "@context": ["https://www.w3.org/ns/activitystreams"],
         "id": post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`,
         "type": "Note",
         "content": post.content,
         "published": post.published,
-        "summary": null,
-        "attributedTo": post.attributedTo,
-        "to": post.to,
-        "cc": post.cc,
-        "inReplyTo": post.inReplyTo,
-        "attachment": post.attachment,
+        "attributedTo": post.attributedTo || post.username,
+        "to": post.to || [],
+        "cc": post.cc || [],
+        "inReplyTo": post.inReplyTo || "",
+        "attachment": post.attachment || [],        
       };
 
       return NextResponse.json(postData, {

@@ -6,16 +6,17 @@ import PostCard from "@/components/features/post/card/PostCard";
 import Alert from "@/components/ui/Alert";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { ActivityPubImage } from "@/types/activitypub/collections";
-import { ActivityPubNote } from "@/types/activitypub";
+import { ActivityPubNote, ActivityPubActor, ActivityPubNoteInClient } from "@/types/activitypub";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { getActorByUserId, Actor as ActorType } from "@/lib/appwrite/database";
+import { getActorByUserId } from "@/lib/appwrite/database";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { getTimelinePosts } from "@/lib/appwrite/serverConfig";
 
 
 // カスタムフック: タイムライン管理
-const useTimelineManager = () => {
-  const [posts, setPosts] = useState<ActivityPubNote[]>([]);
+const useTimelineManager = (user: string) => {
+  const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
   const [offset, setOffset] = useState<number>(10);
   const [fetchMore, setFetchMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,19 +26,9 @@ const useTimelineManager = () => {
   const fetchPosts = async (offset: number, isLoadMore: boolean = false) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/posts?limit=10&offset=${offset}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/activity+json",
-          "Accept": "application/activity+json",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0"
-        },
-      });
-      const data = await res.json();
-      const sortedPosts = data.notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
-      console.log("sortedPosts", sortedPosts);
+      const {note,total} = await getTimelinePosts(user, 10, offset);
+      const sortedPosts = note.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+      //console.log("sortedPosts", sortedPosts);
       
       if (isLoadMore) {
         // もっと見る: 既存の投稿に追加
@@ -47,7 +38,7 @@ const useTimelineManager = () => {
         setPosts([...sortedPosts]);
       }
       
-      setFetchMore(data.total > offset + data.notes.length);
+      setFetchMore(total > offset + note.length);
       setIsLoading(false);
     } catch (error) {
       setError(error as ApiError);
@@ -57,12 +48,15 @@ const useTimelineManager = () => {
   }
 
   useEffect(() => {
+    if(!user){
+      return;
+    }
     // 最初のアクセス時のみfetch
     if (!isInitialized && offset === 10) {
       fetchPosts(0, false);
       setIsInitialized(true);
     }
-  }, [isInitialized, offset]);
+  }, [isInitialized, offset, user]);
 
   const handleLoadMore = async () => {
     fetchPosts(offset, true); 
@@ -79,7 +73,7 @@ const useTimelineManager = () => {
 // カスタムフック: ユーザー認証とアクター情報
 const useUserAndActor = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [actor, setActor] = useState<ActorType | null>(null);
+  const [actor, setActor] = useState<ActivityPubActor | null>(null);
 
   useEffect(() => {
     if (!user && !isAuthLoading) {
@@ -151,7 +145,7 @@ const PostList = ({
   setModalImages, 
   setModalIndex 
 }: {
-  posts: ActivityPubNote[]; // ActivityPubのNote形式の配列
+  posts: ActivityPubNoteInClient[]; // ActivityPubのNote形式の配列
   setIsModalOpen: (open: boolean) => void;
   isModalOpen: boolean;
   setModalImages: (images: ActivityPubImage[]) => void;
@@ -178,7 +172,7 @@ const TimelineContent = ({
   error,
 }: {
   isLoading: boolean | null;
-  posts: ActivityPubNote[]; // ActivityPubのNote形式の配列
+  posts: ActivityPubNoteInClient[]; // ActivityPubのNote形式の配列
   error: ApiError | null;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -227,8 +221,8 @@ const TimelineContent = ({
  */
 export default function TimelinePage() {
   const { actor } = useUserAndActor();
-  const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager();
-  const [posts, setPosts] = useState<ActivityPubNote[]>([]);
+  const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager(actor?.id.split("/").pop() || "");
+  const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   //handleTimelineReloadが呼ばれたら、postsを更新
   useEffect(() => {
@@ -248,7 +242,7 @@ export default function TimelinePage() {
         //console.log("新しい投稿を追加:", newPosts.length, "件");
         setPosts(prevPosts => [...prevPosts, ...newPosts]);
       } else {
-        console.log("新しい投稿なし");
+        //console.log("新しい投稿なし");
       }
       
       setIsLoading(false);
@@ -260,7 +254,7 @@ export default function TimelinePage() {
     <>
       <div 
         className="w-full h-full bg-cover bg-center z-[-1] bg-fixed absolute top-0 left-0" 
-        style={{backgroundImage: `url(${actor?.backgroundUrl})`}}
+        style={{backgroundImage: `url(${actor?.image?.url})`}}
       />
       <div 
         className="max-w-2xl mx-auto md:px-4"

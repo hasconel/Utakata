@@ -10,6 +10,8 @@ import { Errors } from "../activitypub/errors";
 import {z} from "zod"
 import { cookies } from "next/headers";
 import { createCipheriv, randomBytes, createDecipheriv } from "crypto";
+import { Actor } from "@/types/appwrite";
+import { ActivityPubActor } from "@/types/activitypub";
 /**
  * ユーザーIDからアクターを取得！🔍
  * @param userId AppwriteのユーザーID
@@ -68,55 +70,6 @@ export async function decrypt(text: string): Promise<string> {
   return decipher.update(encrypted, "hex", "utf8") + decipher.final("utf8");
 }
 
-export interface ActivityPubActor {
-  "@context": string[],
-  type: string,
-  id: string,
-  preferredUsername: string,
-  name?: string,
-  summary?: string,
-  icon?: {
-    "type": string,
-    "url": string,
-  },
-  image?: {
-    "type": string,
-    "url": string,
-  },
-  inbox: string,
-  outbox: string,
-  followers: string,
-  following: string,
-  publicKey: string,
-  privateKey: {
-    id: string,
-    type: string,
-    owner: string,
-    publicKeyPem: string,
-  }
-}
-export interface Actor {
-    $id: string;
-    actorId: string;
-    preferredUsername: string;
-    displayName?: string;
-    inbox: string;
-    outbox: string;
-    publicKey: string;
-    privateKey: string;
-    userId: string;
-    mutedUsers?: string[];
-    following?: string;
-    avatarUrl?: string;
-    bio?: string;
-    backgroundUrl?: string;
-    followers?: string;
-  }
-  export interface ActorSub extends Models.Document {
-    followersCount: number;
-    followingCount: number;
-    }
-
 const ActorSchema = z.object({
     $id: z.string(),
     actorId: z.string(),
@@ -129,6 +82,7 @@ const ActorSchema = z.object({
     following: z.string().optional(),
     avatarUrl: z.string().optional(),
     bio: z.string().optional(),
+    backgroundUrl: z.string().optional(),
   });
   
   /**
@@ -146,7 +100,7 @@ const ActorSchema = z.object({
    * @returns Actorオブジェクト（見つからない場合はnull）
    * @throws Error データベースエラー
    */
-  export async function getActorByUserId(userId: string): Promise<Actor | null> {
+  export async function getActorByUserId(userId: string): Promise<ActivityPubActor | null> {
     try {
         const {databases} = await createSessionClient();
       // actorsコレクションからuserIdで検索
@@ -169,30 +123,31 @@ const ActorSchema = z.object({
       // ドキュメントが存在する場合、Actor型に変換
       
         // Actor型に変換（型ガードで安全）
-        const actor: Actor = {
-          $id: doc.$id,
-          actorId: doc.actorId,
+        const actor: ActivityPubActor = {
+          "@context": ["https://www.w3.org/ns/activitystreams"],
+          type: "Person",
+          id: doc.actorId,
           preferredUsername: doc.preferredUsername,
           displayName: doc.displayName || doc.preferredUsername, // 移行用
           inbox: doc.inbox,
           outbox: doc.outbox,
           following: doc.following || doc.actorId + "/following",
           followers: doc.followers || doc.actorId + "/followers",
-          publicKey: doc.publicKey ,
-          privateKey: doc.privateKey,
-          userId: doc.userId,
-          mutedUsers: doc.mutedUsers || [],
-          avatarUrl: doc.avatarUrl || "",
-          bio: doc.bio || "",
-          backgroundUrl: doc.backgroundUrl || "",
-        };
-  
-        /*displayNameがない場合、preferredUsernameを保存
-        if (!doc.displayName) {
-          await databases.updateDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, actor.$id, {
-            displayName: actor.preferredUsername,
-          });
-        }*/
+          publicKey: {
+            id: doc.actorId + "#main-key",
+            owner: doc.actorId,
+            publicKeyPem: doc.publicKey,
+          },
+          icon: {
+            type: "Image",
+            url: doc.avatarUrl || "",
+          },
+          image: {
+            type: "Image",
+            url: doc.backgroundUrl || "",
+          },
+          summary: doc.bio || "",
+        } as ActivityPubActor;
   
         return actor;
       
@@ -254,27 +209,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
         Permission.write(Role.user(userId)),
         Permission.delete(Role.user(userId))
       ]
-    ).then((res) => {
-      if (!isActor(res)) {
-        throw new Error("アクターの作成に失敗したよ！💦");
-      }
-      return {
-        $id: res.$id,
-        actorId: res.actorId,
-        preferredUsername: res.preferredUsername,
-        displayName: res.displayName,
-        inbox: res.inbox,
-        outbox: res.outbox,
-        followers: res.actorId + "/followers",
-        publicKey: res.publicKey,
-        privateKey: res.privateKey,
-        userId: res.userId,
-        mutedUsers: res.mutedUsers || [],
-        following: res.actorId + "/following",
-        avatarUrl: res.avatarUrl || "",
-        bio: res.bio || "",
-      };
-    });
+    )
      await databases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
@@ -295,7 +230,7 @@ export async function createActor(userId: string, preferredUsername: string, dis
     });
 
     // クライアントに返す
-    return actor;
+    return actor as Actor;
   } catch (err: any) {
     console.error("SignUp error:", {
       message: err.message,
@@ -381,7 +316,7 @@ export async function getActorById(actorId: string): Promise<ActivityPubActor | 
  * @returns Actorオブジェクト（見つからない場合はnull）
  * @throws Error データベースエラー
  */
-export async function getActorByPreferredUsername(preferredUsername: string): Promise<Actor | null> {
+export async function getActorByPreferredUsername(preferredUsername: string): Promise<ActivityPubActor | null> {
   const {databases} = await createSessionClient();
   const {documents} = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
@@ -406,18 +341,49 @@ export async function getActorByPreferredUsername(preferredUsername: string): Pr
     throw new Error("サブアクターの取得に失敗したよ！💦");
   }
   return {
-    $id: doc.$id,
-    actorId: doc.actorId,
+    "@context": ["https://www.w3.org/ns/activitystreams"],
+    type: "Person",
+    id: doc.actorId,
     preferredUsername: doc.preferredUsername,
     displayName: doc.displayName,
     followers: doc.actorId + "/followers",
-    privateKey: doc.privateKey,
-    userId: doc.userId,
-    mutedUsers: doc.mutedUsers || [],
+    inbox: doc.inbox,
+    outbox: doc.outbox,
     following: doc.following || `${process.env.NEXT_PUBLIC_DOMAIN}/users/${doc.preferredUsername}/following`,
-    avatarUrl: doc.avatarUrl,
-    bio: doc.bio,
-    backgroundUrl: doc.backgroundUrl,
-  } as Actor;
+    publicKey: {
+      id: `${doc.actorId}#main-key`,
+      type: "Key",
+      owner: doc.actorId,
+      publicKeyPem: doc.publicKey,
+    },
+    icon: {
+      type: "Image",
+      url: doc.avatarUrl,
+    },
+    image: {
+      type: "Image",
+      url: doc.backgroundUrl,
+    },
+    summary: doc.bio,
+    url: doc.actorId,
+  } as ActivityPubActor;
 }
 
+/**
+ * アクターのミュートリストを取得！🔍
+ * 
+ * @returns ミュートリスト
+ */
+export async function getMutedUsers(): Promise<string[]> {
+  const {databases,account} = await createSessionClient();
+  const userId = await account.get();
+  if(!userId){
+    throw new Error("ユーザーが見つからないよ！💦");
+  }
+  const {documents} : Actor = await databases.getDocument(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+    userId.$id
+  );
+  return documents.mutedUsers || [];
+}

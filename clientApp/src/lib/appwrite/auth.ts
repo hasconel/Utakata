@@ -3,10 +3,11 @@
  * ギャルSNSのキラキラ登録とログインをサポート！💖
  */
 "use server";
-import {  Query } from "node-appwrite";
+import {  Models,   Query } from "node-appwrite";
 import { createAdminClient, createSessionClient, deletePost } from "./serverConfig";
-import { cookies } from "next/headers";
+import { cookies } from "next/headers";   
 import {  createDecipheriv } from "crypto";
+import { Actor, Post } from "@/types/appwrite";
 const ENCRYPTION_KEY = Buffer.from(process.env.APPWRITE_ENCRYPTION_KEY!, "hex");
 
 /**
@@ -35,7 +36,6 @@ export async function signInWithEmail(formData:{email:string,password:string}) {
       path: "/",
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 30, // 30日間
       expires: new Date(Date.now() + 60 * 60 * 24 * 30 * 1000) // 30日後
     });
@@ -63,11 +63,11 @@ export async function signOut() {
 
 export async function getActorByUserId(userId: string) {
   const { databases} = await createSessionClient();
-  const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [
+  const { documents } : Models.DocumentList<Actor> = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [
     Query.equal("userId", userId),
   ]);
   if (documents[0]) {
-    const actor = documents[0];
+    const actor : Actor = documents[0];
     actor.privateKey = decrypt(actor.privateKey);
     return actor;
   }
@@ -114,9 +114,9 @@ export async function deleteAccount() {
   try{
     const { account, databases } = await createSessionClient();
     const targetUser = (await account.get()).$id;
-    const targetActor = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, targetUser);
+    const targetActor : Actor = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, targetUser) as Actor;
     while(true){
-      const targetPosts = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [
+      const targetPosts : Models.DocumentList<Post> = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [
         Query.equal("attributedTo", targetActor.actorId),
       ]);
       if(targetPosts.documents.length === 0){

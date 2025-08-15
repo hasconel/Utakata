@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "build:dev": "NODE_ENV=development next build",
+    "build:dev": "next build",
+    "build:prod": "next build",
     "check-env": "node scripts/check-env.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.6",

@@ -9,11 +9,11 @@ import { Query, Role } from "node-appwrite";
 import { createNote, fetchActorInbox, getFollowers } from "@/lib/activitypub/utils";
 import { signRequest } from "@/lib/activitypub/crypto";
 import { Errors } from "@/lib/activitypub/errors";
-import sanitizeHtml from "sanitize-html";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Permission } from "node-appwrite";
 import { MeiliSearch } from "meilisearch";
   import {  getActorById } from "@/lib/appwrite/database";
+import { Databases } from "node-appwrite";
 
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -61,57 +61,55 @@ export async function validatePostInput(input: unknown): Promise<PostInput> {
  */
 export async function savePost(
   input: PostInput,
-  actor: { actorId: string; preferredUsername: string; displayName: string; followers: string ,avatarUrl:string},
-  images: ActivityPubImage[] = []
+  actor: { userId: string;},
+  images: ActivityPubImage[] = [],
+  databases: Databases
 ) {
   // NoteとCreateアクティビティを生成（utils.tsで定義）
+  const actorId = process.env.NEXT_PUBLIC_DOMAIN!+"/users/"+actor.userId;
   const uniqueID = require("node-appwrite").ID.unique();
-  const { note, activity } = await createNote(uniqueID, actor.actorId, input.content, input.visibility, actor.followers, input.inReplyTo?.id, input.inReplyTo?.to);
+  const { note, activity } = await createNote(uniqueID, actorId, input.content, input.visibility,  input.inReplyTo?.to);
 
   // 画像を追加
   if (images.length > 0) {
     note.attachment = images;
   }
   const imagesArray = images.map(image => JSON.stringify(image));
-  const { databases, account } = await createSessionClient();
-  const session = await account.get();
+  const session = actor.userId;
+  if(!session){
+    throw new Error("セッションが見つからないよ！💦");
+  }
 
   const finalTo = Array.isArray(note.to) ? note.to : note.to ? [note.to] : [];
 
   const finalCc = Array.isArray(note.cc) ? note.cc : note.cc ? [note.cc] : [];
 
-  // displayNameをサニタイズ（XSS対策）
-  const sanitizedDisplayName = sanitizeHtml(actor.displayName, {
-    allowedTags: [],
-    allowedAttributes: {},
-  });
   // 投稿をAppwriteに保存
   const permission = (visibility:string)=>{
     if(visibility === "public"){
       return [
         Permission.read(Role.any()),
-        Permission.update(Role.user(session.$id)),
-        Permission.delete(Role.user(session.$id)),
+        Permission.update(Role.user(session)),
+        Permission.delete(Role.user(session)),
       ];
     }else{
       return [
         Permission.read(Role.users()),
-        Permission.update(Role.user(session.$id)),
-        Permission.delete(Role.user(session.$id)),
+        Permission.update(Role.user(session)),
+        Permission.delete(Role.user(session)),
       ];
     }
   }
   const userdocument = await databases.createDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, uniqueID, {
     content: input.content,
-    username: sanitizedDisplayName,
+    username: process.env.NEXT_PUBLIC_DOMAIN!+"/users/"+actor.userId,
     activityId: note.id,
     to: finalTo,
     cc: finalCc,
     published: note.published,
     inReplyTo: input.inReplyTo?.id || null,
-    attributedTo: actor.actorId,
+    attributedTo: process.env.NEXT_PUBLIC_DOMAIN!+"/users/"+actor.userId,
     attachment: imagesArray,
-    avatar: actor.avatarUrl,
   },[
     ...permission(input.visibility),
   ]);
@@ -122,7 +120,7 @@ export async function savePost(
   },[
     Permission.read(Role.users()),
     Permission.update(Role.users()),
-    Permission.delete(Role.user(session.$id)),
+    Permission.delete(Role.user(session)),
   ]);
   const document = {
     $id: userdocument.$id,
@@ -185,7 +183,6 @@ export async function deliverActivity(
       if (inbox) inboxes.add(inbox);
     }
   }
-  console.log("inboxes", inboxes);
   // 並列配信、リトライ3回で安定性UP
   await Promise.all(
     Array.from(inboxes).map(async (inbox) => {

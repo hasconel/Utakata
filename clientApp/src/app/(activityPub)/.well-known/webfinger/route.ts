@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       {
         "rel": "self",
         "type": "application/activity+json",
-        "href": `${actor.actorId}`
+        "href": `${actor.id}`
       }
     ]
   },{headers: {

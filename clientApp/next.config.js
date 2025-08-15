@@ -1,129 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 本番環境での設定
-  ...(process.env.NODE_ENV === 'production' && {
-    // 本番環境でのテストファイル完全除外（強化版）
-    pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-    
-    // Webpack設定でテストファイルを除外
-    webpack: (config, { dev, isServer }) => {
-      if (!dev) {
-        // テストファイルを完全に除外
-        config.module.rules.push({
-          test: /\.(test|spec)\.(ts|tsx|js|jsx)$/,
-          loader: 'ignore-loader',
-        });
-        
-        // テストディレクトリ全体を除外
-        config.resolve.alias = {
-          ...config.resolve.alias,
-          '@/test': false,
-          '@/components/testing': false,
-          '@/app/testing': false,
-          // パフォーマンステスト関連のファイルも除外
-          'PerformanceTestSuite': false,
-          'runPerformanceTests': false,
-          'PerformanceTestRunner': false,
-        };
-        
-        // テスト関連のファイルを除外（強化版）
-        config.module.rules.push({
-          test: (path) => {
-            return path.includes('test') || 
-                   path.includes('testing') || 
-                   path.includes('PerformanceTestSuite') ||
-                   path.includes('runPerformanceTests') ||
-                   path.includes('PerformanceTestRunner');
-          },
-          loader: 'ignore-loader',
-        });
-
-        // 特定のファイルパターンを除外
-        config.module.rules.push({
-          test: /[\\/]src[\\/](test|components[\\/]testing|app[\\/]testing)[\\/]/,
-          loader: 'ignore-loader',
-        });
-
-        // パフォーマンステスト関連のファイルを強制的に除外
-        config.module.rules.push({
-          test: /PerformanceTestSuite|runPerformanceTests|PerformanceTestRunner/,
-          loader: 'ignore-loader',
-        });
-
-        // テストディレクトリ内のすべてのファイルを除外
-        config.module.rules.push({
-          test: /[\\/]src[\\/]test[\\/].*/,
-          loader: 'ignore-loader',
-        });
-
-        // テストコンポーネントを除外
-        config.module.rules.push({
-          test: /[\\/]src[\\/]components[\\/]testing[\\/].*/,
-          loader: 'ignore-loader',
-        });
-
-        // テストページを除外
-        config.module.rules.push({
-          test: /[\\/]src[\\/]app[\\/]testing[\\/].*/,
-          loader: 'ignore-loader',
-        });
-
-        // 動的インポートでテストファイルが含まれないようにする
-        config.plugins = config.plugins || [];
-        config.plugins.push(
-          new (require('webpack').DefinePlugin)({
-            'process.env.EXCLUDE_TESTS': JSON.stringify('true'),
-          })
-        );
-
-        // テストファイルをexternalsとして設定（完全除外）
-        config.externals = config.externals || [];
-        config.externals.push({
-          '@/test': 'commonjs @/test',
-          '@/components/testing': 'commonjs @/components/testing',
-          '@/app/testing': 'commonjs @/app/testing',
-        });
-
-        // テストファイルの完全除外（強化版）
-        config.resolve.alias = {
-          ...config.resolve.alias,
-          '@/test': false,
-          '@/components/testing': false,
-          '@/app/testing': false,
-          // パフォーマンステスト関連のファイルも除外
-          'PerformanceTestSuite': false,
-          'runPerformanceTests': false,
-          'PerformanceTestRunner': false,
-        };
-
-        // テストファイルのパス解決を無効化
-        config.resolve.fallback = {
-          ...config.resolve.fallback,
-          '@/test': false,
-          '@/components/testing': false,
-          '@/app/testing': false,
-        };
-
-        // テストファイルのインポートを完全にブロック
-        config.module.rules.push({
-          test: /\.(ts|tsx|js|jsx)$/,
-          exclude: [
-            /[\\/]src[\\/]test[\\/]/,
-            /[\\/]src[\\/]components[\\/]testing[\\/]/,
-            /[\\/]src[\\/]app[\\/]testing[\\/]/,
-            /PerformanceTestSuite/,
-            /runPerformanceTests/,
-            /PerformanceTestRunner/,
-          ],
-        });
-      }
-      return config;
-    },
-  }),
-
-  // 共通設定
+  // 環境に関係なく同じ設定
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  
+  // 画像設定（next/image用）
   images: {
-    domains: ['localhost', process.env.NEXT_PUBLIC_DOMAIN.split('//')[1]],
+    domains: [
+      'localhost',
+      process.env.NEXT_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '') ,
+      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\/[^\/]+/, '') ,
+    ].filter(Boolean), // undefinedやnullを除外
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
@@ -131,27 +17,20 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
-
-  // 圧縮設定
-  compress: true,
-
-  // パフォーマンス最適化
-  poweredByHeader: false,
-  generateEtags: false,
-
-  // ヘッダー設定
+  
+  // セキュリティヘッダー（環境に関係なく）
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
             key: 'X-Frame-Options',
             value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
           {
             key: 'X-XSS-Protection',
@@ -205,24 +84,19 @@ const nextConfig = {
     ];
   },
 
-  // Webpack設定
+  // Webpack設定（環境に関係なく完全統一）
   webpack: (config, { dev, isServer }) => {
-    // 本番環境でのテストディレクトリ除外は上で処理済み
+    // チャンク分割を無効化（self is not definedエラーを防ぐ）
+    config.optimization.splitChunks = false;
     
-    // 本番ビルドの最適化
-    if (!dev) {
-      // チャンク分割を無効化（self is not definedエラーを防ぐ）
-      config.optimization.splitChunks = false;
-      
-      // ミニファイ
-      config.optimization.minimize = true;
-    } else {
-      // 開発環境での設定
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 300,
-      };
-    }
+    // ミニファイ（環境に関係なく）
+    config.optimization.minimize = true;
+    
+    // 環境に関係なく同じ設定
+    config.watchOptions = {
+      poll: 1000,
+      aggregateTimeout: 300,
+    };
     
     // Node.jsモジュールのフォールバック
     config.resolve.fallback = {
@@ -235,17 +109,17 @@ const nextConfig = {
     return config;
   },
 
-  // TypeScript設定
+  // TypeScript設定（環境に関係なく）
   typescript: {
-    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+    ignoreBuildErrors: false,
   },
 
-  // ESLint設定
+  // ESLint設定（環境に関係なく）
   eslint: {
-    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
+    ignoreDuringBuilds: false,
   },
 
-  // React設定
+  // React設定（環境に関係なく）
   reactStrictMode: true,
 };
 

@@ -25,7 +25,6 @@ export async function signRequest(url: string, body: any, privateKey: string, ke
     const digest = createHash("sha256")
       .update(JSON.stringify(body))
       .digest("base64");
-    
     const headers = {
       Host: parsedUrl.host,
       Date: new Date().toUTCString(),
@@ -40,7 +39,6 @@ export async function signRequest(url: string, body: any, privateKey: string, ke
     signer.update(headerString);
 
     const signature = signer.sign(await decrypt(privateKey), "base64");
-
     const signatureHeader = `keyId="${keyId}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
     
     return {
@@ -127,9 +125,11 @@ export async function verifySignature(req: import("next/server").NextRequest, ac
     const {  signature, signingString } = parseSignatureHeader(headers, req.method || "POST", req.url);
     //console.log(keyId, signature, signingString);
     // 公開鍵を取得（actorIdからフェッチ）
+    //console.log("actor",actor);
     const actorData = await fetch(actor, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
     }).then(res => res.json());
+    //console.log("actorData",actorData);
     //console.log("actorData",actorData);
     const publicKey = actorData.publicKey?.publicKeyPem;
     if (!publicKey) {

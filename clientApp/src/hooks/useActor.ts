@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { isInternalUrl } from "@/lib/utils";
+import { ActivityPubActor } from "@/types/activitypub";
 
 export function useActor() {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,13 +15,14 @@ export function useActor() {
     try {
         // 内部ドメインの場合は直接取得
         if(isInternalUrl(url)){
-          const actor = await fetch(url,{
+          console.log("internal",url);
+          const actor : ActivityPubActor = await fetch(url,{
             method: "GET",
             headers: {
               "Accept": "application/activity+json",
             },
           }).then((res) => res.json());
-          //console.log("actor",actor);
+          console.log("actor",actor);
           return {actor:actor,name:actor.preferredUsername};
         }else{
           // 外部ドメインの場合はWebFingerにアクセス

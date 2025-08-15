@@ -1,48 +1,65 @@
-/**
- * Appwrite関連の型定義！✨
- */
 
-/**
- * ユーザー型！アプリケーションのユーザーを表現！👤
- */
-export interface User {
-  $id: string;
-  $createdAt: string;
-  $updatedAt: string;
-  name: string;
-  registration: string;
-  status: boolean;
-  labels: string[];
-  passwordUpdate: string;
-  email: string;
-  phone: string;
-  emailVerification: boolean;
-  phoneVerification: boolean;
-  prefs: Record<string, any>;
-}
+import { Models } from "node-appwrite";
 
-/**
- * 投稿型！ユーザーの投稿を表現！📝
- */
-export interface Post {
-  $id: string;
-  $createdAt: string;
-  $updatedAt: string;
-  content: string;
+export interface Actor extends Models.Document {
   userId: string;
-  visibility: "public" | "followers" | "private";
-  attachments?: string[];
-  likes?: string[];
-  replies?: string[];
+  preferredUsername: string;
+  actorId: string;
+  publicKey: string;
+  privateKey: string;
+  displayName?: string;
+  mutedUsers?: string[];
+  avatarUrl?: string;
+  backgroundUrl?: string;
+  bio?: string;
+  userUrl?: string;
 }
-/**
- * フォロー関係型！ユーザー間の関係を表現！🤝
- */
-export interface Follow {
-  $id: string;
-  $createdAt: string;
-  followerId: string;
-  followingId: string;
-  status: "pending" | "accepted" | "rejected";
-} 
 
+export interface Follow extends Models.Document {
+  object: string;
+  actor: string;
+  id: string;
+}
+
+export interface Like extends Models.Document {
+  object: string;
+  actor: string;
+  id: string;
+}
+
+export interface Notification extends Models.Document {
+  type: string;
+  from: string;
+  to: string;
+  target?: string;
+  read: boolean;
+  id: string;
+}
+
+export interface Post extends Models.Document {
+  content: string;
+  username: string;
+  activityId: string;
+  published: string;
+  inReplyTo?: string;
+  attributedTo?: string;
+  attachment?: string[];
+  avatar?: string;
+  raw?: string;
+  to?: string[];
+  cc?: string[];
+  deleted?: boolean;
+}
+
+export interface ActorSub extends Models.Document {
+  followersCount: number;
+  followingCount: number;
+  id: string;
+}
+
+export interface PostSub extends Models.Document {
+  repliesCount?: number;
+  likedActors?: string[];
+  activityId: string;
+  likeCount?: number;
+}

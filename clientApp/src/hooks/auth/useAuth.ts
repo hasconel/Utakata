@@ -60,7 +60,7 @@ export function useAuth() {
       setUser(null);
     } finally {
       setIsLoading(false);
-    }
+    } 
   }, [setCachedUserData]);
 
   useEffect(() => {

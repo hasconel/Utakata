@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError } from '@/lib/api/client';
 
+
 // キャッシュの型定義
 interface CacheEntry<T> {
   data: T;
@@ -82,10 +83,6 @@ export function useApi<T>(
     }
     
     abortControllerRef.current = new AbortController();
-    /*
-    // パフォーマンス計測開始
-    const startTime = performance.now();
-    */
     try {
       setIsLoading(true);
       setError(null);
@@ -96,11 +93,6 @@ export function useApi<T>(
         if (cachedData) {
           setData(cachedData);
           options.onSuccess?.(cachedData);
-          /*
-          // キャッシュヒットの計測
-          const cacheTime = performance.now() - startTime;
-          console.log(`🚀 Cache hit: ${options.cacheKey} (${cacheTime.toFixed(2)}ms)`);
-          */
           return;
         }
       }
@@ -113,13 +105,7 @@ export function useApi<T>(
       }
       
       setData(result);
-      options.onSuccess?.(result);
-      
-      /*
-      // API呼び出し時間の計測
-      const apiTime = performance.now() - startTime;
-      console.log(`⚡ API call: ${options.cacheKey || 'unknown'} (${apiTime.toFixed(2)}ms)`);
-      */
+      options.onSuccess?.(result);  
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return; // キャンセルされた場合は何もしない
@@ -128,12 +114,6 @@ export function useApi<T>(
       const apiError = err instanceof ApiError ? err : new ApiError('エラーが発生したよ！💦');
       setError(apiError);
       options.onError?.(apiError);
-      
-      /*
-      // エラー時の計測
-      const errorTime = performance.now() - startTime;
-      console.error(`❌ API error: ${options.cacheKey || 'unknown'} (${errorTime.toFixed(2)}ms)`, err);
-      */
     } finally {
       setIsLoading(false);
     }
@@ -168,35 +148,6 @@ export function usePost(postId: string) {
   return useApi(() => fetch(`/api/posts/${postId}`).then(res => res.json()));
 }
 
-/**
- * タイムラインを取得するフック！✨
- * @param limit 取得件数
- * @param offset オフセット
- * @param lastId 最後の投稿ID
- * @param firstId 最初の投稿ID
- * @param attributedTo 属性
- * @returns タイムラインの結果
- */
-export function useTimeline(limit: number = 10, offset: number | null = 0, lastId: string | null = null, firstId: string | null = null, attributedTo: string | null = null): UseApiResult<string[]> {
-  const offsetQuery = offset ? `&offset=${offset}` : "";
-  const lastIdQuery = lastId ? `&lastId=${lastId}` : "";
-  const firstIdQuery = firstId ? `&firstId=${firstId}` : "";
-  const attributedToQuery = attributedTo ? `&attributedTo=${attributedTo}` : "";
-  
-  const cacheKey = `timeline:${limit}:${offset}:${lastId}:${firstId}:${attributedTo}`;
-  const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}${attributedToQuery}`,
-    {
-      method: "GET",
-      headers: {
-        "Accept": "application/activity+json"
-      }
-    }
-  ).then(res => res.json().then(data => data.postsAsPostArray)), [limit, offset, lastId, firstId, attributedTo]);
-  return useApi<string[]>(fetcher, {
-    cacheKey,
-    cacheTTL: 60000 // 1分間キャッシュ
-  });
-}
 
 /**
  * ユーザー情報を取得するフック！✨
