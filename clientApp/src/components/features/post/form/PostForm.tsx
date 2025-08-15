@@ -148,9 +148,9 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
    * @param image - アップロードする画像ファイル
    * @returns アップロードされた画像情報
    */
-  const uploadImage = async (image: File): Promise<ActivityPubImage> => {
+  const uploadImage = async (image: File ,visibility: "public" | "followers"): Promise<ActivityPubImage> => {
     const base64ImageString = await fileToBase64(image);
-    
+    console.log("visibility", visibility);
     const response = await fetch("/api/files", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -162,6 +162,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
           width: 0,
           height: 0,
           blurhash: "",
+          visibility: visibility,
         }
       }),
     });
@@ -202,7 +203,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
     try {
       // 画像をアップロードするよ！✨
       const imageData = images.length > 0 
-        ? await Promise.all(images.map(uploadImage))
+        ? await Promise.all(images.map(image => uploadImage(image, visibility)))
         : [];
 
       // 投稿を送信するよ！✨

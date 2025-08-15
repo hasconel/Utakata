@@ -30,10 +30,11 @@ export async function POST(request: Request) {
     }
     const binnaryFile = Buffer.from(file.bin,"base64");  
     const Query = [Permission.write(Role.user(userId)),Permission.delete(Role.user(userId))];
+    console.log("file.visibility",file.visibility);
     if(file.visibility === "public"){
       Query.push(Permission.read(Role.any()));
     }
-    if(file.visibility === "unlisted"){
+    if(file.visibility === "followers"){
       Query.push(Permission.read(Role.users()));
     }
     const uploadedFile = await storage.createFile(
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
         Query
     );
     console.log("uploadedFile",uploadedFile);
-    const fileUrl = process.env.NEXT_PUBLIC_DOMAIN! + "/api/files/" + uploadedFile.$id ;
+    const fileUrl = process.env.NEXT_PUBLIC_DOMAIN! + "/files/" + uploadedFile.$id ;
     
     const uploadedFiles : ActivityPubImage = {
         type: fileType,
