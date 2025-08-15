@@ -32,9 +32,9 @@ const useTimelineManager = (user: string) => {
           headers: {
             "Content-Type": "application/activity+json",
             "Accept": "application/activity+json",
-            "cache-control": "no-cache",
-            "expires": "0",
-            "pragma": "no-cache",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0" 
           },
         }
       );
