@@ -1,5 +1,4 @@
 import { Post } from "./posts";
-import { getLoggedInUser } from "./serverConfig";
 import { convertToExternalUrl } from "../utils";
 
 /**
@@ -38,8 +37,7 @@ export async function fetchReplyToPost(activityId: string): Promise<{ post: any;
  * @returns 投稿一覧
  */
 export async function fetchTimelinePosts(limit: number = 10, offset: number = 0): Promise<Post[]> {
-  const currentUser = await getLoggedInUser();
-  const url = `/api/posts?limit=${limit}&offset=${offset}&userId=${currentUser.$id}`
+  const url = `/api/posts?limit=${limit}&offset=${offset}`
   try {
     const response = await fetch(url,{
       method: "GET",

@@ -15,8 +15,6 @@ import { getRelativeTime } from "@/lib/utils/date";
 import { usePostCache } from "@/hooks/post/usePostCache";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
-
 interface PostRepliesProps {
   post: string;
 }
@@ -35,6 +33,7 @@ export default function PostReplies({ post }: PostRepliesProps) {
       setIsPostLoading(true);
       try {
         const data = await getPostWithActor(post);
+        //console.log("data", data);
         setPostData(data);
       } catch (error) { 
         console.error("Post取得エラー:", error);
@@ -43,19 +42,25 @@ export default function PostReplies({ post }: PostRepliesProps) {
       }
     };
     fetchPost();
-  }, [post, getPostWithActor]);
+  }, [post]);
+  console.log("postData", postData);
   useEffect(() => {
     if(postData){
       setImages(postData?.post?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
     }
-  }, [postData]);
+  }, []);
   if(isPostLoading){
     return <div className="flex items-center justify-center h-40">
       <Loader2 className="w-6 h-6 animate-spin" />
     </div>
   }
+  if(!postData?.post?.id){
+    return <div className="flex items-center justify-center h-40">
+      <p className="text-gray-500 dark:text-gray-400">投稿が見つかりません</p>
+    </div>
+  }else{
   return (
-    <Link href={`/posts/${postData?.post?.id}`}>  
+    <Link href={`${postData?.post?.id}`}>  
     <div className="flex flex-col pl-8 space-y-4 border-l-2 border-purple-200 dark:border-pink-900 bg-white dark:bg-gray-800 rounded-lg p-4 hover:bg-purple-50 dark:hover:bg-gray-900/50 transition-all duration-200">
       <div className="flex items-center">
         <Avatar
@@ -69,14 +74,14 @@ export default function PostReplies({ post }: PostRepliesProps) {
         <div className="flex flex-col items-start justify-start w-full ml-2">
         <div className="flex flex-row items-start justify-start w-full gap-1">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {postData?.actor?.name || postData?.actor?.preferredUsername}
+            {postData?.actor?.displayName || postData?.actor?.preferredUsername}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            @{getActorDisplayPreferredUsername(postData?.actor)}
+            @{postData?.actor?.preferredUsername}
           </p>
         </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {formatDate(postData?.post?.published || "")}
+            {postData?.post?.published ? formatDate(postData?.post?.published) : "Unknown"}
           </div>
           </div>
           <div className="ml-auto">
@@ -114,5 +119,6 @@ export default function PostReplies({ post }: PostRepliesProps) {
       )}
     </div>
     </Link>
-  );
+    );
+  }
 } 

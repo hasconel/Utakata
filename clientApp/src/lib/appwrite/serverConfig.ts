@@ -522,6 +522,7 @@ export async function likePost(postId: string ,actorInbox: string) {
 
 export async function getUserPostCount(userId: string) {
   const { databases } = await createSessionClient();
+  //console.log("userId", userId);
   const { total } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_POSTS_COLLECTION_ID!,
@@ -970,4 +971,15 @@ export async function getReplyPostsFromActivityId(activityId: string) {
       attachment: document.attachment,
     } as unknown as Post;
   });
+}
+
+export async function getLikedActivities(postId: string) {
+  const { databases } = await createSessionClient();
+  const { documents } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_LIKES_COLLECTION_ID!,
+    [Query.equal("object", postId)]
+  );
+  //console.log("documents",documents);
+  return documents;
 }

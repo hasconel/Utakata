@@ -184,7 +184,6 @@ export function useTimeline(limit: number = 10, offset: number | null = 0, lastI
   const attributedToQuery = attributedTo ? `&attributedTo=${attributedTo}` : "";
   
   const cacheKey = `timeline:${limit}:${offset}:${lastId}:${firstId}:${attributedTo}`;
-  
   const fetcher = useCallback(() => fetch(`/api/posts?limit=${limit}${offsetQuery}${lastIdQuery}${firstIdQuery}${attributedToQuery}`,
     {
       method: "GET",

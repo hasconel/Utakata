@@ -23,14 +23,14 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
   const { user, isLoading: isAuthLoading } = useAuth();
   const { getActor, isLoading: isActorLoading } = useActor();
   const [targetActor, setTargetActor] = useState<any | null>(null);
-  const [posts, setPosts] = useState<string[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [isFollowing, setIsFollowing] = useState<string|false>(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
   const [modalIndex, setModalIndex] = useState(0);
-  const [offset, setOffset] = useState<number>(0);
+  const [offset, setOffset] = useState<number>(10);
   const [fetchMore, setFetchMore] = useState(false);
   const [postCount, setPostCount] = useState<number>(0);
 
@@ -76,7 +76,9 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
           "Accept": "application/activity+json",
         },
       }).then((res) => res.json()).then((res) => {
-        const actor = getActor(res.links.find((link: any) => link.rel === "self")?.href).then((res)=>setTargetActor(res.actor));
+        const actor = getActor(res.links.find((link: any) => link.rel === "self")?.href).then((res)=>{
+          setTargetActor(res.actor);
+        });
         if(!actor){
           router.push(`/`);
         }
@@ -88,7 +90,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
     if(targetActor && user){
     if(targetActor?.id===`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}`){
       setIsOwnProfile(true);
-    }
+    }else{
     fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}/following?target=${encodeURIComponent(targetActor?.id)}`,{
       method: "GET",
       headers: {
@@ -99,8 +101,12 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
       setIsFollowing(res.id);
       //console.log("response",res);
     });}
+  if(targetActor?.id.startsWith(process.env.NEXT_PUBLIC_DOMAIN)){
+    getUserPostCount(targetActor?.id).then((res) => setPostCount(res));
+  }
+  }
   },[user,targetActor])
-  useEffect(() => {
+  const fetchPosts = async (offset: number) => {
     if(targetActor){
       fetch(`/api/posts?attributedTo=${encodeURIComponent(targetActor?.id)}&limit=10&offset=${offset}`,{
         method: "GET",
@@ -109,26 +115,27 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
           "Accept": "application/activity+json",
         },
       }).then((res) => res.json()).then((res) => {
-        if(res.postsAsPostArray){
-          if(res.postsAsPostArray.length<10) setFetchMore(false);else setFetchMore(true);
-          // Setを使った高速検索でフィルタリングを最適化
-          const existingPostsSet = new Set(posts);
-          const filteredData = res.postsAsPostArray.filter((post:string) => !existingPostsSet.has(post));
-          // 重複を完全に除去してから状態を更新
-          setPosts(prevPosts => {
-            const allPosts = [...prevPosts, ...filteredData];
-            return Array.from(new Set(allPosts)); // 重複を完全に除去
-          });
-          getUserPostCount(targetActor?.id).then((res) => setPostCount(res));
-        }
+        const newPosts = res.notes.filter((post: any) => !posts.some((p: any) => p.id === post.id)).map((post: any) => ({
+          ...post,
+          published: post.published || new Date().toISOString(),
+        }));
+        const sortedPosts = newPosts.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+        setPosts([...posts, ...sortedPosts]);
+        //console.log("res.total",res.total);
+        //console.log("offset",offset);
+        //console.log("res.notes.length",res.notes.length);
+        setFetchMore(res.total > offset + res.notes.length);
       });
     }
-  },[targetActor,offset])
-  const handleLoadMore = async () => {
-    if(fetchMore){
-      setOffset(offset+10);
-      setFetchMore(false);
+  }
+  useEffect(() => {
+      if(targetActor){
+        fetchPosts(0);
     }
+  },[targetActor])
+  const handleLoadMore = async () => {
+    fetchPosts(offset);
+    setOffset(offset + 10);
   }
 
   const handleFollow = async (userId: string) => {
@@ -251,10 +258,9 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
             まだ投稿がないわ！💦
           </p>
         ) : (
-          // 重複を除去してからマップ
-          Array.from(new Set(posts)).map((post, index) => (
+          posts.map((post, index) => (
             <PostCard 
-              key={`${post}-${index}`} 
+              key={`${post.id}-${index}`} 
               post={post}  
               setIsModalOpen={setIsModalOpen} 
               isModalOpen={isModalOpen} 
@@ -262,7 +268,8 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
               setModalIndex={setModalIndex} 
             />
           ))
-        )}            {fetchMore && (
+        )}
+        {fetchMore && (
           <div className="flex justify-center mt-8">
             <button
               onClick={() => handleLoadMore()}

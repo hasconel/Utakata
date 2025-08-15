@@ -17,9 +17,10 @@ import { Button } from "@/components/ui/Button";
 import  {getActorById,ActivityPubActor} from "@/lib/appwrite/database";
 import { usePostCache } from "@/hooks/post/usePostCache";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
 import { checkLike } from "@/lib/appwrite/serverConfig";
+import { getLikedActivities } from "@/lib/appwrite/serverConfig";
 
 // いいねしたユーザーの一覧を表示するボタン！✨
 const LikedUsersButton = ({ likeCount, onClick }: { 
@@ -44,27 +45,33 @@ const LikedUsersButton = ({ likeCount, onClick }: {
 const LikedUsersModal = ({ 
   isOpen, 
   onClose, 
-  likedActors 
+  postId,
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
-  likedActors: string[];
+  postId: string;
 }) => {
   const [users, setUsers] = useState<ActivityPubActor[]>([]);
-
   useEffect(() => {
     setUsers([]);
-    if (isOpen && likedActors.length > 0) {
-      likedActors.forEach(async (actor) => {
-        const user = await getActorById(actor);
-        if(user){
+    if (isOpen && postId) {
+      async function getLikedActors(){
+        const likedActivities = await getLikedActivities(postId);
+      likedActivities.forEach(async (activity: any) => {
+        const user = await getActorById(activity.actor);
+        if(user && !users.some((u) => u.id === user.id)){
           setUsers((prev) => [...prev, user]);
-        }
+        } 
       });
+      }
+      getLikedActors();
     }
-  }, [isOpen, likedActors]);
+    return () => {
+      setUsers([]);
+    }
+  }, [isOpen,postId]);
 
-  if (!isOpen || !likedActors.length) return null;
+  if (!isOpen || !users.length) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -73,19 +80,20 @@ const LikedUsersModal = ({
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">いいねしたユーザー</h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-gray-700 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-900/80 rounded-full p-2 hover:scale-110 hover:rotate-180 hover:bg-gray-200/20 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-pink-500 transition-all duration-200"
           >
-            ✕
+            <X className="w-6 h-6" />
           </button>
         </div>
         <div className="space-y-2">
           {users.map((user) => (
-            <div key={user.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <a key={user.id} href={user.id} className="block">
+            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+             
                   <Avatar
                     src={user.icon?.url || ""}
                     alt={user.preferredUsername}
                     fallback={user.preferredUsername?.charAt(0)}
-                    attributedTo={user.id}
                     size="md"
                     variant="outline"
                   />
@@ -93,7 +101,8 @@ const LikedUsersModal = ({
                     <span className="text-gray-900 dark:text-gray-100">{user.name}</span>
                     <span className="text-gray-500 dark:text-gray-400">@{user.preferredUsername}</span>
                   </div>
-                </div>
+              </div>
+              </a>
           ))}
         </div>
       </div>
@@ -359,7 +368,7 @@ export default function PostDetailCard({
             alt={postData?.actor?.preferredUsername}
             fallback={postData?.actor?.preferredUsername?.charAt(0)}
             size="lg"
-            variant={postData?.post?.to ? "outline" : "default"}
+            variant={postData?.post?.to?.includes("https://www.w3.org/ns/activitystreams#Public") ? "outline" : "default"}
             className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
           />
           <div className="ml-4">
@@ -416,7 +425,7 @@ export default function PostDetailCard({
               onLikeCountChange={setLikeCount}
             />
             <LikedUsersButton 
-              likeCount={0} 
+              likeCount={likeCount} 
               onClick={() => setIsLikedUsersOpen(true)} 
             />
           </div>
@@ -441,7 +450,7 @@ export default function PostDetailCard({
           onClose={() => {
             setIsLikedUsersOpen(false);
           }}  
-          likedActors={[]} 
+          postId={postData?.post?.id || ""} 
         />
 
         {/**postData?.replyCount > 0 && (

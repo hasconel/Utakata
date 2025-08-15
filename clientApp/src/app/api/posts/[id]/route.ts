@@ -14,10 +14,6 @@ export async function GET(
   const header = request.headers;
   const acceptHeader = header.get("Accept");
   
-  // セッション状態を確認
-  const { checkSessionStatus } = await import("@/lib/appwrite/serverConfig");
-  const sessionStatus = await checkSessionStatus(request);
-  console.log("🔍 セッション状態:", sessionStatus);
   
   // ActivityPubリクエストの場合はJSON形式で返す！✨
   if (acceptHeader === "application/activity+json") {

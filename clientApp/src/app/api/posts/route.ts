@@ -9,6 +9,8 @@ import { Query } from "node-appwrite";
 import {  savePost, deliverActivity } from "@/lib/activitypub/post";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { ENV } from "@/lib/api/config";
+import { ActivityPubNote } from "@/types/activitypub";
+
 
 // CORSの設定を追加するよ！✨
 export async function OPTIONS() {
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
 
 /**
  * 投稿一覧を取得するAPIエンドポイント！✨
+ * ActivityPubのNote形式で投稿データを返すよ〜💖
  */
 export async function GET(request: Request) {
   const date = Date.now();
@@ -158,7 +161,6 @@ export async function GET(request: Request) {
   let limit: string = "20";
   let offset: string = "0";
   let inReplyTo: string | null = null;
-  let userId: string | null = null;
   let attributedTo: string | null = null;
   let lastId: string | null = null;
   let firstId: string | null = null;
@@ -168,7 +170,6 @@ export async function GET(request: Request) {
     limit = url.searchParams.get("limit") || "20";
     offset = url.searchParams.get("offset") || "0";
     inReplyTo = url.searchParams.get("inReplyTo");
-    userId = url.searchParams.get("userId");
     attributedTo = url.searchParams.get("attributedTo");
     lastId = url.searchParams.get("lastId");
     firstId = url.searchParams.get("firstId");
@@ -188,49 +189,30 @@ export async function GET(request: Request) {
     
   const queries = queryBuilder.build();
   try {
-    const { databases } = await createSessionClient(request);    
-    let posts: any;
-    
-    // ミュートユーザーフィルターをクエリビルダーで追加
-    if(userId){
-      const currentUserActor = await getActorByUserId(userId);
-      if(currentUserActor?.mutedUsers && currentUserActor.mutedUsers.length > 0){
-        queryBuilder.addMutedUsersFilter(currentUserActor.mutedUsers);
-        // 更新されたクエリを取得
-        const updatedQueries = queryBuilder.build();
-        posts = await databases.listDocuments(
-          ENV.DATABASE_ID,
-          ENV.POSTS_COLLECTION_ID,
-          updatedQueries
-        );
-      } else {
-        posts = await databases.listDocuments(
-          ENV.DATABASE_ID,
-          ENV.POSTS_COLLECTION_ID,
-          queries
-        );
-      }
-    } else {
-      posts = await databases.listDocuments(
-        ENV.DATABASE_ID,
-        ENV.POSTS_COLLECTION_ID,
-        queries
-      );
+    let userId: string | null = null;
+    const { databases, account } = await createSessionClient(request);    
+    const user = await account.get();
+    if(!user){
+      return NextResponse.json({ error: "ログインしてないよ！💦" }, { status: 400 });
     }
+    userId = process.env.NEXT_PUBLIC_DOMAIN + "/users/" + user.$id;
+    const         posts = await databases.listDocuments(
+      ENV.DATABASE_ID,
+      ENV.POSTS_COLLECTION_ID,
+      queries
+    );
     
-    const postsAsPostArray: string[] = [];
-    for(const post of posts.documents){
-      const postId: string = post.activityId;
-      postsAsPostArray.push(postId);
-    }
-    console.log("postsAsPostArray",postsAsPostArray);
-    return NextResponse.json({postsAsPostArray}, {
+    // ActivityPubのNote形式に変換！✨
+    const notes = await convertPostsToNotes(posts.documents, databases, userId);
+    return NextResponse.json({ notes, total: posts.total }, {
       headers: {
+        'Content-Type': 'application/activity+json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, user-agent',
       }
     });
+    
   } catch (error) {
     //console.error("投稿の取得に失敗したよ！💦", error);
     return NextResponse.json(
@@ -246,3 +228,100 @@ export async function GET(request: Request) {
     );
   }
 }
+
+
+/**
+ * 投稿をActivityPubのNote形式に変換する関数！✨
+ */
+const convertPostsToNotes = async (posts: any[], databases: any, userId: string ) => {
+  
+  const notes :ActivityPubNote[] = [];
+  const actors :any[] = [];
+  try{
+  for (const post of posts) {
+    if(post.attributedTo){
+      if(!actors.find((actor) => actor.id === post.attributedTo)){
+        const {documents : [actorDocument]} = await databases.listDocuments(
+          ENV.DATABASE_ID,
+          ENV.ACTORS_COLLECTION_ID,
+          [Query.equal("actorId", post.attributedTo)]
+        );
+        const actor = {
+          "@context": "https://www.w3.org/ns/activitystreams",
+          "type": "Person",
+          "id": actorDocument.actorId,
+          "preferredUsername": actorDocument.preferredUsername,
+          "displayName": actorDocument.displayName,
+          "followers": actorDocument.actorId + "/followers",
+          "following": actorDocument.actorId + "/following",
+          "inbox": actorDocument.actorId + "/inbox",
+          "outbox": actorDocument.actorId + "/outbox",
+          "publicKey": {
+            "id": actorDocument.actorId + "#main-key",
+            "owner": actorDocument.actorId,
+            "publicKeyPem": actorDocument.publicKey,
+          },
+          "icon":{
+            "type": "Image",
+            "url": actorDocument.avatarUrl,
+          }
+        }
+        actors.push(actor);
+      }
+    }
+    const {total: totalLikes} = await databases.listDocuments(
+      ENV.DATABASE_ID,
+      process.env.APPWRITE_LIKES_COLLECTION_ID || "",
+      [Query.equal("object", post.activityId)]
+    );
+    let isLiked = false;
+    if(userId){
+      //console.log("userId", userId);
+      //console.log("post.activityId", post.activityId);
+      const {total: totalIsLiked} = await databases.listDocuments(
+        ENV.DATABASE_ID,
+        process.env.APPWRITE_LIKES_COLLECTION_ID || "",
+        [Query.equal("object", post.activityId), Query.equal("actor", userId)]
+      );
+      //console.log("totalIsLiked", totalIsLiked);
+      isLiked = totalIsLiked > 0;
+    }
+    const note :ActivityPubNote = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      "type": "Note",
+      "id": post.activityId,
+      "attributedTo":  post.attributedTo,
+      "content": post.content,
+      "published": post.published || post.$createdAt,
+      "url": post.activityId,
+      "to": post.to,
+      "cc": post.cc,
+      "inReplyTo": post.inReplyTo,
+      "attachment": post.attachment,
+      "likes": {
+        "totalItems": totalLikes || 0,
+        "first": post.activityId + "/likes?page=1",
+        "last": post.activityId + "/likes?page=" + Math.ceil(totalLikes / 20),
+      },
+      "replies": {
+        "totalItems": post.replies?.totalItems || 0,
+        "first": post.activityId + "/replies?page=1",
+        "last": post.activityId + "/replies?page=" + Math.ceil(post.replies?.totalItems / 20),
+      },
+      "repost": {
+        "totalItems": post.repost?.totalItems || 0,
+        "first": post.activityId + "/repost?page=1",
+        "last": post.activityId + "/repost?page=" + Math.ceil(post.repost?.totalItems / 20),
+      },
+      "_isLiked": isLiked,
+      "_user": actors.find((actor) => actor.id === post.attributedTo) || null,
+    }
+    notes.push(note);
+    }
+      //console.log("notes", notes);
+    return notes;
+  } catch (error) {
+    console.error("投稿の変換に失敗したよ！💦", error);
+    return [];
+  }
+};

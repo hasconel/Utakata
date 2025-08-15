@@ -1,214 +1,65 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState,  } from "react";
 import PostForm from "@/components/features/post/form/PostForm";
 import PostCard from "@/components/features/post/card/PostCard";
 import Alert from "@/components/ui/Alert";
-import { useTimeline } from "@/hooks/api/useApi";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { ActivityPubImage } from "@/types/activitypub/collections";
+import { ActivityPubNote } from "@/types/activitypub";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId, Actor as ActorType } from "@/lib/appwrite/database";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { usePostCache } from "@/hooks/post/usePostCache";
 
-// カスタムフック: プルリフレッシュ機能
-const usePullToRefresh = (onRefresh: () => Promise<void>) => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [startY, setStartY] = useState(0);
-  const { invalidatePostCache } = usePostCache();
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setStartY(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-    
-    if (diff > 50 && window.scrollY === 0 && !isRefreshing) {
-      setIsRefreshing(true);
-      
-      // プルリフレッシュ時にキャッシュ無効化
-      //console.log('📱 プルリフレッシュ: キャッシュ無効化 + タイムライン更新');
-      invalidatePostCache('update');
-      
-      onRefresh().finally(() => {
-        setIsRefreshing(false);
-      });
-    }
-  };
-
-  return {
-    isRefreshing,
-    handleTouchStart,
-    handleTouchMove
-  };
-};
 
 // カスタムフック: タイムライン管理
 const useTimelineManager = () => {
-  const [fetchMore, setFetchMore] = useState<boolean>(false);
-  const [offset, setOffset] = useState<number>(0);
-  const [allPosts, setAllPosts] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<any>(null);
-  const { invalidatePostCache } = usePostCache();
-  
-  // 直接fetchする関数
-  const fetchPosts = useCallback(async (currentOffset: number = 0, isRefresh: boolean = false) => {
+  const [posts, setPosts] = useState<ActivityPubNote[]>([]);
+  const [offset, setOffset] = useState<number>(10);
+  const [fetchMore, setFetchMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+
+  const fetchPosts = async (offset: number) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      const url = new URL('/api/posts', window.location.origin);
-      url.searchParams.set('limit', '10');
-      url.searchParams.set('offset', currentOffset.toString());
-      
-      //  console.log('📡 投稿を直接fetch中:', url.toString());
-      
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // キャッシュを使わない
-        cache: 'no-store'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const posts: string[] = data.postsAsPostArray || [];
-      
-      //console.log('✅ 投稿fetch完了:', posts.length, '件');
-      
-      if (isRefresh) {
-        // リフレッシュの場合は既存の投稿を置き換え
-        setAllPosts(posts);
-      } else {
-        // 追加読み込みの場合は既存の投稿に追加
-        setAllPosts(prevPosts => {
-          const existingPostsSet = new Set(prevPosts);
-          const newPosts = posts.filter((post: string) => !existingPostsSet.has(post));
-          return [...prevPosts, ...newPosts];
-        });
-      }
-      
-      // 次のページがあるかどうかを判定
-      setFetchMore(posts.length >= 10);
-      
+      const res = await fetch(`/api/posts?limit=10&offset=${offset}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/activity+json",
+        "Accept": "application/activity+json",
+      },
+    });
+    const data = await res.json();
+    const sortedPosts = data.notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+    setPosts([...sortedPosts]);
+    setFetchMore(data.total > offset + data.notes.length);
+    setIsLoading(false);
     } catch (error) {
-      //console.error('❌ 投稿fetchエラー:', error);
-      setError(error);
+      setError(error as ApiError);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
+    fetchPosts(0);
   }, []);
 
-  useEffect(() => {
-    if (!Array.isArray(allPosts)) return;
-    
-    const hasMorePosts = allPosts.length >= 10;
-    setFetchMore(hasMorePosts);
-    
-    // このフックではキャッシュを使わないため、offsetは常に0
-    // キャッシュを使わないため、postsの内容は常に最新
-  }, [allPosts]);
+  const handleLoadMore = async () => {
+    fetchPosts(offset); 
+    setOffset(offset + 10);
+  }
 
-  // 初期データの読み込み
-  useEffect(() => {
-    //console.log('🚀 初期データ読み込み開始');
-    fetchPosts(0, true);
-  }, [fetchPosts]);
-
-  // useRefで安定した参照を確保
-  const refetchRef = useRef(fetchPosts);
-  const handleTimelineReloadRef = useRef(fetchPosts);
-  
-  useEffect(() => {
-    refetchRef.current = fetchPosts;
-  }, [fetchPosts]);
-  
-  useEffect(() => {
-    handleTimelineReloadRef.current = fetchPosts;
-  }, [fetchPosts]);
-
-  // キャッシュ無効化イベントのリスナーを追加
-  useEffect(() => {
-    //console.log('🔧 イベントリスナーを登録中...');
-    
-    const handleCacheInvalidated = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      //console.log('🔄 キャッシュ無効化イベントを受信:', customEvent.detail);
-      
-      // 投稿の作成・更新・削除時にタイムラインを再読み込み
-      if (customEvent.detail.action === 'create' || customEvent.detail.action === 'update' || customEvent.detail.action === 'delete') {
-        //console.log('📱 キャッシュ無効化によるタイムライン更新（無限ループ防止）');
-        
-        // キャッシュ無効化をスキップしてタイムラインを更新
-        handleTimelineReloadRef.current(0, true); // offsetを0にしてリフレッシュ
-      }
-    };
-
-    // カスタムイベントリスナーを追加
-    window.addEventListener('postCacheInvalidated', handleCacheInvalidated as EventListener);
-    
-    // 既存の投稿作成イベントリスナーも維持
-    const handlePostCreated = () => {
-      //console.log('✨ 投稿作成イベントを受信');
-      handleTimelineReloadRef.current(0, true); // offsetを0にしてリフレッシュ
-    };
-    window.addEventListener('postCreated', handlePostCreated);
-
-    // 投稿削除イベントリスナーを追加
-    const handlePostDeleted = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      //console.log('🗑️ 投稿削除イベントを受信:', customEvent.detail);
-      const deletedPostId = customEvent.detail.postId;
-      
-      // 削除された投稿を一覧から除外
-      setAllPosts(prevPosts => {
-        const filteredPosts = prevPosts.filter(post => !post.includes(deletedPostId));
-        //console.log(`🗑️ 投稿を一覧から除外: ${deletedPostId}`);
-        return filteredPosts;
-      });
-      
-      // 削除後は最新データを取得
-      handleTimelineReloadRef.current(0, true);
-    };
-    window.addEventListener('postDeleted', handlePostDeleted);
-
-    //console.log('🔧 イベントリスナー登録完了');
-
-    // クリーンアップ
-    return () => {
-      //console.log('🧹 イベントリスナーをクリーンアップ中...');
-      window.removeEventListener('postCacheInvalidated', handleCacheInvalidated as EventListener);
-      window.removeEventListener('postCreated', handlePostCreated);
-      window.removeEventListener('postDeleted', handlePostDeleted);
-      //console.log('🧹 イベントリスナークリーンアップ完了');
-    };
-  }, []); // handleTimelineReloadを依存関係から削除
-
-  const handleLoadMore = useCallback(async () => {
-    handleTimelineReloadRef.current(offset, false); // offsetを増やして追加読み込み
-  }, [offset]);
-
-  return {
-    allPosts,
-    fetchMore,
-    isLoading,
-    error,
-    handleTimelineReload: handleTimelineReloadRef.current,
-    handleLoadMore,
-    refetch: fetchPosts // このフックではrefetchはfetchPostsを直接呼び出す
+  const handleTimelineReload = async () => {
+    fetchPosts(0);
+    setOffset(10);
   };
-};
 
+  return { posts, fetchMore, isLoading, error, handleLoadMore, handleTimelineReload };
+}
 // カスタムフック: ユーザー認証とアクター情報
 const useUserAndActor = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -230,19 +81,6 @@ const useUserAndActor = () => {
 
   return { user, isAuthLoading, actor };
 };
-
-// コンポーネント: プルリフレッシュインジケーター（メモ化）
-const PullRefreshIndicator = React.memo(({ isRefreshing }: { isRefreshing: boolean }) => {
-  if (!isRefreshing) return null;
-
-  return (
-    <div className="fixed top-0 left-0 right-0 flex justify-center z-50">
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-4 py-2 rounded-b-2xl shadow-lg border border-purple-100 dark:border-purple-900">
-        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    </div>
-  );
-});
 
 // コンポーネント: タイムラインヘッダー
 const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => {
@@ -273,22 +111,13 @@ const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => {
 
 // コンポーネント: もっと見るボタン
 const LoadMoreButton = ({ onLoadMore }: { onLoadMore: () => void }) => {
-  const { invalidatePostCache } = usePostCache();
-  
-  const handleLoadMoreWithCacheInvalidation = () => {
-    //console.log('📚 もっと見るボタンクリック: キャッシュ無効化 + 追加読み込み');
-    
-    // 投稿関連のキャッシュを無効化
-    invalidatePostCache('update');
-    
     // 追加の投稿を読み込み
     onLoadMore();
-  };
 
   return (
     <div className="flex justify-center mt-8">
       <button
-        onClick={handleLoadMoreWithCacheInvalidation}
+        onClick={onLoadMore}
         className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
       >
         <span className="flex items-center">
@@ -321,7 +150,7 @@ const PostList = ({
   setModalImages, 
   setModalIndex 
 }: {
-  posts: string[];
+  posts: ActivityPubNote[]; // ActivityPubのNote形式の配列
   setIsModalOpen: (open: boolean) => void;
   isModalOpen: boolean;
   setModalImages: (images: ActivityPubImage[]) => void;
@@ -330,7 +159,7 @@ const PostList = ({
   <div className="space-y-4">
     {Array.isArray(posts) && posts.map((post) => (
       <PostCard 
-        key={post} 
+        key={post.id} // $idを使用
         post={post} 
         setIsModalOpen={setIsModalOpen} 
         isModalOpen={isModalOpen} 
@@ -345,10 +174,10 @@ const PostList = ({
 const TimelineContent = ({ 
   isLoading, 
   posts, 
-  error 
+  error,
 }: {
   isLoading: boolean | null;
-  posts: string[];
+  posts: ActivityPubNote[]; // ActivityPubのNote形式の配列
   error: ApiError | null;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -401,30 +230,18 @@ const TimelineContent = ({
  */
 export default function TimelinePage() {
   const { actor } = useUserAndActor();
-  const { 
-    allPosts, 
-    fetchMore, 
-    isLoading, 
-    error, 
-    handleTimelineReload, 
-    handleLoadMore,  
-  } = useTimelineManager();
-  
-  const { isRefreshing, handleTouchStart, handleTouchMove } = usePullToRefresh(handleTimelineReload);
-
+  const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager();
+  const [posts, setPosts] = useState<ActivityPubNote[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   // 投稿作成イベントのリスナー！✨
   useEffect(() => {
-    const handlePostCreated = () => {
-      //console.log('✨ 投稿作成イベントを受信（無限ループ防止）');
-      
-      // キャッシュ無効化をスキップしてタイムラインを更新
-      handleTimelineReload(0, true); // offsetを0にしてリフレッシュ
-    };
-
-    window.addEventListener('postCreated', handlePostCreated);
-    return () => window.removeEventListener('postCreated', handlePostCreated);
-  }, [handleTimelineReload]); // handleTimelineReloadを依存関係に追加
-
+    const newPosts = nextPosts.filter((post: any) => !posts.some((p: any) => p.id === post.id)).map((post: any) => ({
+      ...post,
+      published: post.published ,
+    }));
+    setPosts([...posts, ...newPosts]);
+    setIsLoading(false);
+  }, [nextPosts]);
   return (
     <>
       <div 
@@ -433,19 +250,15 @@ export default function TimelinePage() {
       />
       <div 
         className="max-w-2xl mx-auto md:px-4"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
       >
-        <PullRefreshIndicator isRefreshing={isRefreshing} />
-        
         <TimelineHeader onRefresh={handleTimelineReload} />
         
         <TimelineContent 
           isLoading={isLoading} 
-          posts={allPosts} 
+          posts={posts} 
           error={error}
         />
-        
+        {isLoadingNextPosts && <LoadingSkeleton />}
         {fetchMore && <LoadMoreButton onLoadMore={handleLoadMore} />}
       </div>
     </>
