@@ -3,7 +3,7 @@
   "short_name": "Utakata",
   "description": "キラキラな思いをシェアするSNS！ActivityPubで世界中のSNSと繋がって、キミの瞬間を自由にシェア！",
   "start_url": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#faf5ff",
   "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
@@ -17,50 +17,9 @@
       "src": "/favicon.ico",
       "sizes": "32x32",
       "type": "image/x-icon"
-    },
-    {
-      "src": "/favicon.ico",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.ico",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
     }
   ],
   "categories": ["social", "communication", "entertainment"],
   "lang": "ja",
-  "dir": "ltr",
-  "scope": "/",
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "shortcuts": [
-    {
-      "name": "タイムライン",
-      "short_name": "TL",
-      "description": "最新の投稿を確認",
-      "url": "/timeline",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "96x96"
-        }
-      ]
-    },
-    {
-      "name": "投稿",
-      "short_name": "投稿",
-      "description": "新しい投稿を作成",
-      "url": "/timeline",
-      "icons": [
-        {
-          "src": "/favicon.ico",
-          "sizes": "96x96"
-        }
-      ]
-    }
-  ]
+  "dir": "ltr"
 }

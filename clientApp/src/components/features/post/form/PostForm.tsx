@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImagePlus, X, ToggleRight, ToggleLeft, Loader2 } from "lucide-react";
 import { ActivityPubImage } from "@/types/activitypub/collections";
-import { usePostCache } from "@/hooks/post/usePostCache"; // キャッシュフックを追加
 
 /**
  * 投稿フォームのプロパティ！✨
@@ -19,6 +18,7 @@ interface PostFormProps {
   post?: { activityId: string; preferredUsername: string; attributedTo: string };
   onClose?: () => void;
   isReplyDisplay?: boolean;
+  refreshTimeline?: () => void;
 }
 
 /**
@@ -39,7 +39,7 @@ interface PreviewUrl {
  * 新しい投稿やリプライを作成できるよ！💖
  * 画像も追加できるし、公開範囲も選べるよ！🎀
  */
-export default function PostForm({ post, onClose, isReplyDisplay = true }: PostFormProps) {
+export default function PostForm({ post, onClose, isReplyDisplay = true ,refreshTimeline}: PostFormProps) {
   // 投稿内容の状態！✨
   const [content, setContent] = useState(post ? `@${post.preferredUsername} ` : "");
   // 公開範囲の状態！✨
@@ -60,8 +60,6 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
   const isReply = !!post;
   // ファイル入力の参照！✨
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // キャッシュフック！✨
-  const { invalidatePostCache } = usePostCache();
 
   /**
    * ファイルタイプを判定する関数！✨
@@ -234,12 +232,12 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
       setError(null);
 
       if (isReply && onClose) {
+        refreshTimeline && refreshTimeline();        
         onClose();
       } else {
         // タイムラインを更新するよ！💖
-        window.dispatchEvent(new CustomEvent('postCreated'));
+        refreshTimeline && refreshTimeline();
         router.refresh();
-        invalidatePostCache('create'); // 投稿作成時のキャッシュ無効化
       }
     } catch (err: any) {
       console.error("投稿エラー:", err);

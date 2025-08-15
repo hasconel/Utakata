@@ -11,7 +11,6 @@ import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId, Actor as ActorType } from "@/lib/appwrite/database";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { usePostCache } from "@/hooks/post/usePostCache";
 
 
 // カスタムフック: タイムライン管理
@@ -45,7 +44,10 @@ const useTimelineManager = () => {
   }
 
   useEffect(() => {
-    fetchPosts(0);
+    if (offset === 10) {
+      fetchPosts(0);
+    }
+    return () => setOffset(10);
   }, []);
 
   const handleLoadMore = async () => {
@@ -84,36 +86,21 @@ const useUserAndActor = () => {
 
 // コンポーネント: タイムラインヘッダー
 const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => {
-  const { invalidatePostCache } = usePostCache();
-  
-  const handleRefreshWithCacheInvalidation = () => {
-    //console.log('🔄 タイムラインヘッダークリック: キャッシュ無効化 + タイムライン更新');
-    
-    // 投稿関連のキャッシュを無効化
-    invalidatePostCache('update');
-    
-    // タイムラインを更新
-    onRefresh();
-  };
-
   return (
     <div className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/40 dark:via-gray-700/80 dark:to-gray-900/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
       <button 
         className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4 hover:scale-105 transition-transform duration-200" 
-        onClick={handleRefreshWithCacheInvalidation}
+        onClick={onRefresh}
       >
         タイムライン ✨
       </button>
-      <PostForm />
+      <PostForm refreshTimeline={onRefresh} />
     </div>
   );
 };
 
 // コンポーネント: もっと見るボタン
 const LoadMoreButton = ({ onLoadMore }: { onLoadMore: () => void }) => {
-    // 追加の投稿を読み込み
-    onLoadMore();
-
   return (
     <div className="flex justify-center mt-8">
       <button
@@ -209,9 +196,6 @@ const TimelineContent = ({
         </div>
       )}
       
-      {!posts || posts.length === 0 ? (
-        <EmptyState />
-      ) : (
         <PostList 
           posts={posts}
           setIsModalOpen={setIsModalOpen}
@@ -219,7 +203,6 @@ const TimelineContent = ({
           setModalImages={setModalImages}
           setModalIndex={setModalIndex}
         />
-      )}
     </div>
   );
 };
@@ -232,34 +215,44 @@ export default function TimelinePage() {
   const { actor } = useUserAndActor();
   const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager();
   const [posts, setPosts] = useState<ActivityPubNote[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    setIsLoading(true);
+    setPosts(nextPosts);
+    setIsLoading(false);
+  }, [handleTimelineReload]);
   // 投稿作成イベントのリスナー！✨
   useEffect(() => {
-    const newPosts = nextPosts.filter((post: any) => !posts.some((p: any) => p.id === post.id)).map((post: any) => ({
-      ...post,
-      published: post.published ,
-    }));
-    setPosts([...posts, ...newPosts]);
+
+    console.log(nextPosts.length);
+    console.log(posts.length);
+    setPosts([...posts, ...nextPosts]);
     setIsLoading(false);
+    console.log( "posts.length", posts.length);
   }, [nextPosts]);
-  return (
+  return (  
     <>
       <div 
         className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" 
         style={{backgroundImage: `url(${actor?.backgroundUrl})`}}
       />
       <div 
-        className="max-w-2xl mx-auto md:px-4"
+        className="max-w-2xl mx-auto md:px-4 mt-16 mb-16"
       >
         <TimelineHeader onRefresh={handleTimelineReload} />
-        
+        {posts.length > 0 || !isLoading || !isLoadingNextPosts ? (<>
         <TimelineContent 
           isLoading={isLoading} 
           posts={posts} 
           error={error}
         />
+
         {isLoadingNextPosts && <LoadingSkeleton />}
-        {fetchMore && <LoadMoreButton onLoadMore={handleLoadMore} />}
+        {fetchMore && !isLoadingNextPosts && <LoadMoreButton onLoadMore={handleLoadMore} />}
+        </>
+        ) : (
+          <EmptyState />
+        )}
       </div>
     </>
   );

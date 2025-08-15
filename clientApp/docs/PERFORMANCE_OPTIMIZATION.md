@@ -84,33 +84,7 @@ cache.prefetchOnHover('/api/posts/123', 'medium');
 cache.prefetchImmediate('/api/users/456', 'high');
 ```
 
-### 3. オフライン対応
 
-#### オフラインストレージ
-```typescript
-import { useOfflineManager } from '@/hooks/offline/useOfflineManager';
-
-const offlineManager = useOfflineManager({
-  storage: { maxSize: 2000, defaultTTL: 48 * 60 * 60 * 1000 },
-  queue: { maxSize: 200, maxRetries: 5 },
-  sync: { autoSync: true, syncInterval: 15000 }
-});
-```
-
-**機能:**
-- IndexedDB + LocalStorage
-- 操作キュー管理
-- 自動同期
-- 接続状態監視
-
-#### オフライン操作
-```typescript
-// オフライン操作をキューに追加
-offlineManager.addOfflineOperation('post', 'createPost', postData, 'high');
-
-// オフラインデータを保存
-await offlineManager.saveOfflineData('user_posts', posts, 60000, 'high', 'pending');
-```
 
 ### 4. 最終最適化
 
