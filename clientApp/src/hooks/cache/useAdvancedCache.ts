@@ -200,7 +200,7 @@ export function useAdvancedCache<T>(
     
     if (lowPriorityItems.length > 0) {
       batchRemove(lowPriorityItems);
-      console.log(`Optimized cache: removed ${lowPriorityItems.length} low-priority items`);
+      //console.log(`Optimized cache: removed ${lowPriorityItems.length} low-priority items`);
     }
   }, [intelligentCache, batchRemove]);
 

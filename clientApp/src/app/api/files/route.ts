@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
     const binnaryFile = Buffer.from(file.bin,"base64");  
     const Query = [Permission.write(Role.user(userId)),Permission.delete(Role.user(userId))];
-    console.log("file.visibility",file.visibility);
+    //console.log("file.visibility",file.visibility);
     if(file.visibility === "public"){
       Query.push(Permission.read(Role.any()));
     }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
         InputFile.fromBuffer(binnaryFile,file.name),
         Query
     );
-    console.log("uploadedFile",uploadedFile);
+    //console.log("uploadedFile",uploadedFile);
     const fileUrl = process.env.NEXT_PUBLIC_DOMAIN! + "/files/" + uploadedFile.$id ;
     
     const uploadedFiles : ActivityPubImage = {

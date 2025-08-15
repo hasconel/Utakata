@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const page = url.searchParams.get("page") || "1";
         const { id } = await params;
         
-        console.log(`Likes取得開始: postId=${id}, page=${page}`);
+        //console.log(`Likes取得開始: postId=${id}, page=${page}`);
         
         // 環境変数のチェック
         if (!process.env.APPWRITE_DATABASE_ID || !process.env.APPWRITE_LIKES_COLLECTION_ID) {
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             "totalItems": likes.total,
         };
         
-        console.log("レスポンス準備完了:", JSON.stringify(orderedCollectionPage, null, 2));
+        //console.log("レスポンス準備完了:", JSON.stringify(orderedCollectionPage, null, 2));
         
         return NextResponse.json(orderedCollectionPage, {
             headers: {

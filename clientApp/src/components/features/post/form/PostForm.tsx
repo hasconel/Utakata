@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImagePlus, X, ToggleRight, ToggleLeft, Loader2 } from "lucide-react";
 import { ActivityPubImage } from "@/types/activitypub/collections";
+import { usePostCache } from "@/hooks/post/usePostCache"; // キャッシュフックを追加
 
 /**
  * 投稿フォームのプロパティ！✨
@@ -59,6 +60,8 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
   const isReply = !!post;
   // ファイル入力の参照！✨
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // キャッシュフック！✨
+  const { invalidatePostCache } = usePostCache();
 
   /**
    * ファイルタイプを判定する関数！✨
@@ -150,7 +153,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
    */
   const uploadImage = async (image: File ,visibility: "public" | "followers"): Promise<ActivityPubImage> => {
     const base64ImageString = await fileToBase64(image);
-    console.log("visibility", visibility);
+    //console.log("visibility", visibility);
     const response = await fetch("/api/files", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -220,7 +223,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.log(errorData);
+        //console.log(errorData);
         throw new Error(errorData.error || `${isReply ? "リプライ" : "投稿"}に失敗しました💦`);
       }
 
@@ -236,6 +239,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true }: PostF
         // タイムラインを更新するよ！💖
         window.dispatchEvent(new CustomEvent('postCreated'));
         router.refresh();
+        invalidatePostCache('create'); // 投稿作成時のキャッシュ無効化
       }
     } catch (err: any) {
       console.error("投稿エラー:", err);

@@ -102,17 +102,48 @@ const LikedUsersModal = ({
 };
 
 // 削除ボタンのコンポーネント！✨
-const DeleteButton = ({ postId }: { postId: string }) => {
+const DeleteButton = ({ postId, onDelete }: { postId: string; onDelete?: () => void }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { invalidatePostCache } = usePostCache();
 
   const handleDelete = async () => {
+    if (isDeleting) return;
+    
+    setIsDeleting(true);
+    
     try {
-      await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/posts/${postId}`, { 
+        method: 'DELETE' 
+      });
+      
+      if (!response.ok) {
+        throw new Error('投稿の削除に失敗しました');
+      }
+      
+      // キャッシュを無効化
+      invalidatePostCache('delete', postId);
+      
+      // 削除完了の処理
       setIsDeleteModalOpen(false);
-      window.location.reload();
+      
+      // 親コンポーネントに削除完了を通知
+      if (onDelete) {
+        onDelete();
+      } else {
+        // デフォルトの処理：モーダルを閉じる
+        window.dispatchEvent(new CustomEvent('postDeleted', { 
+          detail: { postId } 
+        }));
+      }
+      
+      //console.log('🗑️ 投稿削除完了:', postId);
     } catch (error) {
-      console.error('削除に失敗したよ！💦', error);
+      //console.error('削除に失敗したよ！💦', error);
+      alert('投稿の削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -122,29 +153,38 @@ const DeleteButton = ({ postId }: { postId: string }) => {
         onClick={() => setIsDeleteModalOpen(true)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group relative px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-red-200 dark:border-red-800"
+        disabled={isDeleting}
+        className="group relative px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-red-200 dark:border-red-800 disabled:opacity-50"
       >
         <div className="flex items-center gap-2">
-          <span className={`transition-transform duration-200 ${isHovered ? 'animate-bounce' : ''}`}>
-            {isHovered ? '💔' : '🗑️'}
+          <span className={`transition-transform duration-200 ${isHovered ? 'animate-bounce' : ''} ${isDeleting ? 'animate-spin' : ''}`}>
+            {isDeleting ? '🔄' : (isHovered ? '💔' : '🗑️')}
           </span>
-          <span className="font-medium">削除する</span>
+          <span className="font-medium">
+            {isDeleting ? '削除中...' : '削除する'}
+          </span>
         </div>
       </button>
+      
       {isDeleteModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
             <h3 className="text-lg font-bold mb-4">投稿を削除する？</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              この投稿を削除しますか？この操作は取り消せません。
+            </p>
             <div className="flex gap-4">
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                削除する
+                {isDeleting ? '削除中...' : '削除する'}
               </button>
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 キャンセル
               </button>
@@ -155,6 +195,38 @@ const DeleteButton = ({ postId }: { postId: string }) => {
     </>
   );
 };
+
+// 404エラー表示コンポーネント
+const NotFoundError = ({ postId }: { postId: string }) => (
+  <div className="flex flex-col items-center justify-center min-h-[60vh] bg-white dark:bg-gray-800 rounded-2xl p-8">
+    <div className="text-6xl mb-6 animate-bounce">💫</div>
+    <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+      投稿が見つかりません
+    </h1>
+    <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 text-center">
+      お探しの投稿は存在しないか、削除された可能性があります。
+    </p>
+    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 mb-6">
+      <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+        {postId}
+      </p>
+    </div>
+    <div className="flex gap-4">
+      <button
+        onClick={() => window.history.back()}
+        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+      >
+        前のページに戻る
+      </button>
+      <button
+        onClick={() => window.location.href = "/timeline"}
+        className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+      >
+        タイムラインに戻る
+      </button>
+    </div>
+  </div>
+);
 
 // 投稿詳細カードのメインコンポーネント！✨
 export default function PostDetailCard({
@@ -194,19 +266,39 @@ export default function PostDetailCard({
       setIsPostLoading(true);
       try {
         const data = await getPostWithActor(post);
+        
+        // データが取得できない場合は404エラーとして扱う
+        if (!data || !data.post) {
+          //console.log("❌ 投稿が見つかりません:", post);
+          setPostData(null);
+          return;
+        }
+        
         setPostData(data);
+        
         if(post.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)) {
-          checkLike(post).then((res) => {
-            setIsPostLiked(res.isLiked);
-            setLikeCount(res.likeCount);
-          });
+          try {
+            const likeResult = await checkLike(post);
+            setIsPostLiked(likeResult.isLiked);
+            setLikeCount(likeResult.likeCount);
+          } catch (error) {
+            //console.error("❌ Like状態の取得に失敗:", error);
+            // エラーが発生しても投稿の表示は継続
+          }
         }
       } catch (error) {
-        console.error("Post取得エラー:", error);
+        //console.error("Post取得エラー:", error);
+        setPostData(null);
       } finally {
         setIsPostLoading(false);
       }
     };
+
+    // 404エラーの場合は再読み込みをスキップ
+    if (postData === null && !isPostLoading) {
+      //console.log("🚫 404エラーのため、再読み込みをスキップ");
+      return;
+    }
 
     fetchPost();
   }, [post, getPostWithActor]);
@@ -245,13 +337,13 @@ export default function PostDetailCard({
   // 投稿データとアクターデータが読み込まれていない場合はローディング中を表示
   if(isPostLoading){
     return <div className="flex items-center justify-center h-40">
-      <Loader2 className="w-6 h-6 animate-spin" />
+      <Loader2 className="w-6 w-6 animate-spin" />
     </div>
   }
-  if(!postData?.post?.published ){
-    return <div className="flex items-center justify-center h-40">
-      <Loader2 className="w-6 h-6 animate-spin" />
-    </div>
+  
+  // 投稿が見つからない場合は404エラーを表示
+  if(!postData || !postData.post || !postData.post.published){
+    return <NotFoundError postId={post} />;
   }
   return (
     <div >
@@ -328,7 +420,20 @@ export default function PostDetailCard({
               onClick={() => setIsLikedUsersOpen(true)} 
             />
           </div>
-          {canDelete && <DeleteButton postId={postData?.post?.id.split("/").pop() || ""} />}
+          {canDelete && (
+            <DeleteButton 
+              postId={postData?.post?.id.split("/").pop() || ""} 
+              onDelete={() => {
+                // 投稿削除完了時の処理
+                setIsDetailOpen(false);
+                setIsModalOpen(false);
+                // 投稿一覧から削除された投稿を除外
+                window.dispatchEvent(new CustomEvent('postDeleted', { 
+                  detail: { postId: postData?.post?.id } 
+                }));
+              }}
+            />
+          )}
         </div>
 
         <LikedUsersModal 

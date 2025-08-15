@@ -23,7 +23,7 @@ export default function ThemeToggle() {
   const CurrentIcon = currentTheme.icon;
 
   const handleThemeChange = (newTheme: Theme) => {
-    console.log("テーマを変更します:", { from: theme, to: newTheme });
+    //console.log("テーマを変更します:", { from: theme, to: newTheme });
     setTheme(newTheme);
     setIsOpen(false);
   };

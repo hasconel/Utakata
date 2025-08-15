@@ -53,7 +53,9 @@ export function usePostCache() {
       });
 
       if (!response.ok) {
-        throw new Error(`Post取得エラー: ${response.status}`);
+        // 404の場合はnullを返す
+        
+        return null;
       }
       const post = await response.json();
       // Actor情報を取得（キャッシュ優先）
@@ -167,6 +169,65 @@ export function usePostCache() {
     removeCachedPost(postUrl);
   }, []);
 
+  // 投稿の追加・更新・削除時の包括的なキャッシュ無効化
+  const invalidatePostCache = useCallback((action: 'create' | 'update' | 'delete', postUrl?: string) => {
+    //console.log(`🔄 投稿キャッシュ無効化: ${action}`, postUrl);
+    
+    if (action === 'delete' && postUrl) {
+      // 削除時は特定の投稿のみ無効化
+      removeCachedPost(postUrl);
+    } else {
+      // 作成・更新時は関連するキャッシュを包括的に無効化
+      
+      // 1. 投稿一覧のキャッシュを無効化
+      const timelineCacheKeys = [
+        '/api/posts',
+        '/timeline',
+        '/[user]',
+        '/search'
+      ];
+      
+      timelineCacheKeys.forEach(key => {
+        // ローカルストレージのキャッシュをクリア
+        if (typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage);
+          keys.forEach(storageKey => {
+            if (storageKey.includes(key) || storageKey.includes('posts')) {
+              localStorage.removeItem(storageKey);
+              //console.log(`🗑️ キャッシュ削除: ${storageKey}`);
+            }
+          });
+        }
+      });
+      
+      // 2. 関連する投稿のキャッシュも無効化
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage);
+        keys.forEach(storageKey => {
+          if (storageKey.includes('post') || storageKey.includes('actor')) {
+            localStorage.removeItem(storageKey);
+            //console.log(`🗑️ 関連キャッシュ削除: ${storageKey}`);
+          }
+        });
+      }
+      
+      // 3. メモリキャッシュもクリア
+      if (typeof window !== 'undefined' && (window as any).__POST_CACHE__) {
+        (window as any).__POST_CACHE__ = {};
+        //console.log('🧠 メモリキャッシュクリア完了');
+      }
+    }
+    
+    // 4. 強制的な再レンダリングをトリガー
+    if (typeof window !== 'undefined') {
+      // カスタムイベントを発火して、関連コンポーネントにキャッシュ無効化を通知
+      window.dispatchEvent(new CustomEvent('postCacheInvalidated', {
+        detail: { action, postUrl }
+      }));
+      //console.log('📡 キャッシュ無効化イベント発火');
+    }
+  }, []);
+
   // 特定のPostがローディング中かチェック
   const isLoading = useCallback((postUrl: string) => {
     return loadingPosts.has(postUrl);
@@ -176,6 +237,7 @@ export function usePostCache() {
     getPostWithActor,
     getPostsWithActors,
     removePost,
+    invalidatePostCache, // 新しい関数を追加
     isLoading,
   };
 } 

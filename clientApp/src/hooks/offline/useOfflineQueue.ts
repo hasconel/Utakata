@@ -65,13 +65,13 @@ export function useOfflineQueue(
   useEffect(() => {
     const handleOnline = () => {
       isOnlineRef.current = true;
-      console.log('Network is online, starting sync...');
+      //console.log('Network is online, starting sync...');
       processQueue();
     };
 
     const handleOffline = () => {
       isOnlineRef.current = false;
-      console.log('Network is offline, operations will be queued');
+      //console.log('Network is offline, operations will be queued');
       if (syncTimerRef.current) {
         clearTimeout(syncTimerRef.current);
       }
@@ -115,7 +115,7 @@ export function useOfflineQueue(
 
     queueRef.current.set(id, item);
     updateStats();
-    console.log(`Added to offline queue: ${action}`);
+    //console.log(`Added to offline queue: ${action}`);
 
     // オンラインの場合は即座に処理を試行
     if (isOnlineRef.current) {
@@ -129,7 +129,7 @@ export function useOfflineQueue(
   const removeFromQueue = useCallback((id: string) => {
     if (queueRef.current.delete(id)) {
       updateStats();
-      console.log(`Removed from queue: ${id}`);
+      //console.log(`Removed from queue: ${id}`);
     }
   }, []);
 
@@ -137,7 +137,7 @@ export function useOfflineQueue(
   const clearQueue = useCallback(() => {
     queueRef.current.clear();
     updateStats();
-    console.log('Queue cleared');
+    //console.log('Queue cleared');
   }, []);
 
   // キューアイテムの状態を更新
@@ -188,14 +188,14 @@ export function useOfflineQueue(
       
       if (success) {
         updateItemStatus(item.id, 'completed');
-        console.log(`Queue item processed successfully: ${item.action}`);
+        //console.log(`Queue item processed successfully: ${item.action}`);
         return true;
       } else {
         throw new Error('Action execution failed');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Failed to process queue item: ${item.action}`, error);
+      //console.error(`Failed to process queue item: ${item.action}`, error);
       
       if (item.retryCount < item.maxRetries) {
         incrementRetryCount(item.id);
@@ -266,7 +266,7 @@ export function useOfflineQueue(
     }
 
     setIsProcessing(true);
-    console.log('Processing offline queue...');
+    //console.log('Processing offline queue...');
 
     try {
       const pendingItems = Array.from(queueRef.current.values())
@@ -292,9 +292,9 @@ export function useOfflineQueue(
         }
       }
 
-      console.log('Queue processing completed');
+      //console.log('Queue processing completed');
     } catch (error) {
-      console.error('Queue processing failed:', error);
+      //console.error('Queue processing failed:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -339,7 +339,7 @@ export function useOfflineQueue(
     });
 
     updateStats();
-    console.log(`Retrying ${failedItems.length} failed items`);
+    //console.log(`Retrying ${failedItems.length} failed items`);
 
     if (isOnlineRef.current) {
       processQueue();

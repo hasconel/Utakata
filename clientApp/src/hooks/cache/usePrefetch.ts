@@ -54,10 +54,10 @@ export function usePrefetch(config: Partial<PrefetchConfig> = {}) {
 
       if (response.ok) {
         task.status = 'completed';
-        console.log(`Prefetch completed: ${task.url}`);
+        //console.log(`Prefetch completed: ${task.url}`);
       } else {
         task.status = 'failed';
-        console.warn(`Prefetch failed: ${task.url} - ${response.status}`);
+        //console.warn(`Prefetch failed: ${task.url} - ${response.status}`);
       }
     } catch (error) {
       task.status = 'failed';

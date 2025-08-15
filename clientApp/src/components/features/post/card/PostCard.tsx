@@ -121,6 +121,8 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
   setModalImages: (images: ActivityPubImage[]) => void, 
   setModalIndex: (index: number) => void 
 }) => {
+  //console.log(`🔧 PostCard レンダリング: ${post}`);
+  
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [, setReplyPosts] = useState<any[]>([]);
@@ -139,13 +141,19 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
       try {
         const data = await getPostWithActor(post);
         setPostData(data);
-      if(post.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)) {
-      checkLike(post).then((res) => {
-        setIsPostLiked(res.isLiked);
-        setLikeCount(res.likeCount);
-        //console.log("isPostLiked", isPostLiked, "likeCount", likeCount);
-      });
-      }
+        
+        // 内部投稿の場合のみcheckLikeを実行
+        if (post.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)) {
+          try {
+            const likeResult = await checkLike(post);
+            setIsPostLiked(likeResult.isLiked);
+            setLikeCount(likeResult.likeCount);
+            //console.log("✅ Like状態を取得:", likeResult);
+          } catch (error) {
+            console.error("❌ Like状態の取得に失敗:", error);
+            // エラーが発生しても投稿の表示は継続
+          }
+        }
       } catch (error) {
         console.error("Post取得エラー:", error);
       } finally {
@@ -154,7 +162,7 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
     };
 
     fetchPost();
-  }, [post, getPostWithActor]);
+  }, [post]); // getPostWithActorを依存関係から削除
 
   useEffect(() => {
     if(postData){
@@ -173,7 +181,17 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
   }, [postData]);
 
   function ReplyPosts() {
-    getReplyPost(postData?.post?.inReplyTo || "").then((data) => setReplyPosts(data));
+    // 既に取得済みの場合はスキップ
+    if (postData?.post?.inReplyTo && !postData?.post?.inReplyTo.includes("undefined")) {
+      getReplyPost(postData.post.inReplyTo).then((data) => {
+        if (data && data.length > 0) {
+          setReplyPosts(data);
+          //console.log("✅ リプライ投稿を取得:", data.length, "件");
+        }
+      }).catch((error) => {
+        console.error("❌ リプライ投稿の取得に失敗:", error);
+      });
+    }
   }
   
   if(isPostLoading){
@@ -186,7 +204,13 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
         <div className="flex flex-col gap-2 w-full">
       <div 
         className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-white/80 dark:border-gray-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0 w-full"
-        onClick={() => {setIsDetailOpen(true); {postData?.post?.replyCount > 0 ? ReplyPosts() : ""}}}
+        onClick={() => {
+          setIsDetailOpen(true);
+          // リプライがある場合のみReplyPostsを実行
+          if (postData?.post?.replyCount > 0 && postData?.post?.inReplyTo) {
+            ReplyPosts();
+          }
+        }}
       >
         {/* キラキラな背景エフェクト！✨ */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-pink-500/0 to-purple-500/0 group-hover:from-purple-500/5 group-hover:via-pink-500/5 group-hover:to-purple-500/5 transition-all duration-500" />
@@ -259,9 +283,9 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
             </button>
               <LikeButton 
                 postId={post} 
-                initialLikes={likeCount} 
                 isPostLiked={isPostLiked} 
-                actorInbox={postData?.actor?.inbox || ""} 
+                initialLikes={likeCount} 
+                actorInbox={postData?.actor?.inbox || ""}
                 onLikeChange={setIsPostLiked}
                 onLikeCountChange={setLikeCount}
               />

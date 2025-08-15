@@ -17,7 +17,7 @@ export default function NotificationPermission() {
 
   const requestPermission = async () => {
     if (!('Notification' in window)) {
-      console.log('Notifications not supported');
+      //console.log('Notifications not supported');
       return;
     }
 
@@ -27,13 +27,13 @@ export default function NotificationPermission() {
       setPermission(result);
       
       if (result === 'granted') {
-        console.log('Notification permission granted!');
+        //console.log('Notification permission granted!');
         // ここでプッシュ通知の購読処理を実装可能
       } else if (result === 'denied') {
-        console.log('Notification permission denied');
+        //console.log('Notification permission denied');
       }
     } catch (error) {
-      console.error('Failed to request notification permission:', error);
+      //console.error('Failed to request notification permission:', error);
     }
   };
 

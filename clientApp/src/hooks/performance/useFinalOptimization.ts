@@ -291,9 +291,9 @@ export function useFinalOptimization(
       optimizePerformanceMonitoring();
       
       setIsOptimized(true);
-      console.log('All optimizations applied successfully');
+      //console.log('All optimizations applied successfully');
     } catch (error) {
-      console.error('Optimization failed:', error);
+      //console.error('Optimization failed:', error);
     }
   }, [
     optimizeLazyLoading,
@@ -323,7 +323,7 @@ export function useFinalOptimization(
     observersRef.current.clear();
     lazyLoadRefs.current.clear();
     setIsOptimized(false);
-    console.log('All optimizations stopped');
+    //console.log('All optimizations stopped');
   }, []);
 
   // 最適化の再実行

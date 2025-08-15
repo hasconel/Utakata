@@ -166,11 +166,11 @@ export function useOfflineStorage<T>(
 
       await dbManagerRef.current.init();
       setIsInitialized(true);
-      console.log('IndexedDB initialized successfully');
+      //  console.log('IndexedDB initialized successfully');
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to initialize IndexedDB');
       setError(error);
-      console.error('IndexedDB initialization failed:', error);
+      //console.error('IndexedDB initialization failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -204,10 +204,10 @@ export function useOfflineStorage<T>(
       };
 
       await dbManagerRef.current.set(item);
-      console.log(`Data stored offline: ${storageKey}`);
+      //console.log(`Data stored offline: ${storageKey}`);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to store data');
-      console.error('Failed to store data:', error);
+      //console.error('Failed to store data:', error);
       throw error;
     }
   }, [isInitialized, finalConfig.defaultTTL]);
@@ -231,7 +231,7 @@ export function useOfflineStorage<T>(
 
       return item.data;
     } catch (err) {
-      console.error('Failed to retrieve data:', err);
+      //console.error('Failed to retrieve data:', err);
       return null;
     }
   }, [isInitialized]);
@@ -244,9 +244,9 @@ export function useOfflineStorage<T>(
 
     try {
       await dbManagerRef.current.remove(storageKey);
-      console.log(`Data removed from offline storage: ${storageKey}`);
+      //console.log(`Data removed from offline storage: ${storageKey}`);
     } catch (err) {
-      console.error('Failed to remove data:', err);
+      //console.error('Failed to remove data:', err);
     }
   }, [isInitialized]);
 
@@ -259,7 +259,7 @@ export function useOfflineStorage<T>(
     try {
       return await dbManagerRef.current.getAll<T>();
     } catch (err) {
-      console.error('Failed to retrieve all data:', err);
+      //console.error('Failed to retrieve all data:', err);
       return [];
     }
   }, [isInitialized]);
@@ -273,7 +273,7 @@ export function useOfflineStorage<T>(
     try {
       return await dbManagerRef.current.getPendingSync<T>();
     } catch (err) {
-      console.error('Failed to retrieve pending sync data:', err);
+      //console.error('Failed to retrieve pending sync data:', err);
       return [];
     }
   }, [isInitialized]);
@@ -286,9 +286,9 @@ export function useOfflineStorage<T>(
 
     try {
       await dbManagerRef.current.clear();
-      console.log('Offline storage cleared');
+      //console.log('Offline storage cleared');
     } catch (err) {
-      console.error('Failed to clear storage:', err);
+      //console.error('Failed to clear storage:', err);
     }
   }, [isInitialized]);
 
@@ -323,7 +323,7 @@ export function useOfflineStorage<T>(
 
       return stats;
     } catch (err) {
-      console.error('Failed to get storage stats:', err);
+      //console.error('Failed to get storage stats:', err);
       return null;
     }
   }, [isInitialized, getAll, finalConfig.maxSize]);
@@ -344,10 +344,10 @@ export function useOfflineStorage<T>(
       }
 
       if (expiredItems.length > 0) {
-        console.log(`Cleaned up ${expiredItems.length} expired items`);
+        //console.log(`Cleaned up ${expiredItems.length} expired items`);
       }
     } catch (err) {
-      console.error('Cleanup failed:', err);
+      //console.error('Cleanup failed:', err);
     }
   }, [isInitialized, getAll, remove]);
 

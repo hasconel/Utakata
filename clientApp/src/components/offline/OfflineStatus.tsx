@@ -234,7 +234,7 @@ export default function OfflineStatus() {
                 <Button
                   onClick={() => {
                     // オフライン設定画面を開く
-                    console.log('Open offline settings');
+                    //console.log('Open offline settings');
                   }}
                   size="sm"
                   variant="outline"

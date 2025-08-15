@@ -79,7 +79,7 @@ export function useCacheInvalidation(
     for (const rule of matchingRules) {
       if (rule.strategy === 'immediate') {
         cache.remove(url);
-        console.log(`Cache invalidated immediately: ${url}`);
+        //console.log(`Cache invalidated immediately: ${url}`);
         
         // イベントを記録
         const eventId = `invalidate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -115,7 +115,7 @@ export function useCacheInvalidation(
         const timer = setTimeout(() => {
           cache.remove(url);
           event.status = 'completed';
-          console.log(`Cache invalidated after delay: ${url}`);
+          //console.log(`Cache invalidated after delay: ${url}`);
           
           // 完了したイベントを一定時間後に削除
           setTimeout(() => {
@@ -136,7 +136,7 @@ export function useCacheInvalidation(
       if (rule.strategy === 'conditional' && rule.condition) {
         if (rule.condition(url, data)) {
           cache.remove(url);
-          console.log(`Cache invalidated conditionally: ${url}`);
+          //console.log(`Cache invalidated conditionally: ${url}`);
           
           // イベントを記録
           const eventId = `invalidate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -157,7 +157,7 @@ export function useCacheInvalidation(
   const invalidateByPattern = useCallback((pattern: string) => {
     // パターンにマッチするすべてのURLを無効化
     // 注意: この実装では全キャッシュをクリアする必要がある場合がある
-    console.log(`Invalidating cache by pattern: ${pattern}`);
+    //console.log(`Invalidating cache by pattern: ${pattern}`);
     
     // より高度な実装では、キャッシュキーのパターンマッチングが必要
     // 現在は全クリアで対応
@@ -201,7 +201,7 @@ export function useCacheInvalidation(
           timersRef.current.delete(eventId);
         }
         eventsRef.current.delete(eventId);
-        console.log(`Invalidation cancelled: ${url}`);
+        //  console.log(`Invalidation cancelled: ${url}`);
         break;
       }
     }

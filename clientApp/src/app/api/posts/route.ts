@@ -223,7 +223,7 @@ export async function GET(request: Request) {
       const postId: string = post.activityId;
       postsAsPostArray.push(postId);
     }
-
+    console.log("postsAsPostArray",postsAsPostArray);
     return NextResponse.json({postsAsPostArray}, {
       headers: {
         'Access-Control-Allow-Origin': '*',

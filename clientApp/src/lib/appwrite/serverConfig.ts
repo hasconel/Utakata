@@ -24,18 +24,33 @@ const client = new Client()
 export async function createSessionClient(cookie?: Request) {
   try {
     let session: string | undefined;
+    
     if (cookie) {
-      session = cookie.headers.get("cookie")?.split("; ")[0].split("=")[1];
-      //console.log("session", session);
+      // リクエストヘッダーからセッションクッキーを取得
+      const cookieHeader = cookie.headers.get("cookie");
+      if (cookieHeader) {
+        const cookies = cookieHeader.split("; ").reduce((acc: any, cookie) => {
+          const [key, value] = cookie.split("=");
+          acc[key] = value;
+          return acc;
+        }, {});
+        session = cookies["my-custom-session"];
+        //console.log("🔍 リクエストヘッダーからセッション取得:", !!session);
+      }
     } else {
+      // Next.jsのcookies()からセッションクッキーを取得
       session = (await cookies()).get("my-custom-session")?.value;
+      //console.log("🔍 Next.js cookies()からセッション取得:", !!session);
     }
+    
     if (session) {
       client.setSession(session);
     } else {
-      //throw new Error("セッションが見つからないよ！💦");
+      //console.log("⚠️ セッションが見つかりません - ゲストユーザーとして扱われます");
+      // セッションがない場合はゲストユーザーとして扱う
+      // ただし、認証が必要な操作は制限される
     }
-    //if (!session) throw new Error("セッションが見つからないよ！💦");
+    
     return {
       account: new Account(client),
       databases: new Databases(client),
@@ -47,6 +62,28 @@ export async function createSessionClient(cookie?: Request) {
       throw new Error("ログインが必要だよ！💦 もう一度ログインしてね！✨");
     }
     throw new Error("セッションの取得に失敗したよ！💦");
+  }
+}
+
+/**
+ * セッション状態を確認！✨
+ * 現在のセッションが有効かどうかをキラキラに確認するよ！💖
+ */
+export async function checkSessionStatus(cookie?: Request) {
+  try {
+    const { account } = await createSessionClient(cookie);
+    const user = await account.get();
+    return {
+      isValid: true,
+      user: user,
+      message: "セッションが有効です"
+    };
+  } catch (error: any) {
+    return {
+      isValid: false,
+      user: null,
+      message: error.message || "セッションが無効です"
+    };
   }
 }
 
@@ -67,7 +104,7 @@ export async function getLoggedInUser() {
     const { account } = await createSessionClient();
     return await account.get();
   } catch (error: any) {
-    console.error("セッションエラー:", error);
+    //console.error("セッションエラー:", error);
     if (error.code === 401) {
       throw new Error("ログインが必要だよ！💦 もう一度ログインしてね！✨");
     }
