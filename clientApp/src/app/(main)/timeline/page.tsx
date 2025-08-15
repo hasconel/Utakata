@@ -21,21 +21,29 @@ const useTimelineManager = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const fetchPosts = async (offset: number) => {
+  const fetchPosts = async (offset: number, isLoadMore: boolean = false) => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/posts?limit=10&offset=${offset}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/activity+json",
-        "Accept": "application/activity+json",
-      },
-    });
-    const data = await res.json();
-    const sortedPosts = data.notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
-    setPosts([...sortedPosts]);
-    setFetchMore(data.total > offset + data.notes.length);
-    setIsLoading(false);
+        method: "GET",
+        headers: {
+          "Content-Type": "application/activity+json",
+          "Accept": "application/activity+json",
+        },
+      });
+      const data = await res.json();
+      const sortedPosts = data.notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+      
+      if (isLoadMore) {
+        // もっと見る: 既存の投稿に追加
+        setPosts(prevPosts => [...prevPosts, ...sortedPosts]);
+      } else {
+        // リロード: 投稿を置き換え
+        setPosts([...sortedPosts]);
+      }
+      
+      setFetchMore(data.total > offset + data.notes.length);
+      setIsLoading(false);
     } catch (error) {
       setError(error as ApiError);
     } finally {
@@ -45,18 +53,18 @@ const useTimelineManager = () => {
 
   useEffect(() => {
     if (offset === 10) {
-      fetchPosts(0);
+      fetchPosts(0, false);
     }
     return () => setOffset(10);
   }, []);
 
   const handleLoadMore = async () => {
-    fetchPosts(offset); 
+    fetchPosts(offset, true); 
     setOffset(offset + 10);
   }
 
   const handleTimelineReload = async () => {
-    fetchPosts(0);
+    fetchPosts(0, false);
     setOffset(10);
   };
 
@@ -144,9 +152,9 @@ const PostList = ({
   setModalIndex: (index: number) => void;
 }) => (
   <div className="space-y-4">
-    {Array.isArray(posts) && posts.map((post) => (
+    {Array.isArray(posts) && posts.map((post, index) => (
       <PostCard 
-        key={post.id} // $idを使用
+        key={post.id + index} // $idを使用
         post={post} 
         setIsModalOpen={setIsModalOpen} 
         isModalOpen={isModalOpen} 
@@ -216,28 +224,40 @@ export default function TimelinePage() {
   const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager();
   const [posts, setPosts] = useState<ActivityPubNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  //handleTimelineReloadが呼ばれたら、postsを更新
   useEffect(() => {
     setIsLoading(true);
     setPosts(nextPosts);
     setIsLoading(false);
   }, [handleTimelineReload]);
-  // 投稿作成イベントのリスナー！✨
+  //nextPostsが更新されたら、postsに追加
   useEffect(() => {
+    if (nextPosts.length > 0) {
+      // 重複チェックして新しい投稿のみを追加
+      const newPosts = nextPosts.filter((nextPost: ActivityPubNote) => 
+        !posts.some((existingPost: ActivityPubNote) => existingPost.id === nextPost.id)
+      );
+      
+      if (newPosts.length > 0) {
+        console.log("新しい投稿を追加:", newPosts.length, "件");
+        setPosts(prevPosts => [...prevPosts, ...newPosts]);
+      } else {
+        console.log("新しい投稿なし");
+      }
+      
+      setIsLoading(false);
+    }
+  }, [nextPosts, posts]);
 
-    console.log(nextPosts.length);
-    console.log(posts.length);
-    setPosts([...posts, ...nextPosts]);
-    setIsLoading(false);
-    console.log( "posts.length", posts.length);
-  }, [nextPosts]);
+
   return (  
     <>
       <div 
-        className="bg-cover bg-center z-[-1] absolute inset-0 w-full h-full bg-fixed" 
+        className="w-full h-full bg-cover bg-center z-[-1] bg-fixed absolute top-0 left-0" 
         style={{backgroundImage: `url(${actor?.backgroundUrl})`}}
       />
       <div 
-        className="max-w-2xl mx-auto md:px-4 mt-16 mb-16"
+        className="max-w-2xl mx-auto md:px-4"
       >
         <TimelineHeader onRefresh={handleTimelineReload} />
         {posts.length > 0 || !isLoading || !isLoadingNextPosts ? (<>

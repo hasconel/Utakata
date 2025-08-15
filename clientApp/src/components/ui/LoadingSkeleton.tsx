@@ -6,7 +6,7 @@
  */
 export default function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-4">
       {[...Array(3)].map((_, i) => (
         <div key={i} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-100 dark:border-purple-900 animate-pulse">
           {/* ユーザー情報のスケルトン！✨ */}
