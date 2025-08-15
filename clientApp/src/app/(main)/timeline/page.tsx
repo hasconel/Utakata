@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { getTimelinePosts } from "@/lib/appwrite/serverConfig";
+//import { getTimelinePosts } from "@/lib/appwrite/serverConfig";// 使えなかった
 
 
 // カスタムフック: タイムライン管理
@@ -26,8 +26,26 @@ const useTimelineManager = (user: string) => {
   const fetchPosts = async (offset: number, isLoadMore: boolean = false) => {
     setIsLoading(true);
     try {
-      const {note,total} = await getTimelinePosts(user, 10, offset);
-      const sortedPosts = note.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+      const response = await fetch(`/api/posts?offset=${offset}&limit=10`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/activity+json",
+            "Accept": "application/activity+json",
+            "cache-control": "no-cache",
+            "expires": "0",
+            "pragma": "no-cache",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch posts");
+      }
+      const data = await response.json();
+      //console.log("data",data);
+      const notes = data.notes;
+      const total = data.total;
+      const sortedPosts = notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
       //console.log("sortedPosts", sortedPosts);
       
       if (isLoadMore) {
@@ -38,7 +56,7 @@ const useTimelineManager = (user: string) => {
         setPosts([...sortedPosts]);
       }
       
-      setFetchMore(total > offset + note.length);
+      setFetchMore(total > offset + notes.length);
       setIsLoading(false);
     } catch (error) {
       setError(error as ApiError);

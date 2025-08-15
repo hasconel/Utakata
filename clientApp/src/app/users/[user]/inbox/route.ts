@@ -66,7 +66,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // HTTPシグネチャの検証
 
   const verified = await verifySignature(request, ActorId);
-  
+
   if(!verified){
     return NextResponse.json({ error: "Signature verification failed" }, { status: 400 });
   }
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
       // 自分のドメインの場合はAcceptを返す
       if(NoteId.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)){
-        console.log("NoteIdを受信しました", NoteId);
+        //console.log("NoteIdを受信しました", NoteId);
         const Accept = {
           "type": "Accept",
           "actor": ActorId,

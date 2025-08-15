@@ -274,7 +274,7 @@ export default function PostDetailCard({
       setIsPostLoading(true);
       try {
         const data = await getInternalPostWithActor(post);
-        console.log("data",data);
+        //console.log("data",data);
         // データが取得できない場合は404エラーとして扱う
         if (!data) {
           //console.log("❌ 投稿が見つかりません:", post);

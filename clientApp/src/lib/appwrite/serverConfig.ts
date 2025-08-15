@@ -813,7 +813,7 @@ export async function getPostFromActivityId(activityId:string): Promise<Activity
  * タイムラインの投稿を取得！✨
  * 投稿をキラキラに取得するよ！💖
  */
-export async function getTimelinePosts(sessionId: string, limit: number = 10, offset: number = 0) : Promise<{note:ActivityPubNoteInClient[],total:number}> {
+export async function getTimelinePosts(sessionId: string, limit: number = 10, offset: number = 0) : Promise<{notes:ActivityPubNoteInClient[],total:number}> {
   try {
     const { databases } = await createSessionClient();
     const { documents, total } : Models.DocumentList<Post> = await databases.listDocuments(
@@ -882,7 +882,7 @@ export async function getTimelinePosts(sessionId: string, limit: number = 10, of
       posts.push(note)}
     }
     //console.log("posts",posts);
-    return {note:posts,total:total};
+    return {notes :posts,total:total};
   } catch (error) {
     throw new Error('タイムラインの取得に失敗したよ！💦');
   }

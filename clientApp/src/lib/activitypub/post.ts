@@ -174,7 +174,7 @@ export async function deliverActivity(
       if (inbox) inboxes.add(inbox);
     }
   }
-  console.log("activity.cc", activity.cc);
+  //console.log("activity.cc", activity.cc);
   for (const cc of activity.cc){
     if(cc === actor.followers) await userFollwer();
     else if(cc === "https://www.w3.org/ns/activitystreams#Public") inboxes.add("https://www.w3.org/ns/activitystreams#Public");
@@ -188,7 +188,7 @@ export async function deliverActivity(
     Array.from(inboxes).map(async (inbox) => {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          console.log("inboxに送信します",inbox);
+          //console.log("inboxに送信します",inbox);
           const { headers } = await signRequest(inbox, activity, actor.privateKey, `${actor.id}#main-key`);
           // inboxはフルURL
           const res = await fetch(`${inbox}`, {
@@ -197,9 +197,9 @@ export async function deliverActivity(
             body: JSON.stringify(activity),
           });
           if(res.status === 200){
-            console.log("配信成功");
+            //console.log("配信成功");
           }else{
-            console.log("配信失敗");
+            //console.log("配信失敗");
           }
           return;
         } catch (err: any) {
