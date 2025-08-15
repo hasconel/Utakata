@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import ReplyToPost from "../reply/ReplyToPost";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -54,8 +53,6 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
   const [previewUrls, setPreviewUrls] = useState<PreviewUrl[]>([]);
   // 投稿中の状態！✨
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // ルーター！✨
-  const router = useRouter();
   // リプライモードかどうか！✨
   const isReply = !!post;
   // ファイル入力の参照！✨
@@ -237,7 +234,6 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
       } else {
         // タイムラインを更新するよ！💖
         refreshTimeline && refreshTimeline();
-        router.refresh();
       }
     } catch (err: any) {
       console.error("投稿エラー:", err);

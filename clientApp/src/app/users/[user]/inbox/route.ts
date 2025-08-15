@@ -157,6 +157,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
       // 自分のドメインの場合はAcceptを返す
       if(NoteId.startsWith(process.env.NEXT_PUBLIC_DOMAIN!)){
+        console.log("NoteIdを受信しました", NoteId);
         const Accept = {
           "type": "Accept",
           "actor": ActorId,
@@ -174,22 +175,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Note already exists" }, { status: 400 });
       }
       // Noteのデータを作成
+      const attachmentArray :string[] = [];
+      activity.object.attachment.map((attachment: any) => attachmentArray.push(attachment.url));
       const note = await adminDatabases.createDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_POSTS_COLLECTION_ID!,
         ID.unique(),
         {
           "activityId": NoteId,
-          "username": activity.actor.name? activity.actor.name : activity.actor.preferredUsername,
+          "username":  ActorId,
           "content": activity.object.content,
-          "createdAt": new Date().toISOString(),
-          "published": new Date().toISOString(),
-          "cc": activity.cc,
-          "to": activity.to,
-          "inReplyTo": activity.inReplyTo,
-          "attributedTo": activity.attributedTo,
-          "attachment": activity.attachment,
-          "avatar": activity.actor.icon.url,
+          "createdAt": activity.object.published,
+          "published": activity.object.published,
+          "cc": activity.object.cc,
+          "to": activity.object.to,
+          "inReplyTo": activity.object.inReplyTo,
+          "attributedTo": activity.object.attributedTo,
+          "attachment": attachmentArray,
+          "avatar": activity.actor.icon.url? activity.actor.icon.url : "",
           "raw": activity.object.toString(),
         }
       );

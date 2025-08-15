@@ -13,7 +13,7 @@ import sanitizeHtml from "sanitize-html";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Permission } from "node-appwrite";
 import { MeiliSearch } from "meilisearch";
-import { getActorByUserId, getActorById } from "@/lib/appwrite/database";
+  import {  getActorById } from "@/lib/appwrite/database";
 
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -76,10 +76,8 @@ export async function savePost(
   const { databases, account } = await createSessionClient();
   const session = await account.get();
 
-  // toをAppwriteのstring型に変換
   const finalTo = Array.isArray(note.to) ? note.to : note.to ? [note.to] : [];
 
-  // ccをAppwriteのstring型に変換
   const finalCc = Array.isArray(note.cc) ? note.cc : note.cc ? [note.cc] : [];
 
   // displayNameをサニタイズ（XSS対策）
@@ -145,7 +143,7 @@ export async function savePost(
   };
   // メイリスケのインデックスに追加
   meilisearch.index("posts").addDocuments([document]);
-  return { document, activity, parentActorId: input.inReplyTo?.to };
+  return { document, activity };
 }
 
 /**
@@ -158,37 +156,54 @@ export async function savePost(
  */
 export async function deliverActivity(
   activity: any,
-  actor: { id: string; privateKey: string; followers: string },
-  parentActorId: string | null
+  actor: { id: string; privateKey: string; followers: string }
 ) {
   // 配信先inboxを収集
   const inboxes = new Set<string>();
-  const followers = await getFollowers(actor.followers);
-  for (const follower of followers) {
-    const inbox = await fetchActorInbox(follower);
-    //followerはuser/followerでアクセスするとページが表示される。
-    if (inbox) inboxes.add(inbox);
+  const userFollwer = async ()=>{
+    const followers = await getFollowers(actor.followers);
+    for (const follower of followers) {
+      const inbox = await fetchActorInbox(follower);
+      //followerはuser/followerでアクセスするとページが表示される。
+      if (inbox) inboxes.add(inbox);
+    }
   }
-  if (parentActorId) {
-    const inbox = await fetchActorInbox(parentActorId);
-    //console.log("parentActorId",parentActorId);
-    //console.log("inbox",inbox);
-    if (inbox) inboxes.add(inbox);
+  for (const to of activity.to){
+    if(to === actor.followers) await userFollwer();
+    else if(to === "https://www.w3.org/ns/activitystreams#Public") inboxes.add("https://www.w3.org/ns/activitystreams#Public");
+    else{
+      const inbox = await fetchActorInbox(to);
+      if (inbox) inboxes.add(inbox);
+    }
   }
-
+  console.log("activity.cc", activity.cc);
+  for (const cc of activity.cc){
+    if(cc === actor.followers) await userFollwer();
+    else if(cc === "https://www.w3.org/ns/activitystreams#Public") inboxes.add("https://www.w3.org/ns/activitystreams#Public");
+    else{
+      const inbox = await fetchActorInbox(cc);
+      if (inbox) inboxes.add(inbox);
+    }
+  }
+  console.log("inboxes", inboxes);
   // 並列配信、リトライ3回で安定性UP
   await Promise.all(
     Array.from(inboxes).map(async (inbox) => {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          //console.log("inboxに送信します",inbox);
+          console.log("inboxに送信します",inbox);
           const { headers } = await signRequest(inbox, activity, actor.privateKey, `${actor.id}#main-key`);
           // inboxはフルURL
-          await fetch(`${inbox}`, {
+          const res = await fetch(`${inbox}`, {
             method: "POST",
             headers,
             body: JSON.stringify(activity),
           });
+          if(res.status === 200){
+            console.log("配信成功");
+          }else{
+            console.log("配信失敗");
+          }
           return;
         } catch (err: any) {
           console.error(`Attempt ${attempt} failed for ${inbox}:`, err.message);
@@ -200,43 +215,6 @@ export async function deliverActivity(
       }
     })
   );
-}
-
-/**
- * 投稿を作成する関数！✨
- * @param input 投稿の入力値
- * @returns 投稿の結果
- */
-export async function createPost(input: PostInput) {
-  const { account } = await createSessionClient();
-  const user = await account.get();
-  if (!user) {
-    throw new Error("ユーザーが見つからないよ！💦");
-  }
-
-  const actor = await getActorByUserId(user.$id);
-  if (!actor) {
-    throw new Error("アクターが見つからないよ！💦");
-  }
-
-  const { document, activity, parentActorId } = await savePost(
-    input,
-    {
-      actorId: actor.actorId,
-      preferredUsername: actor.preferredUsername,
-      displayName: actor.displayName || "",
-      followers: actor.followers || "",
-      avatarUrl: actor.avatarUrl || "",
-    }
-  );
-
-  await deliverActivity(activity, {
-    id: actor.actorId,
-    privateKey: actor.privateKey,
-    followers: actor.followers || "",
-  }, parentActorId || null);
-
-  return document;
 }
 
 /**
@@ -278,7 +256,7 @@ export async function deletePostOutbox(postId: string) {
     id: actor.id,
     privateKey: privateKey,
     followers: actor.followers || "",
-  }, null);
+  });
   await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, post[0].$id);
   await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, postsub[0].$id);
   await meilisearch.index("posts").deleteDocument(post[0].$id);

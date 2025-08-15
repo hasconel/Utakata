@@ -91,7 +91,7 @@ const UrlInText = ({ arg }: { arg: string }) => {
   if (XURLs != null) {
     const ResultPath = new URL(XURLs[0]).pathname;
     return (
-      <div className="relative">
+      <div className="relative ">
         <blockquote
           data-theme={theme}
           className="twitter-tweet w-full"

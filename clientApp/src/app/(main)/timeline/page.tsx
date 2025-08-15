@@ -20,6 +20,7 @@ const useTimelineManager = () => {
   const [fetchMore, setFetchMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const fetchPosts = async (offset: number, isLoadMore: boolean = false) => {
     setIsLoading(true);
@@ -29,10 +30,14 @@ const useTimelineManager = () => {
         headers: {
           "Content-Type": "application/activity+json",
           "Accept": "application/activity+json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0"
         },
       });
       const data = await res.json();
       const sortedPosts = data.notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+      console.log("sortedPosts", sortedPosts);
       
       if (isLoadMore) {
         // もっと見る: 既存の投稿に追加
@@ -52,11 +57,12 @@ const useTimelineManager = () => {
   }
 
   useEffect(() => {
-    if (offset === 10) {
+    // 最初のアクセス時のみfetch
+    if (!isInitialized && offset === 10) {
       fetchPosts(0, false);
+      setIsInitialized(true);
     }
-    return () => setOffset(10);
-  }, []);
+  }, [isInitialized, offset]);
 
   const handleLoadMore = async () => {
     fetchPosts(offset, true); 
@@ -239,7 +245,7 @@ export default function TimelinePage() {
       );
       
       if (newPosts.length > 0) {
-        console.log("新しい投稿を追加:", newPosts.length, "件");
+        //console.log("新しい投稿を追加:", newPosts.length, "件");
         setPosts(prevPosts => [...prevPosts, ...newPosts]);
       } else {
         console.log("新しい投稿なし");

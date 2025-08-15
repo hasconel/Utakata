@@ -113,6 +113,9 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
         headers: {
           "Content-Type": "application/activity+json",
           "Accept": "application/activity+json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0" 
         },
       }).then((res) => res.json()).then((res) => {
         const newPosts = res.notes.filter((post: any) => !posts.some((p: any) => p.id === post.id)).map((post: any) => ({

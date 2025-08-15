@@ -46,11 +46,10 @@ export async function POST(request: Request) {
     if (!actor) {
       throw new Error("アクターが見つからないよ！💦");
     }
-
     const { content, visibility, images, inReplyTo, attributedTo } = await request.json();
     
     // 投稿を保存
-    const { document, activity, parentActorId } = await savePost(
+    const { document, activity } = await savePost(
       { content, visibility, inReplyTo, attributedTo },
       {
         actorId: actor.actorId,
@@ -66,8 +65,8 @@ export async function POST(request: Request) {
       id: actor.actorId,
       privateKey: actor.privateKey,
       followers: actor.followers || "",
-    }, parentActorId || null);
-
+    });
+    console.log("success");
     return NextResponse.json({ success: true, document }, {
       headers: {
         'Access-Control-Allow-Origin': '*',
@@ -76,7 +75,7 @@ export async function POST(request: Request) {
       }
     });
   } catch (error: any) {
-    //console.error("投稿に失敗したよ！💦", error);
+    console.error("投稿に失敗したよ！💦", error);
     return NextResponse.json(
       { error: error.message || "投稿に失敗したよ！もう一度試してみてね！💦" },
       { 

@@ -115,7 +115,6 @@ const DeleteButton = ({ postId, onDelete }: { postId: string; onDelete?: () => v
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { invalidatePostCache } = usePostCache();
 
   const handleDelete = async () => {
     if (isDeleting) return;
@@ -131,8 +130,6 @@ const DeleteButton = ({ postId, onDelete }: { postId: string; onDelete?: () => v
         throw new Error('投稿の削除に失敗しました');
       }
       
-      // キャッシュを無効化
-      invalidatePostCache('delete', postId);
       
       // 削除完了の処理
       setIsDeleteModalOpen(false);

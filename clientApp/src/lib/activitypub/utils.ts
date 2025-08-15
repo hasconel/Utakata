@@ -35,12 +35,11 @@ export async function createNote(
   }
   if(visibility === "public"){
     to.push(PUBLIC);
-  }
-  if(visibility === "followers"){
+  }else{
     to.push(followers);
   }
   // 公開範囲を設定（publicならfollowers、followersなら空欄）
-  const cc = visibility === "public" ? followers : "";
+  const cc = visibility === "public" ? [followers] : [];
 
   // Noteオブジェクト（投稿本体）
   const note: ActivityPubNote = {
@@ -76,24 +75,20 @@ export async function createNote(
  * @returns actorId[]
  */
 export async function getFollowers(followersUrl: string) {
-
   const followers: string[] = [];
     const followersList = await fetch(convertToExternalUrl(followersUrl), {
       headers: { Accept: 'application/activity+json' },
     }).then(res => res.json());
-    if(followersList.type === 'OrderedCollectionPage') {
-      const followersTop = await fetch(convertToExternalUrl(followersList.followersList.first),{
+    if(followersList.type === 'OrderedCollection') {
+      let followersPage = await fetch(followersList.first,{
         headers: { Accept: 'application/activity+json' },
       }).then(res => res.json());
-      let followersPage = await fetch(convertToExternalUrl(followersTop.first),{
-        headers: { Accept: 'application/activity+json' },
-      }).then(res => res.json());
-      followers.push(followersPage.orderedItems.map((item: any) => item.id));
+      followersPage.orderedItems.map((item: string) => followers.push(item));
       while(followersPage.next) {
-        const next = await fetch(convertToExternalUrl(followersPage.next),{
+        const next = await fetch(followersPage.next,{
           headers: { Accept: 'application/activity+json' },
         }).then(res => res.json());
-        followers.push(...next.orderedItems.map((item: any) => item.id));
+        next.orderedItems.map((item: string) => followers.push(item));
         followersPage = next;
       }
     }
