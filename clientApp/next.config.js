@@ -9,6 +9,7 @@ const nextConfig = {
       'localhost',
       process.env.NEXT_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '') ,
       process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\/[^\/]+/, '') ,
+      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\/[^\/]+/, '') ,
     ].filter(Boolean), // undefinedやnullを除外
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -43,20 +44,20 @@ const nextConfig = {
         ],
       },
       {
-        source: '/api/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=300, stale-while-revalidate=600',
-          },
-        ],
-      },
-      {
-        source: '/static/(.*)',
+        source: '/files/(.*)',
         headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: `/users/(.*)`,
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31000, stale-while-revalidate=1600',
           },
         ],
       },
@@ -74,17 +75,7 @@ const nextConfig = {
     ];
   },
 
-  // リライト設定
-  async rewrites() {
-    return [
-      {
-        source: '/api/health',
-        destination: '/api/health/route',
-      },
-    ];
-  },
 
-  // Webpack設定（環境に関係なく完全統一）
   webpack: (config, { dev, isServer }) => {
     // チャンク分割を無効化（self is not definedエラーを防ぐ）
     config.optimization.splitChunks = false;
@@ -109,17 +100,14 @@ const nextConfig = {
     return config;
   },
 
-  // TypeScript設定（環境に関係なく）
   typescript: {
     ignoreBuildErrors: false,
   },
 
-  // ESLint設定（環境に関係なく）
   eslint: {
     ignoreDuringBuilds: false,
   },
 
-  // React設定（環境に関係なく）
   reactStrictMode: true,
 };
 

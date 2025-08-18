@@ -260,7 +260,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* リプライ先の投稿を表示するよ！✨ */}
-      {replyToPost && isReplyDisplay && <ReplyToPost post={replyToPost} />}
+      {replyToPost && isReplyDisplay && <ReplyToPost post={replyToPost} setIsLoading={()=>{}} />}
 
       <div className="space-y-8">
         {/* 投稿内容の入力エリア！✨ */}

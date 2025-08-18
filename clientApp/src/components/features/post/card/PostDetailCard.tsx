@@ -346,7 +346,7 @@ export default function PostDetailCard({
       <div className="space-y-6 m-4">
         {postData?.inReplyTo && (
           <div className="">
-            <ReplyToPost post={postData?.inReplyTo} />
+            <ReplyToPost post={postData?.inReplyTo} setIsLoading={setIsPostLoading} />
           </div>
         )}
         <div className="flex items-center">

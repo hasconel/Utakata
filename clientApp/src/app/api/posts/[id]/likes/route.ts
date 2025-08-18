@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
         
         const url = new URL(request.url);
-        const page = url.searchParams.get("page") || "1";
+        const page = url.searchParams.get("page") || null;
         const { id } = await params;
         
         //console.log(`Likes取得開始: postId=${id}, page=${page}`);
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             process.env.APPWRITE_LIKES_COLLECTION_ID,
             [
                 Query.equal("object", `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`), 
-                Query.offset((parseInt(page) - 1) * 10), 
+                Query.offset((parseInt(page || "1") - 1) * 10), 
                 Query.limit(10)
             ]
         );
@@ -47,7 +47,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             "id": like.id,
             "published": like.published || new Date().toISOString()
         }));
-        
+        if(!page){
+            const orderedCollection = {
+                "@context": "https://www.w3.org/ns/activitystreams",
+                "type": "OrderedCollection",
+                "id": `${process.env.NEXT_PUBLIC_DOMAIN}/api/posts/${id}/likes`,
+                "totalItems": likes.total,
+                "first": `${process.env.NEXT_PUBLIC_DOMAIN}/api/posts/${id}/likes?page=1`,
+            }
+            return NextResponse.json(orderedCollection, {
+                headers: {
+                    "Content-Type": "application/activity+json",
+                    "Cache-Control": "no-cache"
+                }
+            });
+        }
         const orderedCollectionPage = {
             "@context": "https://www.w3.org/ns/activitystreams",
             "type": "OrderedCollectionPage",

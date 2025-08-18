@@ -134,9 +134,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if(activity.type === "Create"){
     // Noteの場合
     if(activity.object.type === "Note"){
+      console.log("activity.object",activity.object);
       const NoteId = activity.object.id;
       // 先に通知を作ってしまう
+      console.log("activity.object.inReplyTo",activity.object.inReplyTo);
       if(activity.object.inReplyTo && activity.object.to.includes(process.env.NEXT_PUBLIC_DOMAIN! + "/users/" + username)){
+        console.log("activity.object.inReplyTo",activity.object.inReplyTo);
+        console.log("activity.object.to",activity.object.to);
+        console.log("process.env.NEXT_PUBLIC_DOMAIN! + /users/" + username,process.env.NEXT_PUBLIC_DOMAIN! + "/users/" + username);
         const notification = await adminDatabases.createDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,

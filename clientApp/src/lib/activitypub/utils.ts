@@ -14,6 +14,7 @@ import {isInternalUrl, convertToExternalUrl} from "@/lib/utils"
  * @param visibility 公開範囲（public/followers）
  * @param followers フォロワーのIDリスト
  * @param inReplyTo リプライ先の投稿ID（任意）
+ * @param attributedTo 宛先のID（任意）
  * @returns NoteとCreateアクティビティ
  */
 export async function createNote(

@@ -7,10 +7,11 @@ import Notification from "@/components/features/user/Notification";
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
+    // 初期化済みの場合は実行しない
+    
     getUserNotifications().then(notifications => {
-      setNotifications(notifications.map((notification:any)=>({
+      const mappedNotifications = notifications.map((notification:any)=>({
         ...notification,
         read: notification.read,
         type: notification.type,
@@ -21,15 +22,20 @@ export default function NotificationsPage() {
         $id: notification.$id,
         $createdAt: notification.$createdAt,
         $updatedAt: notification.$updatedAt,
-      })));
-      for(const notification of notifications){
-        if(!notification.read){
-          readNotification(notification.$id);
-        }
-      }
+      }));
+      
+      setNotifications(mappedNotifications);
       setIsLoading(false);
+      const unreadNotifications = mappedNotifications.filter(n => !n.read);
+      if (unreadNotifications.length > 0) {
+        Promise.all(
+          unreadNotifications.map(notification => 
+            readNotification(notification.$id)
+          )
+        ).catch(console.error);
+      }
     });
-  }, []);
+  }, []); // hasInitializedのみを依存配列に
 
   if (isLoading) {
     return (

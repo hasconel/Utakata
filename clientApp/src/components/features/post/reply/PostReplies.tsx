@@ -12,61 +12,53 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
-import { usePostCache } from "@/hooks/post/usePostCache";
-import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getInternalPostWithActor } from "@/lib/appwrite/serverConfig";
+import { ActivityPubNoteInClient } from "@/types/activitypub";
 interface PostRepliesProps {
-  post: string;
+  post: string; //https://example.com/posts/123
+  setIsLoading: (isLoading: boolean) => void;
 }
+
 
 /**
  * リプライ先の投稿を表示するコンポーネント！✨
  * かわいいデザインでリプライ先の投稿を表示するよ！💖
  */
-export default function PostReplies({ post }: PostRepliesProps) {
-  const { getPostWithActor } = usePostCache();
-  const [postData, setPostData] = useState<any>(null);
-  const [isPostLoading, setIsPostLoading] = useState(true);
-  const [images, setImages] = useState<ActivityPubImage[]>([]);
+export default function PostReplies({ post, setIsLoading }: PostRepliesProps) {
+  const [postData, setPostData] = useState<ActivityPubNoteInClient | null>(null);
   useEffect(() => {
     const fetchPost = async () => {
-      setIsPostLoading(true);
-      try {
-        const data = await getPostWithActor(post);
-        //console.log("data", data);
-        setPostData(data);
-      } catch (error) { 
-        console.error("Post取得エラー:", error);
-      } finally {
-        setIsPostLoading(false);
-      }
+      const postData = await getInternalPostWithActor(post);
+      setPostData(postData);
     };
     fetchPost();
+    setIsLoading(false);
   }, [post]);
-  console.log("postData", postData);
+  const [images, setImages] = useState<ActivityPubImage[]>([]);
+  
   useEffect(() => {
     if(postData){
-      setImages(postData?.post?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
+      console.log("PostReplies - postData loaded:", postData);
+      console.log("PostReplies - userData:", postData?._user);
+      setImages(postData?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
+      setIsLoading(false);
     }
-  }, []);
-  if(isPostLoading){
-    return <div className="flex items-center justify-center h-40">
-      <Loader2 className="w-6 h-6 animate-spin" />
-    </div>
-  }
-  if(!postData?.post?.id){
+  }, [postData]);
+
+  if(!postData?.id){
     return <div className="flex items-center justify-center h-40">
       <p className="text-gray-500 dark:text-gray-400">投稿が見つかりません</p>
     </div>
   }else{
   return (
-    <Link href={`${postData?.post?.id}`}>  
+    <Link href={`${postData?.id}`}>  
     <div className="flex flex-col pl-8 space-y-4 border-l-2 border-purple-200 dark:border-pink-900 bg-white dark:bg-gray-800 rounded-lg p-4 hover:bg-purple-50 dark:hover:bg-gray-900/50 transition-all duration-200">
       <div className="flex items-center">
         <Avatar
-          src={postData?.actor?.icon?.url}
-          alt={postData?.actor?.preferredUsername || ""}
-          fallback={postData?.actor?.preferredUsername?.charAt(0)}
+          src={postData?._user?.icon?.url}
+          alt={postData?._user?.preferredUsername || ""}
+          fallback={postData?._user?.preferredUsername?.charAt(0)}
           size="sm"
           variant="outline"
           className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
@@ -74,23 +66,23 @@ export default function PostReplies({ post }: PostRepliesProps) {
         <div className="flex flex-col items-start justify-start w-full ml-2">
         <div className="flex flex-row items-start justify-start w-full gap-1">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {postData?.actor?.displayName || postData?.actor?.preferredUsername}
+            {postData?._user?.displayName || postData?._user?.preferredUsername}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            @{postData?.actor?.preferredUsername}
+            @{postData?._user?.preferredUsername}
           </p>
         </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {postData?.post?.published ? formatDate(postData?.post?.published) : "Unknown"}
+            {postData?.published ? formatDate(postData?.published) : "Unknown"}
           </div>
           </div>
           <div className="ml-auto">
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {getRelativeTime(postData?.post?.published || "")}
+              {getRelativeTime(postData?.published || "")}
             </span>  
           </div>
       </div>
-      <p className="text-gray-700 dark:text-gray-300 text-sm">{postData?.post?.content}</p>
+      <p className="text-gray-700 dark:text-gray-300 text-sm">{postData?.content}</p>
       {images.length > 0 && (
         <div className="flex justify-left grid-cols-4 gap-2">
           {images.map((image, index) => (

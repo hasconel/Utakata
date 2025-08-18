@@ -50,7 +50,6 @@ export async function POST(request: Request) {
       throw new Error("ユーザーが見つからないよ！💦");
     }
     const { content, visibility, images, inReplyTo, attributedTo } = await request.json();
-    
     // 投稿を保存
     const { document, activity } = await savePost(
       { content, visibility, inReplyTo, attributedTo },

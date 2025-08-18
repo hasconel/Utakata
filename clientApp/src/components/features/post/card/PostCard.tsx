@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { getRelativeTime } from "@/lib/utils/date";
 import { ActivityPubImage } from "@/types/activitypub/collections";
@@ -111,7 +111,7 @@ export const LikeButton = ({
  * @param setModalImages モーダルの画像を設定
  * @param setModalIndex モーダルのインデックスを設定
  */
-const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages, setModalIndex}: { 
+const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalIndex}: { 
   post: ActivityPubNoteInClient, // ActivityPubのNote形式の投稿データ
   setIsModalOpen: (isOpen: boolean) => void, 
   isModalOpen: boolean, 
@@ -298,7 +298,5 @@ const PostCard = React.memo(({ post, setIsModalOpen, isModalOpen, setModalImages
       )}
     </>
   );
-});
-PostCard.displayName = 'PostCard';
-
+};
 export default PostCard;

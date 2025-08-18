@@ -3,16 +3,16 @@
 import {  useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
-import PostCard from "@/components/features/post/card/PostCard";
 import { Button } from "@/components/ui/Button";
 import FollowButton from "@/components/features/user/FollowButton";
 import { muteUser, unmuteUser } from "@/lib/appwrite/serverConfig";
 import MuteButton from "@/components/features/user/MuteButton";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getUserPostCount, followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
-import { ActivityPubImage } from "@/types/activitypub/collections";
-import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
 import { useActor } from "@/hooks/useActor";
+import { TimelineContent, LoadMoreButton, EmptyState } from "@/components/features/timeline/TimelineContent";
+import { useTimelineManager } from "@/hooks/api/useApi";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
 /**
  * ユーザープロフィール画面！✨
@@ -23,17 +23,12 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
   const { user, isLoading: isAuthLoading } = useAuth();
   const { getActor, isLoading: isActorLoading } = useActor();
   const [targetActor, setTargetActor] = useState<any | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const { posts, fetchMore, isLoading, error, handleLoadMore } = useTimelineManager(user?.$id || "", targetActor?.id || "");
   const [isFollowing, setIsFollowing] = useState<string|false>(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
-  const [modalIndex, setModalIndex] = useState(0);
-  const [offset, setOffset] = useState<number>(10);
-  const [fetchMore, setFetchMore] = useState(false);
   const [postCount, setPostCount] = useState<number>(0);
-
+  
   useEffect(() => {
     if(!userParam.startsWith("%40")){
       router.push(`/`);
@@ -49,7 +44,9 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
       // ドメインからhttps://を削除してポート番号も削除
       const domain = process.env.NEXT_PUBLIC_DOMAIN?.replace(/https?:\/\//, "").replace(/\/$/, "").replace(/:\d+/, "");
       //console.log(domain);
-      const actor = fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/.well-known/webfinger?resource=${encodeURIComponent(`acct:${actorName}@${domain}`)}`,{
+      const url = new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/.well-known/webfinger`);
+      url.searchParams.set("resource", `acct:${actorName}@${domain}`);
+      const actor = fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/activity+json",
@@ -69,7 +66,10 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
     if(userParams.length === 3){
       const domain = userParams[2];
       const actorName = userParams[1];
-      const actorId = fetch(`/api/webfinger?resource=${encodeURIComponent(`acct:${actorName}@${domain}`)}&domain=${domain}`,{
+      const url = new URL(`/api/webfinger`);
+      url.searchParams.set("resource", `acct:${actorName}@${domain}`);
+      url.searchParams.set("domain", domain);
+      const actorId = fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/activity+json",
@@ -91,7 +91,9 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
     if(targetActor?.id===`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}`){
       setIsOwnProfile(true);
     }else{
-    fetch(`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}/following?target=${encodeURIComponent(targetActor?.id)}`,{
+      const url = new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/users/${user?.$id}/following`);
+      url.searchParams.set("target", targetActor?.id);
+      fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/activity+json",
@@ -106,40 +108,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
   }
   }
   },[user,targetActor])
-  const fetchPosts = async (offset: number) => {
-    if(targetActor){
-      fetch(`/api/posts?attributedTo=${encodeURIComponent(targetActor?.id)}&limit=10&offset=${offset}`,{
-        method: "GET",
-        headers: {
-          "Content-Type": "application/activity+json",
-          "Accept": "application/activity+json",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0" 
-        },
-      }).then((res) => res.json()).then((res) => {
-        const newPosts = res.notes.filter((post: any) => !posts.some((p: any) => p.id === post.id)).map((post: any) => ({
-          ...post,
-          published: post.published || new Date().toISOString(),
-        }));
-        const sortedPosts = newPosts.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
-        setPosts([...posts, ...sortedPosts]);
-        //console.log("res.total",res.total);
-        //console.log("offset",offset);
-        //console.log("res.notes.length",res.notes.length);
-        setFetchMore(res.total > offset + res.notes.length);
-      });
-    }
-  }
-  useEffect(() => {
-      if(targetActor){
-        fetchPosts(0);
-    }
-  },[targetActor])
-  const handleLoadMore = async () => {
-    fetchPosts(offset);
-    setOffset(offset + 10);
-  }
+
 
   const handleFollow = async (userId: string) => {
     try {
@@ -250,41 +219,20 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl px-2 py-4 shadow-lg">
           投稿一覧 💫
-        </h2>
-        {isModalOpen && (
-        <div>
-          <ImageModalContent imagesTable={modalImages} isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} index={modalIndex} />
-        </div>
+          </h2>
+      {posts.length > 0 || !isLoading  ? (<>
+      <TimelineContent 
+        isLoading={isLoading} 
+        posts={posts} 
+        error={error}
+      />
+
+      {isLoading && <LoadingSkeleton />}
+      {fetchMore && !isLoading && <LoadMoreButton onLoadMore={handleLoadMore} />}
+      </>
+      ) : (
+        <EmptyState />
       )}
-        {posts.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-            まだ投稿がないわ！💦
-          </p>
-        ) : (
-          posts.map((post, index) => (
-            <PostCard 
-              key={`${post.id}-${index}`} 
-              post={post}  
-              setIsModalOpen={setIsModalOpen} 
-              isModalOpen={isModalOpen} 
-              setModalImages={setModalImages} 
-              setModalIndex={setModalIndex} 
-            />
-          ))
-        )}
-        {fetchMore && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={() => handleLoadMore()}
-              className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
-            >
-              <span className="flex items-center">
-                <span className="mr-2">✨</span>
-                もっと見る
-              </span>
-            </button>
-          </div>
-          )} 
       </div>
 
     </div></>

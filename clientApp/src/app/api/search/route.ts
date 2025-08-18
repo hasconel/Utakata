@@ -6,7 +6,8 @@ const meilisearch = new MeiliSearch({
 
 
 import { NextResponse } from "next/server";
-
+import { ActivityPubNoteInClient } from "@/types/activitypub";
+import { getInternalPostWithActor } from "@/lib/appwrite/serverConfig";
 /**
  * 検索機能のサーバーサイドルートハンドラー！✨
  * AppwriteとMeiliSearchを使って検索機能を提供するよ！💖
@@ -19,5 +20,13 @@ export async function GET(request: Request) {
     .filter((hit:any) => new Date(hit.published) > new Date(new Date().getTime() - 1000 * 60 * 60 * 87))
     .sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime())
   const resultsActivityIds = filteredResults.map((hit: any) => hit.activityId);
-  return NextResponse.json(resultsActivityIds);
+  const resultNotes : ActivityPubNoteInClient[] = [];
+  for(const result of resultsActivityIds){
+    const note = await getInternalPostWithActor(result);
+    if(note){
+      resultNotes.push(note);
+      //console.log("resultNotes", resultNotes.map((post)=>post.id));
+    }
+  }
+  return NextResponse.json(resultNotes);
 }

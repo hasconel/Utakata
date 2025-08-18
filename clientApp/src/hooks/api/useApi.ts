@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError } from '@/lib/api/client';
+import { ActivityPubNoteInClient, ActivityPubNote, ActivityPubActor } from '@/types/activitypub';
 
 
 // キャッシュの型定義
@@ -76,6 +77,10 @@ export function useApi<T>(
   const [error, setError] = useState<ApiError | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // optionsをrefで安定化
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   const fetchData = useCallback(async (useCache: boolean = true) => {
     // 前のリクエストをキャンセル
     if (abortControllerRef.current) {
@@ -86,38 +91,39 @@ export function useApi<T>(
     try {
       setIsLoading(true);
       setError(null);
-      
       // キャッシュから取得を試行
-      if (useCache && options.cacheKey) {
-        const cachedData = getFromCache<T>(options.cacheKey, options.cacheTTL || 30000);
+      if (useCache && optionsRef.current.cacheKey) {
+        const cachedData = getFromCache<T>(optionsRef.current.cacheKey, optionsRef.current.cacheTTL || 30000);
         if (cachedData) {
           setData(cachedData);
-          options.onSuccess?.(cachedData);
+          optionsRef.current.onSuccess?.(cachedData);
+          console.log("キャッシュから取得しました");
           return;
         }
       }
-      
       const result = await fetcher();
-      
+        //console.log("result", result);
       // キャッシュに保存
-      if (options.cacheKey) {
-        setCache(options.cacheKey, result, options.cacheTTL || 30000);
+      if (optionsRef.current.cacheKey) {
+        setCache(optionsRef.current.cacheKey, result, optionsRef.current.cacheTTL || 30000);
+        console.log("キャッシュに保存しました");
       }
-      
       setData(result);
-      options.onSuccess?.(result);  
+      optionsRef.current.onSuccess?.(result);  
     } catch (err) {
+      //console.log("err", err);
       if (err instanceof Error && err.name === 'AbortError') {
+        console.log("キャンセルされたよ");
         return; // キャンセルされた場合は何もしない
       }
-      
+      console.log("エラーが発生したよ", err);
       const apiError = err instanceof ApiError ? err : new ApiError('エラーが発生したよ！💦');
       setError(apiError);
-      options.onError?.(apiError);
+      optionsRef.current.onError?.(apiError);
     } finally {
       setIsLoading(false);
     }
-  }, [fetcher, options.onSuccess, options.onError, options.cacheKey, options.cacheTTL]);
+  }, []); 
 
   useEffect(() => {
     if (options.enabled !== false) {
@@ -129,8 +135,7 @@ export function useApi<T>(
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchData, options.enabled]);
-
+  }, [fetchData, options.enabled]); 
   return {
     data,
     isLoading,
@@ -141,21 +146,44 @@ export function useApi<T>(
 
 /**
  * 投稿を取得するフック！✨
- * @param postId 投稿ID
+ * @param postId 投稿ID https://example.com/posts/123
  * @returns 投稿の結果
  */
-export function usePost(postId: string) {
-  return useApi(() => fetch(`/api/posts/${postId}`).then(res => res.json()));
+export function usePost(postId: string) : UseApiResult<ActivityPubNote> {
+  try{  
+return useApi(() =>{
+  if(!postId){
+    return Promise.resolve(null);
+  }
+  return fetch(postId,
+    {
+      method: "GET",
+      headers: {
+        "Accept": "application/activity+json"
+      }
+    }
+  ).then(res => res.status === 200 ? res.json() : null);
+  });
+}catch(error){
+  console.log("usePost error", error);
+  return {
+    data: null,
+    isLoading: false,
+    error: error as ApiError,
+    refetch: () => Promise.resolve()
+  };
+}
 }
 
 
 /**
  * ユーザー情報を取得するフック！✨
- * @param userId ユーザーID
+ * @param userId ユーザーID https://example.com/users/123
  * @returns ユーザー情報の結果
  */
-export function useUser(userId: string) {
-  return useApi(() => fetch(`/api/users/${userId}`,
+export function useUser(userId: string) : UseApiResult<ActivityPubActor> {
+  try{
+  return useApi(() => fetch(userId,
     {
       method: "GET",
       headers: {
@@ -163,4 +191,106 @@ export function useUser(userId: string) {
       }
     }
   ).then(res => res.json()));
+  }catch(error){
+    console.log("useUser error", error);
+    return {
+      data: null,
+      isLoading: false,
+      error: error as ApiError,
+      refetch: () => Promise.resolve()
+    };
+  }
+}
+
+
+/**
+ * タイムラインを取得するフック！✨
+ * @param userId ユーザーID
+ * @returns タイムラインの結果
+ */
+export function useTimelineManager(user: string, actor?: string) {
+  const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
+  const [offset, setOffset] = useState<number>(10);
+  const [fetchMore, setFetchMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const fetchPosts = useCallback(async (offset: number, isLoadMore: boolean = false) => {
+    setIsLoading(true);
+    try {
+      const url = new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/api/posts`);
+      url.searchParams.set("offset", offset.toString());
+      url.searchParams.set("limit", "10");
+      if(actor){
+        const actorId = process.env.NEXT_PUBLIC_DOMAIN + "/users/" + actor;
+        const encodedActorId = encodeURIComponent(actorId);
+        url.searchParams.set("attributedTo", encodedActorId);
+      }
+      const response = await fetch(url,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/activity+json",
+            "Accept": "application/activity+json",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0" 
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch posts");
+      }
+      const data = await response.json();
+      //console.log("data",data);
+      const notes = data.notes;
+      const total = data.total;
+      const sortedPosts = notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
+      //console.log("sortedPosts", sortedPosts);
+      if (isLoadMore) {
+        // もっと見る: 既存の投稿に追加
+        setPosts(prevPosts => [...prevPosts, ...sortedPosts]);
+      } else {
+        // リロード: 投稿を置き換え
+        setPosts([...sortedPosts]);
+      }
+      
+      setFetchMore(total > offset + notes.length);
+      setIsLoading(false);
+    } catch (error) {
+      setError(error as ApiError);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, actor]);
+  useEffect(() => {
+    if(user){
+      fetchPosts(0, false);
+      setIsInitialized(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if(!user){
+      return;
+    }
+    // 最初のアクセス時のみfetch
+    if (!isInitialized && offset === 10) {
+      fetchPosts(0, false);
+      setIsInitialized(true);
+    }
+  }, [isInitialized, offset, user]);
+  
+  const handleLoadMore = async () => {
+    fetchPosts(offset, true); 
+    setOffset(offset + 10);
+  }
+
+  const handleTimelineReload = async () => {
+    fetchPosts(0, false);
+    setOffset(10);
+  };
+
+  return { posts, fetchMore, isLoading, error, handleLoadMore, handleTimelineReload };
 }

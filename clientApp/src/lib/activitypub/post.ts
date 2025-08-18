@@ -68,7 +68,7 @@ export async function savePost(
   // NoteとCreateアクティビティを生成（utils.tsで定義）
   const actorId = process.env.NEXT_PUBLIC_DOMAIN!+"/users/"+actor.userId;
   const uniqueID = require("node-appwrite").ID.unique();
-  const { note, activity } = await createNote(uniqueID, actorId, input.content, input.visibility,  input.inReplyTo?.to);
+  const { note, activity } = await createNote(uniqueID, actorId, input.content, input.visibility,  input.inReplyTo?.id, input.inReplyTo?.to);
 
   // 画像を追加
   if (images.length > 0) {
