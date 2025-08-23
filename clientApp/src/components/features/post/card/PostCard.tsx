@@ -161,7 +161,6 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         if (data && data.length > 0) {
           setReplyPosts(data);
           if(data.length > 0){
-            console.log("replyPosts",replyPosts);
           }
           //console.log("✅ リプライ投稿を取得:", data.length, "件");
         }

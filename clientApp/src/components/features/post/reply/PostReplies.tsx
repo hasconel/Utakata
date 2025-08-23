@@ -39,8 +39,6 @@ export default function PostReplies({ post, setIsLoading }: PostRepliesProps) {
   
   useEffect(() => {
     if(postData){
-      console.log("PostReplies - postData loaded:", postData);
-      console.log("PostReplies - userData:", postData?._user);
       setImages(postData?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
       setIsLoading(false);
     }

@@ -14,14 +14,12 @@ export function useActor() {
     try {
         // 内部ドメインの場合は直接取得
         if(isInternalUrl(url)){
-          console.log("internal",url);
           const actor : ActivityPubActor = await fetch(url,{
             method: "GET",
             headers: {
               "Accept": "application/activity+json",
             },
           }).then((res) => res.json());
-          console.log("actor",actor);
           return {actor:actor,name:actor.preferredUsername};
         }else{
           // 外部ドメインの場合はWebFingerにアクセス

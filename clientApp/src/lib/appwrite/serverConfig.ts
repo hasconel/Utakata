@@ -580,7 +580,6 @@ export async function getUserNotifications() {
     process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
     [Query.orderDesc("$createdAt"),Query.greaterThan("$updatedAt",new Date(Date.now()-1000*60*60*84).toISOString()),Query.equal("to", process.env.NEXT_PUBLIC_DOMAIN+"/users/"+session.$id)]
   );
-  console.log("documents",documents);
   return documents
 }
 
@@ -713,8 +712,6 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
     }
 
   const noteData = await getPost(appwritePostId, databases);
-  console.log("noteData",noteData.id);
-  //console.log("noteData",noteData.content);
   const { documents : [actorDocument] }: Models.DocumentList<Actor>   = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_ACTORS_COLLECTION_ID!,
@@ -725,8 +722,6 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
     throw new Error("ユーザーが見つからないわ！💦");
   };
   const { likeCount, isLiked } = await getLikeCountAndIsLiked(postId, actorId, databases);
-  console.log("likeCount",likeCount);
-  console.log("isLiked",isLiked);
   const note : ActivityPubNoteInClient = {
     "@context": ["https://www.w3.org/ns/activitystreams"],
     id: noteData.id,
@@ -772,7 +767,6 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
     },
     "_canDelete": actorDocument.$id === session.$id
   } ;
-  console.log("note", note.id);
     return note;
   } catch (error) {
     console.error("投稿の詳細の取得に失敗したよ！💦", error);

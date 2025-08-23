@@ -97,7 +97,6 @@ export function useApi<T>(
         if (cachedData) {
           setData(cachedData);
           optionsRef.current.onSuccess?.(cachedData);
-          console.log("キャッシュから取得しました");
           return;
         }
       }
@@ -106,7 +105,7 @@ export function useApi<T>(
       // キャッシュに保存
       if (optionsRef.current.cacheKey) {
         setCache(optionsRef.current.cacheKey, result, optionsRef.current.cacheTTL || 30000);
-        console.log("キャッシュに保存しました");
+        //console.log("キャッシュに保存しました");
       }
       setData(result);
       optionsRef.current.onSuccess?.(result);  

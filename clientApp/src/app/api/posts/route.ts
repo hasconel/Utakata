@@ -65,7 +65,6 @@ export async function POST(request: Request) {
       privateKey: user.privateKey,
       followers: user.actorId + "/followers",
     });
-    console.log("success");
     return NextResponse.json({ success: true, document }, {
       headers: {
         'Access-Control-Allow-Origin': '*',
