@@ -66,7 +66,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
     if(userParams.length === 3){
       const domain = userParams[2];
       const actorName = userParams[1];
-      const url = new URL(`/api/webfinger`);
+      const url = new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/api/webfinger`);
       url.searchParams.set("resource", `acct:${actorName}@${domain}`);
       url.searchParams.set("domain", domain);
       const actorId = fetch(url, {
