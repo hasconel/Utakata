@@ -1,7 +1,7 @@
 "use client";
 import { getUserNotifications, readNotification } from "@/lib/appwrite/serverConfig";
 import { useEffect, useState } from "react";
-import { Notification as NotificationType } from "@/lib/appwrite/posts";
+import { Notification as NotificationType } from "@/types/appwrite";
 import Notification from "@/components/features/user/Notification";
 
 export default function NotificationsPage() {

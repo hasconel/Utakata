@@ -1,11 +1,10 @@
 "use server";
-import { Client, Account, Databases, Storage, Users, Query, ID,  } from "node-appwrite";
+import { Client, Account, Databases, Storage, Users, Query, ID, Models } from "node-appwrite";
 import { cookies } from "next/headers";
 import { MeiliSearch } from "meilisearch";
-import { Actor, Post } from "@/types/appwrite";
+import { Actor, Post  } from "@/types/appwrite";
 import { signRequest } from "../activitypub/crypto";
-import { ActivityPubNoteInClient, ActivityPubActor, ActivityPubNote } from "@/types/activitypub";
-import { Databases as AppwriteDatabases, Models } from "node-appwrite";
+import { ActivityPubNote, ActivityPubNoteInClient } from "@/types/activitypub";
 
 const meilisearch = new MeiliSearch({
   host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
@@ -68,36 +67,6 @@ export async function createSessionClient(cookie?: Request) {
 }
 
 /**
- * セッション状態を確認！✨
- * 現在のセッションが有効かどうかをキラキラに確認するよ！💖
- */
-export async function checkSessionStatus(cookie?: Request) {
-  try {
-    const { account } = await createSessionClient(cookie);
-    const user = await account.get();
-    return {
-      isValid: true,
-      user: user,
-      message: "セッションが有効です"
-    };
-  } catch (error: any) {
-    return {
-      isValid: false,
-      user: null,
-      message: error.message || "セッションが無効です"
-    };
-  }
-}
-
-/**
- * セッションクッキーを返す！✨
- * セッションクッキーを返すよ！💖
- */
-export async function getSessionCookie() {
-  return (await cookies()).get("my-custom-session")?.value;
-}
-
-/**
  * ログイン済みユーザーを取得！✨
  * セッションからユーザー情報をキラキラに取得するよ！💖
  */
@@ -110,19 +79,6 @@ export async function getLoggedInUser() {
     if (error.code === 401) {
       throw new Error("ログインが必要だよ！💦 もう一度ログインしてね！✨");
     }
-    throw new Error("セッションの取得に失敗したよ！💦");
-  }
-}
-
-/**
- * 現在のセッションを取得！✨
- * アクティブなセッション情報をキラキラに取得するよ！💖
- */
-export async function getCurrentSession() {
-  try {
-    const { account } = await createSessionClient();
-    return await account.getSession("current");
-  } catch (error: any) {
     throw new Error("セッションの取得に失敗したよ！💦");
   }
 }
@@ -144,41 +100,7 @@ export async function createAdminClient() {
   };
 }
 
-/**
- * 必須フィールドのチェック！✨
- * 必要なフィールドが揃ってるかキラキラに確認するよ！💖
- */
-export async function throwIfMissing(obj: any, keys: string[]) {
-  const missing = [];
-  for (let key of keys) {
-    if (!(key in obj) || !obj[key]) {
-      missing.push(key);
-    }
-  }
-  if (missing.length > 0) {
-    throw new Error(`必須フィールドが足りないよ！💦: ${missing.join(', ')}`);
-  }
-}
 
-/**
- * 静的ファイルを取得！✨
- * 指定したファイルの内容をキラキラに読み込むよ！💖
- */
-export async function getStaticFile(fileName: string) {
-  // Next.js環境では相対パスで静的ファイルを読み込む
-  const fs = require('fs');
-  const path = require('path');
-  const staticFolder = path.join(process.cwd(), 'src/lib/appwrite/static');
-  return fs.readFileSync(path.join(staticFolder, fileName)).toString();
-}
-
-/**
- * テンプレートの置換！✨
- * プレースホルダーをキラキラに置き換えるよ！💖
- */
-export async function interpolate(template: string, values: Record<string, string | undefined>) {
-  return template.replace(/{{([^}]+)}}/g, (_, key: string) => values[key] || '');
-}
 
 // フォロー
 export async function followUser(userId: string){
@@ -448,46 +370,6 @@ export async function deletePost(postId: string) {
   }
 }
 /**
- * ライクを確認する。
- * @param postId ライクを確認する投稿の$id
- * @returns ライクが存在するかどうか
- */
-export async function checkLike(postId: string) {
-  try {
-    const { databases, account } = await createSessionClient();
-    const session = await account.get();
-    const currentUser : Actor = await databases.getDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      session.$id
-    );
-    if (!currentUser) {
-      throw new Error("ユーザーが見つからないわ！💦");
-    }
-    
-    // 現在のユーザーがいいねしてるかチェック
-    const { documents } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_LIKES_COLLECTION_ID!,
-      [Query.equal("object", postId), Query.equal("actor", currentUser.actorId)]
-    );
-    
-    // 投稿に対する総いいね数を取得
-    const { total } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_LIKES_COLLECTION_ID!,
-      [Query.equal("object", postId)]
-    );
-    
-    //console.log(`checkLike結果: postId=${postId}, isLiked=${documents.length > 0}, likeCount=${total}`);
-    
-    return { isLiked: documents.length > 0, likeCount: total };
-  } catch (error) {
-    //console.error("checkLikeエラー:", error);
-    return { isLiked: false, likeCount: 0 };
-  }
-}
-/**
  * ライク処理
  * @param postId ライクする投稿の$id
  * @returns ライク成功かどうか
@@ -627,36 +509,6 @@ export async function unlikePost(postId: string, actorInbox: string) {
 } 
 
 /**
- * 通知を作成する関数
- * @param type 通知の種類
- * @param from 通知を送信したユーザーのactorId
- * @param to 通知を受信するユーザーのactorId
- * @param target 通知の対象のアクティビティID
- * @param message 通知のメッセージ
- * @param read 通知が既読かどうか
- */
-export async function createNotification(type: string, from: string, to: string, target: string, {/*message: string*/}, read: boolean) {
-  try {
-    const { databases } = await createAdminClient();
-    await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-      ID.unique(),
-      { 
-        type,
-        from,
-        to,
-        target,
-        read
-      }
-    );
-    return true;
-  } catch (error) {
-    console.error("通知の作成に失敗したわ！💦", error);
-    return false;
-  }
-}
-/**
  * プロフィールの更新
  * @param actorId プロフィールを更新するユーザーのactorId
  * @param displayName 表示名
@@ -772,166 +624,13 @@ export async function readNotification(notificationId: string) {
 }
 
 /**
- * アクティビティIDからポストを取得する 
- * @param activityId アクティビティID
- * @returns ポスト
- */
-export async function getPostFromActivityId(activityId:string): Promise<ActivityPubNote> {
-  try{
-  const { databases } = await createSessionClient();  
-  const { documents : [document] }  : Models.DocumentList<Post> = await databases.listDocuments(
-    process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_POSTS_COLLECTION_ID!,
-    [Query.equal("activityId", activityId)]
-  );
-  if(!document){
-    throw new Error("ポストが見つからないわ！💦");
-  }
-  const post : ActivityPubNote = {
-    "@context": ["https://www.w3.org/ns/activitystreams"],
-    type: "Note",
-    id: document.activityId,
-    attributedTo: document.attributedTo || document.username,
-    content: document.content,
-    published: document.published,
-    inReplyTo: document.inReplyTo || "",
-    attachment: document.attachment || [],
-    to: document.to || [],
-    cc: document.cc || [],
-    url: document.id,
-    likes: document.activityId + "/likes",
-    replies: document.activityId + "/replies",
-  }
-  return post;
-} catch (error) {
-  console.error("ポストの取得に失敗したわ！💦", error);
-  throw error;
-} 
-}
-
-/**
- * タイムラインの投稿を取得！✨
- * 投稿をキラキラに取得するよ！💖
- */
-export async function getTimelinePosts(sessionId: string, limit: number = 10, offset: number = 0) : Promise<{notes:ActivityPubNoteInClient[],total:number}> {
-  try {
-    const { databases } = await createSessionClient();
-    const { documents, total } : Models.DocumentList<Post> = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      [Query.orderDesc("$createdAt"),Query.limit(limit),Query.offset(offset)]
-    );
-    const actors :ActivityPubActor[] = [];
-    const posts : ActivityPubNoteInClient[] = [];
-    
-    // mapをfor...ofに変更して順次処理に
-    for (const document of documents) {
-      //actorsリストにactorIdがない場合
-      if(!actors.find(actor => actor.id === document.attributedTo)){
-        if(document.attributedTo){
-          const actor = await getActor(document.attributedTo, databases);
-          if(actor && actor.id === document.attributedTo){
-            actors.push(actor);
-          }
-        }
-      }
-      const actor = actors.find(actor => actor.id === document.attributedTo);
-      const totalLikes = await databases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_LIKES_COLLECTION_ID!,
-        [Query.equal("object", document.activityId)]
-      );
-      const totalReplies = await databases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_POSTS_COLLECTION_ID!,
-        [Query.equal("inReplyTo", document.activityId)]
-      );
-      const sessionActorId = process.env.NEXT_PUBLIC_DOMAIN+"/users/"+sessionId;
-      const isLiked = await databases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_LIKES_COLLECTION_ID!,
-        [Query.equal("object", document.activityId),Query.equal("actor", sessionActorId)]
-      );
-      if(actor){
-      const note : ActivityPubNoteInClient = {
-        "@context": ["https://www.w3.org/ns/activitystreams"],
-        type: "Note",
-        id: document.activityId,
-        attributedTo: document.attributedTo || document.username,
-        content: document.content,
-        published: document.published,
-        inReplyTo: document.inReplyTo || "",
-        attachment: document.attachment || [],
-        to: document.to || [],
-        cc: document.cc || [],
-        url: document.id,
-        likes: {
-          totalItems: totalLikes.total || 0,
-          first: document.id + "/likes?page=1",
-          last: document.id + "/likes?page=" + Math.ceil(totalLikes.total / 20),
-        },
-        replies: {
-          totalItems: totalReplies.total || 0,
-          first: document.id + "/replies?page=1",
-          last: document.id + "/replies?page=" + Math.ceil(totalReplies.total / 20),
-        },
-        _isLiked: isLiked.total > 0,
-        _user: actor!,
-        _canDelete: actor!.id === sessionActorId
-      }
-      posts.push(note)}
-    }
-    //console.log("posts",posts);
-    return {notes :posts,total:total};
-  } catch (error) {
-    throw new Error('タイムラインの取得に失敗したよ！💦');
-  }
-}
-/**
- * アクターを取得！✨
- * @param actorId アクターのid
- * @param databases データベース
- * @returns アクター
- */
-async function getActor(actorId: string, databases: AppwriteDatabases) : Promise<ActivityPubActor> {
-  const { documents } = await databases.listDocuments(
-    process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-    [Query.equal("actorId", actorId)]
-  );
-  if(documents.length === 0){
-    throw new Error("アクターが見つからないわ！💦");
-  }
-  const actor : ActivityPubActor = {
-    "@context": "https://www.w3.org/ns/activitystreams",
-    type: "Person",
-    id: documents[0].actorId,
-    displayName: documents[0].displayName,
-    preferredUsername: documents[0].preferredUsername,
-    icon: {
-      type: "Image",
-      url: documents[0].avatarUrl,
-    },
-    followers: documents[0].actorId + "/followers",
-    following: documents[0].actorId + "/following",
-    inbox: documents[0].actorId + "/inbox",
-    outbox: documents[0].actorId + "/outbox",
-    publicKey: {
-      id: documents[0].actorId + "#main-key",
-      owner: documents[0].actorId,
-      publicKeyPem: documents[0].publicKey,
-    },
-  }
-  return actor;
-}
-/**
  * 投稿を生のActivityPubNoteで取得！✨
  * @param postId 投稿の$id
  * @param databases データベース
  * @returns 投稿
  * 投稿をキラキラに取得するよ！💖
  */
-async function getPost(postId: string, databases: AppwriteDatabases) : Promise<ActivityPubNote> {
+async function getPost(postId: string, databases: Databases) : Promise<ActivityPubNote> {
   try {
     const document : Post = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
@@ -983,7 +682,7 @@ async function getPost(postId: string, databases: AppwriteDatabases) : Promise<A
  * @param databases データベース
  * @returns いいね数といいねしたかどうか
  */
-const getLikeCountAndIsLiked = async (postId: string, userId: string, databases: AppwriteDatabases) : Promise<{likeCount: number, isLiked: boolean}>  => {
+const getLikeCountAndIsLiked = async (postId: string, userId: string, databases: Databases) : Promise<{likeCount: number, isLiked: boolean}>  => {
   const { total : likeCount } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_LIKES_COLLECTION_ID!,
@@ -1079,127 +778,6 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
     console.error("投稿の詳細の取得に失敗したよ！💦", error);
     throw new Error("投稿の詳細の取得に失敗したよ！💦");
   }
-}
-
-
-/**
- * 投稿を作成！✨
- * 投稿をキラキラに作成するよ！💖
- */
-export async function createPost(content: string, userId: string, images?: File[]) {
-  try {
-    const { databases } = await createSessionClient();
-    const document = await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      'unique()',
-      {
-        content,
-        images: images || [],
-        createdAt: new Date().toISOString(),
-        published: new Date().toISOString(),
-        to: '',
-        cc: [],
-        inReplyTo: null,
-        replyCount: 0,
-        attributedTo: userId,
-        attachment: [],
-        LikedActors: []
-      }
-    );
-    return document;
-  } catch (error) {
-    throw new Error('投稿の作成に失敗したよ！💦');
-  }
-}
-
-/**
- * 投稿を削除！✨
- * 投稿をキラキラに削除するよ！💖
- */
-export async function deletePostById(postId: string) {
-  try {
-    const { databases } = await createSessionClient();
-    await databases.deleteDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      postId
-    );
-  } catch (error) {
-    throw new Error('投稿の削除に失敗したよ！💦');
-  }
-}
-
-/**
- * ユーザーの投稿を取得！✨
- * ユーザーの投稿をキラキラに取得するよ！💖
- */
-export async function getUserPosts(userId: string) {
-  try {
-    const { databases } = await createSessionClient();
-    const { documents } = await databases.listDocuments(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      [
-        Query.equal('$id', userId),
-        Query.orderDesc('$createdAt')
-      ]
-    );
-    return documents;
-  } catch (error) {
-    throw new Error('ユーザーの投稿の取得に失敗したよ！💦');
-  }
-}
-
-/**
- * プロフィールを更新！✨
- * プロフィールをキラキラに更新するよ！💖
- */
-export async function updateUserProfile(actorId: string, data: { displayName: string; bio: string }) {
-  try {
-    const { databases } = await createSessionClient();
-    await databases.updateDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      actorId,
-      {
-        displayName: data.displayName,
-        bio: data.bio,
-      }
-    );
-    return true;
-  } catch (error) {
-    throw new Error('プロフィールの更新に失敗したよ！💦');
-  }
-}
-
-/**
- * リプライの投稿を取得！✨
- * リプライの投稿をキラキラに取得するよ！💖
- */
-export async function getReplyPostsFromActivityId(activityId: string)  {
-  const { databases } = await createSessionClient();
-  const { documents } : Models.DocumentList<Post> = await databases.listDocuments(
-    process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_POSTS_COLLECTION_ID!,
-    [Query.equal("inReplyTo", activityId)]
-  );
-  return documents.map((document) => {
-    return {
-      $id: document.$id,
-      $createdAt: document.$createdAt,
-      $updatedAt: document.$updatedAt,
-      content: document.content,
-      username: document.username,
-      activityId: document.activityId,
-      to: document.to,
-      cc: document.cc,
-      published: document.published,
-      attributedTo: document.attributedTo,
-      avatar: document.avatar,
-      attachment: document.attachment,
-    } ;
-  });
 }
 
 export async function getLikedActivities(postId: string) {

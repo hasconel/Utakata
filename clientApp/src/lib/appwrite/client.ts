@@ -1,4 +1,4 @@
-import { Post } from "./posts";
+import { Post } from "@/types/appwrite";
 import { convertToExternalUrl } from "../utils";
 
 /**

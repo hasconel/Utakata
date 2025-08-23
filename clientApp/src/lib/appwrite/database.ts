@@ -27,24 +27,6 @@ const ENCRYPTION_KEY = Buffer.from(process.env.APPWRITE_ENCRYPTION_KEY!, "hex");
 const IV_LENGTH = 16;
 
 /**
- * 登録スキーマ！💎
- * 入力の安全性をキラキラ検証！✨
-const SignUpSchema = z.object({
-  email: z.string().email({ message: Errors.InvalidInput("メールアドレス") }),
-  password: z.string().min(8, { message: Errors.InvalidInput("パスワードは8文字以上") }),
-  username: z
-    .string()
-    .min(3, { message: Errors.InvalidInput("ユーザー名は3文字以上") })
-    .max(20, { message: Errors.InvalidInput("ユーザー名は20文字以内") })
-    .regex(/^[a-zA-Z]+$/, { message: Errors.InvalidInput("ユーザー名はアルファベットのみ") }),
-  displayName: z
-    .string()
-    .min(1, { message: Errors.InvalidInput("表示名を入力してね") })
-    .max(100, { message: Errors.InvalidInput("表示名は100文字以内") }),
-});
- */
-
-/**
  * 暗号化（AES-256-GCM）！🔒
  * 秘密鍵をキラキラ安全に保存！✨
  */
@@ -309,65 +291,6 @@ export async function getActorById(actorId: string): Promise<ActivityPubActor | 
   } as ActivityPubActor;  
 }
 
-
-/**
- * アクターIDからアクターを取得！🔍
- * @param preferredUsername アクターID
- * @returns Actorオブジェクト（見つからない場合はnull）
- * @throws Error データベースエラー
- */
-export async function getActorByPreferredUsername(preferredUsername: string): Promise<ActivityPubActor | null> {
-  const {databases} = await createSessionClient();
-  const {documents} = await databases.listDocuments(
-    process.env.APPWRITE_DATABASE_ID!,
-    process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-    [Query.equal("preferredUsername", [preferredUsername])]
-  );
-  //console.log("actorId", actorId);
-
-  if (documents.length > 1) {
-    throw new Error("アクターが複数見つかったよ！💦");
-  }
-  if (documents.length === 0) {
-    return null;
-  }
-
-  const doc = documents[0];
-  const actorSubs = await databases.getDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!, doc.$id);
-  if(!actorSubs){
-    throw new Error("サブアクターの取得に失敗したよ！💦");
-  }
-  if (!isActor(doc)) {
-    throw new Error("サブアクターの取得に失敗したよ！💦");
-  }
-  return {
-    "@context": ["https://www.w3.org/ns/activitystreams"],
-    type: "Person",
-    id: doc.actorId,
-    preferredUsername: doc.preferredUsername,
-    displayName: doc.displayName,
-    followers: doc.actorId + "/followers",
-    inbox: doc.inbox,
-    outbox: doc.outbox,
-    following: doc.following || `${process.env.NEXT_PUBLIC_DOMAIN}/users/${doc.preferredUsername}/following`,
-    publicKey: {
-      id: `${doc.actorId}#main-key`,
-      type: "Key",
-      owner: doc.actorId,
-      publicKeyPem: doc.publicKey,
-    },
-    icon: {
-      type: "Image",
-      url: doc.avatarUrl,
-    },
-    image: {
-      type: "Image",
-      url: doc.backgroundUrl,
-    },
-    summary: doc.bio,
-    url: doc.actorId,
-  } as ActivityPubActor;
-}
 
 /**
  * アクターのミュートリストを取得！🔍

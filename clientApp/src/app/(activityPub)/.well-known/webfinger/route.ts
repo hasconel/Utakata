@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { getActorByPreferredUsername } from "../../../../lib/appwrite/database";
+import { createSessionClient } from "../../../../lib/appwrite/serverConfig";
+import { Actor } from "../../../../types/appwrite";
+import { Query } from "node-appwrite";
 
 export async function GET(request: NextRequest) {
     // リクエストヘッダーはacct:user@hostの形式
@@ -15,10 +17,15 @@ export async function GET(request: NextRequest) {
     // process.env.NEXT_PUBLIC_DOMAINは開発環境だけポート指定しているので削除
     const domain = process.env.NEXT_PUBLIC_DOMAIN?.replace(/:\d+$/, "");
     if(baseUrl !== domain) return;
-    const actor = await getActorByPreferredUsername(acct?.split("@")[0] || "");
+    const actor = await acct?.split("@")[0];
     if(!actor) return;
     const user = acct?.split("@")[0];
-
+    const { databases } = await createSessionClient(request);
+    const {documents: [actorData]}: {documents: Actor[]} = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+      [Query.equal("preferredUsername", actor)]
+    );
     if (!resource) {
         return NextResponse.json({ error: "Resource parameter is required" }, { status: 400 });
     }
@@ -33,7 +40,7 @@ export async function GET(request: NextRequest) {
       {
         "rel": "self",
         "type": "application/activity+json",
-        "href": `${actor.id}`
+        "href": `${actorData.actorId}`
       }
     ]
   },{headers: {

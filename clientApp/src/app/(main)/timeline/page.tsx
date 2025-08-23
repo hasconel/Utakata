@@ -56,9 +56,9 @@ export default function TimelinePage() {
   const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager(actor?.id.split("/").pop() || "");
   const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  //handleTimelineReloadが呼ばれたら、postsを更新
-  //nextPostsが更新されたら、postsに追加
   useEffect(() => {
+    //console.log("nextPosts", nextPosts[0]?.content);
+
     if (nextPosts.length > 0) {
       // 重複チェックして新しい投稿のみを追加
       const newPosts = nextPosts.filter((nextPost: ActivityPubNote) => 
@@ -66,16 +66,22 @@ export default function TimelinePage() {
       );
       
       if (newPosts.length > 0) {
-        //console.log("新しい投稿を追加:", newPosts.length, "件");
-        setPosts(prevPosts => [...prevPosts, ...newPosts]);
+        const sortedPosts = [...posts, ...nextPosts].sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+        setPosts(sortedPosts);  
       } else {
         //console.log("新しい投稿なし");
       }
       
       setIsLoading(false);
     }
-  }, [nextPosts, posts]);
+  }, [nextPosts]);
 
+  // 初期化時の処理
+  useEffect(() => {
+    if (actor && nextPosts.length === 0) {
+      setIsLoading(true);
+    }
+  }, [actor, nextPosts.length]);
 
   return (  
     <>
@@ -87,19 +93,17 @@ export default function TimelinePage() {
         className="max-w-2xl mx-auto md:px-4"
       >
         <TimelineHeader onRefresh={handleTimelineReload} />
-        {posts.length > 0 || !isLoading || !isLoadingNextPosts ? (<>
-        <TimelineContent 
-          isLoading={isLoading} 
-          posts={posts} 
-          error={error}
-        />
-
-        {isLoadingNextPosts && <LoadingSkeleton />}
+        {isLoading || isLoadingNextPosts ? (
+          <LoadingSkeleton />
+        ) : ( posts.length > 0 || !isLoadingNextPosts || fetchMore ? (
+          <TimelineContent 
+            isLoading={isLoading} 
+            posts={posts} 
+            error={error}
+          />
+        ) : ( <EmptyState isUser={false} />))    
+        }
         {fetchMore && !isLoadingNextPosts && <LoadMoreButton onLoadMore={handleLoadMore} />}
-        </>
-        ) : (
-          <EmptyState />
-        )}
       </div>
     </>
   );

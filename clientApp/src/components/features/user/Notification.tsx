@@ -1,5 +1,5 @@
 "use client";
-import { Notification as NotificationType } from "@/lib/appwrite/posts";
+import { Notification as NotificationType } from "@/types/appwrite";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { useState, useEffect } from "react";
@@ -20,7 +20,7 @@ export default function Notification({ notification }: { notification: Notificat
     useEffect(() => {
         setIsLoading(true);
         if(notification.type === "Reply" || notification.type === "Like"){
-            setPost(notification.target);
+            setPost(notification?.target || null);
         }
         setIsLoading(false);
     }, [notification]);

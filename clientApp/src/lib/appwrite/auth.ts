@@ -6,24 +6,8 @@
 import {  Models,   Query } from "node-appwrite";
 import { createAdminClient, createSessionClient, deletePost } from "./serverConfig";
 import { cookies } from "next/headers";   
-import {  createDecipheriv } from "crypto";
 import { Actor, Post } from "@/types/appwrite";
-const ENCRYPTION_KEY = Buffer.from(process.env.APPWRITE_ENCRYPTION_KEY!, "hex");
 
-/**
- * 復号化！🔓
- * 暗号化された秘密鍵をキラキラ取り出す！✨
- */
-function decrypt(encrypted: string): string {
-  const [ivHex, encryptedHex, authTagHex] = encrypted.split(":");
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
-  const decipher = createDecipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
-  decipher.setAuthTag(authTag);
-  let decrypted = decipher.update(encryptedHex, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  return decrypted;
-}
 
 export async function signInWithEmail(formData:{email:string,password:string}) {
   const email = formData.email;
@@ -59,19 +43,6 @@ export async function signOut() {
 
   (await cookies()).delete("my-custom-session");
   await account.deleteSession("current");
-}
-
-export async function getActorByUserId(userId: string) {
-  const { databases} = await createSessionClient();
-  const { documents } : Models.DocumentList<Actor> = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [
-    Query.equal("userId", userId),
-  ]);
-  if (documents[0]) {
-    const actor : Actor = documents[0];
-    actor.privateKey = decrypt(actor.privateKey);
-    return actor;
-  }
-  return null;
 }
 
 /**

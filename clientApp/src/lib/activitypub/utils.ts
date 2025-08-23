@@ -2,7 +2,6 @@
  * ActivityPubのユーティリティ関数！✨
  * Note生成、リプライ処理、inbox取得をキラキラサポート！💖
  */
-import { ACTIVITYSTREAMS_CONTEXT, PUBLIC, DOMAIN } from "./constants";
 import { ActivityPubNote, CreateActivity } from "@/types/activitypub/collections";
 import {isInternalUrl, convertToExternalUrl} from "@/lib/utils"
 
@@ -26,16 +25,16 @@ export async function createNote(
   attributedTo?: string
 ): Promise<{ note: ActivityPubNote; activity: CreateActivity }> {
   // 投稿IDを箱数から生成
-  const id = `${DOMAIN}/posts/${noteId}`;
+  const id = `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${noteId}`;
   const followers = actorId + "/followers";
   const published = new Date().toISOString();
   // attributedToが存在する場合、宛先にリプライ先の投稿者を設定
-  const to = [];
+  const to: string[] = [];
   if(attributedTo){
     to.push(attributedTo);
   }
   if(visibility === "public"){
-    to.push(PUBLIC);
+    to.push("https://www.w3.org/ns/activitystreams#Public");
   }else{
     to.push(followers);
   }
@@ -44,7 +43,7 @@ export async function createNote(
 
   // Noteオブジェクト（投稿本体）
   const note: ActivityPubNote = {
-    "@context": ACTIVITYSTREAMS_CONTEXT,
+    "@context": "https://www.w3.org/ns/activitystreams",
     id,
     type: "Note",
     published,
@@ -57,7 +56,7 @@ export async function createNote(
 
   // Createアクティビティ（投稿イベント）
   const activity: CreateActivity = {
-    "@context": ACTIVITYSTREAMS_CONTEXT,
+    "@context": "https://www.w3.org/ns/activitystreams",
     id: `${id}#create`,
     type: "Create",
     actor: actorId,

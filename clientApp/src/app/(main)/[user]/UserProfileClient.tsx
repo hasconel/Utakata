@@ -76,6 +76,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
           "Accept": "application/activity+json",
         },
       }).then((res) => res.json()).then((res) => {
+
         const actor = getActor(res.links.find((link: any) => link.rel === "self")?.href).then((res)=>{
           setTargetActor(res.actor);
         });
@@ -220,18 +221,18 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl px-2 py-4 shadow-lg">
           投稿一覧 💫
           </h2>
-      {posts.length > 0 || !isLoading  ? (<>
+      {posts.filter((post: any) => post.attributedTo.includes(targetActor?.id)).length > 0 && !isLoading  ? (<>
       <TimelineContent 
         isLoading={isLoading} 
-        posts={posts} 
+        posts={posts.filter((post: any) => post.attributedTo.includes(targetActor?.id))} 
         error={error}
       />
 
       {isLoading && <LoadingSkeleton />}
-      {fetchMore && !isLoading && <LoadMoreButton onLoadMore={handleLoadMore} />}
+      {fetchMore && !isLoading && posts.filter((post: any) => post.attributedTo.includes(targetActor?.id)).length > 0 && <LoadMoreButton onLoadMore={handleLoadMore} />}
       </>
       ) : (
-        <EmptyState />
+        <EmptyState isUser={true} />
       )}
       </div>
 

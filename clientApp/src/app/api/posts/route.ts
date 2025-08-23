@@ -98,7 +98,6 @@ export async function GET(request: Request) {
   const LimitDate = new Date(date);
   LimitDate.setHours(LimitDate.getHours() - 84);
   const dateString = LimitDate.toISOString();
-  
   // クエリビルダークラスでクエリ構築を最適化！✨
   class PostQueryBuilder {
     private queries: any[] = [];
@@ -169,10 +168,10 @@ export async function GET(request: Request) {
     offset = url.searchParams.get("offset") || "0";
     inReplyTo = url.searchParams.get("inReplyTo");
     attributedTo = url.searchParams.get("attributedTo");
+    //attributeToをデコード
     lastId = url.searchParams.get("lastId");
     firstId = url.searchParams.get("firstId");
   } catch (error) {
-    console.error("URLパースエラー:", error);
     return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
   }
   

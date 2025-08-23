@@ -206,6 +206,7 @@ export function useUser(userId: string) : UseApiResult<ActivityPubActor> {
 /**
  * タイムラインを取得するフック！✨
  * @param userId ユーザーID
+ * @param actor アクターID(https://example.com/users/123)
  * @returns タイムラインの結果
  */
 export function useTimelineManager(user: string, actor?: string) {
@@ -214,7 +215,6 @@ export function useTimelineManager(user: string, actor?: string) {
   const [fetchMore, setFetchMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   const fetchPosts = useCallback(async (offset: number, isLoadMore: boolean = false) => {
     setIsLoading(true);
@@ -223,19 +223,16 @@ export function useTimelineManager(user: string, actor?: string) {
       url.searchParams.set("offset", offset.toString());
       url.searchParams.set("limit", "10");
       if(actor){
-        const actorId = process.env.NEXT_PUBLIC_DOMAIN + "/users/" + actor;
-        const encodedActorId = encodeURIComponent(actorId);
-        url.searchParams.set("attributedTo", encodedActorId);
+        url.searchParams.set("attributedTo", actor);
       }
+      
+      // キャッシュバスティング用のタイムスタンプを追加
+      url.searchParams.set("_t", Date.now().toString());
       const response = await fetch(url,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/activity+json",
-            "Accept": "application/activity+json",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0" 
           },
         }
       );
@@ -243,11 +240,9 @@ export function useTimelineManager(user: string, actor?: string) {
         throw new Error("Failed to fetch posts");
       }
       const data = await response.json();
-      //console.log("data",data);
-      const notes = data.notes;
+      const notes :ActivityPubNoteInClient[] = data.notes;
       const total = data.total;
       const sortedPosts = notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
-      //console.log("sortedPosts", sortedPosts);
       if (isLoadMore) {
         // もっと見る: 既存の投稿に追加
         setPosts(prevPosts => [...prevPosts, ...sortedPosts]);
@@ -264,23 +259,21 @@ export function useTimelineManager(user: string, actor?: string) {
       setIsLoading(false);
     }
   }, [user, actor]);
+  
+  // 初期化とuser/actorの変更時の処理
   useEffect(() => {
-    if(user){
+    if (user) {
+      // 初期化時は投稿をクリア
+      setPosts([]);
+      setOffset(10);
       fetchPosts(0, false);
-      setIsInitialized(true);
     }
-  }, []);
-
-  useEffect(() => {
-    if(!user){
-      return;
-    }
-    // 最初のアクセス時のみfetch
-    if (!isInitialized && offset === 10) {
+    if(actor){
+      setPosts([]);
+      setOffset(10);
       fetchPosts(0, false);
-      setIsInitialized(true);
     }
-  }, [isInitialized, offset, user]);
+  }, [user, actor, fetchPosts]);
   
   const handleLoadMore = async () => {
     fetchPosts(offset, true); 
@@ -288,8 +281,10 @@ export function useTimelineManager(user: string, actor?: string) {
   }
 
   const handleTimelineReload = async () => {
-    fetchPosts(0, false);
+    // リロード時は投稿をクリアしてから再取得
+    setPosts([]);
     setOffset(10);
+    await fetchPosts(0, false);
   };
 
   return { posts, fetchMore, isLoading, error, handleLoadMore, handleTimelineReload };

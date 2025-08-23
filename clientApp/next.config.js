@@ -8,8 +8,7 @@ const nextConfig = {
     domains: [
       'localhost',
       process.env.NEXT_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '') ,
-      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\/[^\/]+/, '') ,
-      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\/[^\/]+/, '') ,
+      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\//, '').replace(/\/v1/,"") ,
     ].filter(Boolean), // undefinedやnullを除外
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -19,7 +18,7 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   
-  // セキュリティヘッダー（環境に関係なく）
+  // セキュリティヘッダー
   async headers() {
     return [
       {
@@ -52,63 +51,10 @@ const nextConfig = {
           },
         ],
       },
-      {
-        source: `/users/(.*)`,
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31000, stale-while-revalidate=1600',
-          },
-        ],
-      },
-    ];
-  },
-
-  // リダイレクト設定
-  async redirects() {
-    return [
-      {
-        source: '/home',
-        destination: '/',
-        permanent: true,
-      },
     ];
   },
 
 
-  webpack: (config, { dev, isServer }) => {
-    // チャンク分割を無効化（self is not definedエラーを防ぐ）
-    config.optimization.splitChunks = false;
-    
-    // ミニファイ（環境に関係なく）
-    config.optimization.minimize = true;
-    
-    // 環境に関係なく同じ設定
-    config.watchOptions = {
-      poll: 1000,
-      aggregateTimeout: 300,
-    };
-    
-    // Node.jsモジュールのフォールバック
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-    };
-    
-    return config;
-  },
-
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
-
-  reactStrictMode: true,
-};
+}
 
 module.exports = nextConfig;
