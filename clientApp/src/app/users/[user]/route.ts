@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const actor = await getActorByUserId(user);
   if(!actor) return NextResponse.json({ error: "Actor not found" }, { status: 404 });
   const responseActivityPub = {
-    "@context": "https://www.w3.org/ns/activitystreams",
+    "@context": ["https://www.w3.org/ns/activitystreams", "https://w3id.org/security/v1"],
     "type": "Person",
     "id": actor.id,
     "preferredUsername": actor.preferredUsername,
