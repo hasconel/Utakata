@@ -119,12 +119,13 @@ export async function followUser(userId: string){
       "@context": "https://www.w3.org/ns/activitystreams",
       "type": "Follow",
       "id": `${currentUser.inbox}/${ID.unique()}`,
-      "actor": currentUser.id,
+      "actor": currentUser.actorId,
       "object": userId,
       "published": new Date().toISOString()
     };
     const actorInbox = userId+"/inbox";
     const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+
     const response = await fetch(actorInbox, {
       method: "POST",
       headers: headers.headers,
@@ -200,12 +201,12 @@ export async function unfollowUser(activityId: string){
     }
     const actorInbox = follow.object+"/inbox";
     const activity = {
-      "@context": "https://www.w3.org/ns/activitystreams",
+      "@context": ["https://www.w3.org/ns/activitystreams"],
       "type": "Undo",
       "id": `${currentUser.actorId}/inbox/${ID.unique()}`,
-      "actor": currentUser.id,
+      "actor": currentUser.actorId,
       "object": {
-        "@context": "https://www.w3.org/ns/activitystreams",
+        "@context": ["https://www.w3.org/ns/activitystreams"],
         "type": "Follow",
         "id": activityId,
         "actor": follow.actor,

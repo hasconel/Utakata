@@ -61,6 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
   // actorがオブジェクト化されている場合はidを取得、そうでない場合はIdだろうということでそのまま
+  console.log("activity",activity);
   const ActorId = activity.actor.id? activity.actor.id : activity.actor;
   //console.log(ActorId);
   // HTTPシグネチャの検証
