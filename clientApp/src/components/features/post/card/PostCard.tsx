@@ -120,7 +120,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
 }) => {
   const [isPostLoading, setIsPostLoading] = useState<boolean>(false);
   const [postData, setPostData] = useState<any>(null);
-  const [replyPosts, setReplyPosts] = useState<any[]>([]);
+  //const [replyPosts, setReplyPosts] = useState<any[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [relativeTime, setRelativeTime] = useState<string>("");
@@ -159,7 +159,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
     if (postData?.post?.inReplyTo && !postData?.post?.inReplyTo.includes("undefined")) {
       getReplyPost(postData.post.inReplyTo).then((data) => {
         if (data && data.length > 0) {
-          setReplyPosts(data);
+          //setReplyPosts(data);
           if(data.length > 0){
           }
           //console.log("✅ リプライ投稿を取得:", data.length, "件");
