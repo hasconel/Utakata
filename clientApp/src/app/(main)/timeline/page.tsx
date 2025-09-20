@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState,  } from "react";
 import PostForm from "@/components/features/post/form/PostForm";
-import { ActivityPubNote, ActivityPubActor, ActivityPubNoteInClient } from "@/types/activitypub";
+import {  ActivityPubActor, ActivityPubNoteInClient } from "@/types/activitypub";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
