@@ -133,7 +133,7 @@ export async function followUser(userId: string){
     });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`アクティビティの送信に失敗したわ！💦:${error.error}`);
+      throw new Error(`アクティビティの送信に失敗したわ！💦:${error.error} ${response.statusText}`);
     }
     const { documents: [actorSub] } = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,

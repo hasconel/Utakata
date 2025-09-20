@@ -53,9 +53,9 @@ const LoadMoreButton = ({ onLoadMore }: { onLoadMore: () => void }) => {
     setModalIndex: (index: number) => void;
   }) => (
     <div className="space-y-4">
-      {Array.isArray(posts) && posts.map((post, index) => (
+      {Array.isArray(posts) && posts.map((post) => (
         <PostCard 
-          key={post.id + index} // $idを使用
+          key={post.id} // $idを使用
           post={post} 
           setIsModalOpen={setIsModalOpen} 
           isModalOpen={isModalOpen} 
