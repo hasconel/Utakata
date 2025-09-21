@@ -2,11 +2,10 @@
 
 import React, { useEffect, useState,  } from "react";
 import PostForm from "@/components/features/post/form/PostForm";
-import {  ActivityPubActor, ActivityPubNoteInClient } from "@/types/activitypub";
+import {  ActivityPubActor, } from "@/types/activitypub";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getActorByUserId } from "@/lib/appwrite/database";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
-import { TimelineContent, LoadMoreButton, EmptyState } from "@/components/features/timeline/TimelineContent";
+import { TimelineContent, LoadMoreButton } from "@/components/features/timeline/TimelineContent";
 import { useTimelineManager } from "@/hooks/api/useApi";
 //import { getTimelinePosts } from "@/lib/appwrite/serverConfig";// 使えなかった
 
@@ -54,12 +53,7 @@ const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => {
 export default function TimelinePage() {
   const { actor } = useUserAndActor();
   const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager(actor?.id.split("/").pop() || "");
-  const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    setPosts(nextPosts);
-    setIsLoading(isLoadingNextPosts);
-  }, [nextPosts, isLoadingNextPosts]);
+
   return (  
     <>
       <div 
@@ -70,16 +64,11 @@ export default function TimelinePage() {
         className="max-w-2xl mx-auto md:px-4"
       >
         <TimelineHeader onRefresh={handleTimelineReload} />
-        {isLoading || isLoadingNextPosts ? (
-          <LoadingSkeleton />
-        ) : ( posts.length > 0 || !isLoadingNextPosts || fetchMore ? (
           <TimelineContent 
-            isLoading={isLoading} 
-            posts={posts} 
+            isLoading={isLoadingNextPosts} 
+            posts={nextPosts} 
             error={error}
           />
-        ) : ( <EmptyState isUser={false} />))    
-        }
         {fetchMore && !isLoadingNextPosts && <LoadMoreButton onLoadMore={handleLoadMore} />}
       </div>
     </>
