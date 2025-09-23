@@ -118,31 +118,23 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
   setModalImages: (images: ActivityPubImage[]) => void, 
   setModalIndex: (index: number) => void 
 }) => {
-  const [isPostLoading, setIsPostLoading] = useState<boolean>(false);
-  const [postData, setPostData] = useState<any>(null);
   //const [replyPosts, setReplyPosts] = useState<any[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isReplyOpen, setIsReplyOpen] = useState(false);
-  const [relativeTime, setRelativeTime] = useState<string>("");
-  const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
+  const images = post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
 
   // ActivityPubのNote形式のデータを処理！✨
   useEffect(() => {
     if (post) {
       // Note形式のデータを直接設定
-      setPostData({
-        post: post,
-        actor: post._user 
-      });
-      setRelativeTime(getRelativeTime(new Date(post.published)));
-      setIsPostLoading(false);
+
     }
   }, [post]);
 
   function ReplyPosts() {
     // 既に取得済みの場合はスキップ
-    if (postData?.post?.inReplyTo && !postData?.post?.inReplyTo.includes("undefined")) {
-      getReplyPost(postData.post.inReplyTo).then((data) => {
+    if (post?.inReplyTo && !post?.inReplyTo.includes("undefined")) {
+      getReplyPost(post.inReplyTo).then((data) => {
         if (data && data.length > 0) {
           //setReplyPosts(data);
           if(data.length > 0){
@@ -155,20 +147,20 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
     }
   }
   
-  if(isPostLoading){
+  if(!post.published){
     return <LoadingSkeleton />;
   }
-
   return (
     <>
-      {postData?.post?.id && (
+      {post?.id && (
         <div className="flex flex-col gap-2 w-full">
       <div 
         className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-pink-500/80 dark:border-purple-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0 w-full"
         onClick={() => {
           setIsDetailOpen(true);
           // リプライがある場合のみReplyPostsを実行
-          if (postData?.post?.replyCount > 0 && postData?.post?.inReplyTo) {
+          
+          if (post?.replies?.totalItems && post?.replies?.totalItems > 0 && post?.inReplyTo) {
             ReplyPosts();
           }
         }}
@@ -178,31 +170,31 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         
         {/* 相対時間を表示するよ！✨ */}
         <div className="absolute top-3 right-3 text-sm text-gray-500 dark:text-gray-400 bg-white/80 dark:bg-gray-800/80 px-2 py-0.5 rounded-full backdrop-blur-sm">
-          {relativeTime}
+          {getRelativeTime(new Date(post.published))}
         </div>
 
         <div className="flex flex-col gap-3 relative">
           <div className="flex items-center gap-2">
             <Avatar
-              src={postData?.actor?.icon?.url}
-              alt={postData?.actor?.preferredUsername}
-              attributedTo={postData?.actor?.id}
-              fallback={postData?.actor?.preferredUsername?.charAt(0)}
+              src={post?._user?.icon?.url}
+              alt={post?._user?.preferredUsername}
+              attributedTo={post?._user?.id}
+              fallback={post?._user?.preferredUsername?.charAt(0)}
               size="md"
-              variant={postData?.post?.to?.includes("https://www.w3.org/ns/activitystreams#Public") ? "outline" : "default"}
+              variant={post?.to?.includes("https://www.w3.org/ns/activitystreams#Public") ? "outline" : "default"}
               className="ring-2 ring-purple-500/20 dark:ring-pink-500/20 group-hover:ring-purple-500/40 dark:group-hover:ring-pink-500/40 transition-all duration-300"
             />
             <div className="flex flex-col">
-              <Link href={`${postData?.post?.attributedTo}`}>
+              <Link href={`${post?.attributedTo}`}>
               <div className="flex items-center gap-1.5 hover:scale-105 cursor-pointer transition-transform duration-200">
-                <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-pink-400 transition-colors duration-200">{postData?.actor?.displayName}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">@{(postData?.actor?.preferredUsername)}</span> 
+                <span className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-pink-400 transition-colors duration-200">{post?._user?.displayName}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">@{(post?._user?.preferredUsername)}</span> 
               </div>
               </Link>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(postData?.post?.published)}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post?.published)}</span>
             </div>
           </div>
-          <div className="text-gray-800 dark:text-gray-200 text-base leading-relaxed">{postData?.post?.content}</div>
+          <div className="text-gray-800 dark:text-gray-200 text-base leading-relaxed">{post?.content}</div>
           {images.length > 0 ? (
              <div 
                onClick={(e) => {
@@ -221,7 +213,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
                 />
               </div>
           ):(
-              <ContentsCard arg={postData?.post?.content || "" } />
+              <ContentsCard arg={post?.content || "" } />
           )}
         </div>
 
@@ -233,20 +225,21 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
                 setIsReplyOpen(true);
               }}
               className="text-purple-600 dark:text-pink hover:text-purple-700 dark:hover:text-pink-600 hover:scale-105 transition-all duration-200 flex items-center gap-1.5 group"
-              aria-label={`@${postData?.actor?.preferredUsername} にリプライ`}
+              aria-label={`@${post?._user?.preferredUsername} にリプライ`}
             >
               <span className="group-hover:animate-bounce">💭</span>
-              {postData?.post?.replyCount > 0 && (
+              {/*post?.replies?.totalItems && post?.replies?.totalItems !== 0 && (
                 <span className="text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-full">
-                  {postData?.post?.replyCount}
+                {post?.replies?.totalItems}
                 </span>
-              )}
+              )}*/}
+              
             </button>
           <LikeButton 
-            postId={postData?.post?.id} 
-            initialLikes={postData?.post?.likes?.totalItems || 0} 
-            isPostLiked={postData?.post?._isLiked || false} 
-            actorInbox={postData?.actor?.inbox || ""}
+            postId={post?.id} 
+            initialLikes={post?.likes?.totalItems || 0} 
+            isPostLiked={post?._isLiked || false} 
+            actorInbox={post?._user?.inbox || ""}
             onLikeChange={() => {}}
             onLikeCountChange={() => {}}
           />
@@ -259,7 +252,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
       {isDetailOpen && (
         <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)}>
           <PostDetailCard 
-            post={postData?.post?.id} 
+            post={post?.id} 
             setIsDetailOpen={setIsDetailOpen} 
             setIsReplyOpen={setIsReplyOpen} 
             setIsModalOpen={setIsModalOpen} 
@@ -276,7 +269,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
             <h2 className="text-2xl font-bold text-purple-600 dark:text-pink">
               言及する？💫
             </h2>
-            <PostForm post={{activityId: postData?.post?.id, preferredUsername: postData?.actor?.preferredUsername || "", attributedTo: postData?.actor?.id || ""}} onClose={() => setIsReplyOpen(false)} />
+            <PostForm post={{activityId: post?.id, preferredUsername: post?._user?.preferredUsername || "", attributedTo: post?._user?.id || ""}} onClose={() => setIsReplyOpen(false)} />
           </div>
         </Modal>
       )}
