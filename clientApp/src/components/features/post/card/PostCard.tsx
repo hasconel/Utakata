@@ -125,6 +125,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [relativeTime, setRelativeTime] = useState<string>("");
   const images = postData?.post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
+
   // ActivityPubのNote形式のデータを処理！✨
   useEffect(() => {
     if (post) {
@@ -133,26 +134,10 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         post: post,
         actor: post._user 
       });
-      
+      setRelativeTime(getRelativeTime(new Date(post.published)));
       setIsPostLoading(false);
     }
   }, [post]);
-
-  useEffect(() => {
-    if(postData){
-      const updateRelativeTime = () => {
-        const published = new Date(postData?.post?.published || "");
-        setRelativeTime(getRelativeTime(published));
-      };
-      updateRelativeTime();
-      const interval = setInterval(updateRelativeTime, 60000); // 1分ごとに更新
-
-      return () => clearInterval(interval);
-    }
-    return () => {
-      setRelativeTime("");
-    }
-  }, [postData]);
 
   function ReplyPosts() {
     // 既に取得済みの場合はスキップ
