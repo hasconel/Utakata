@@ -241,13 +241,12 @@ export function useTimelineManager(user: string, actor?: string) {
       const data = await response.json();
       const notes :ActivityPubNoteInClient[] = data.notes;
       const total = data.total;
-      const sortedPosts = notes.sort((a: any, b: any) => new Date(b.published).getTime() - new Date(a.published).getTime());
       if (isLoadMore) {
         // もっと見る: 既存の投稿に追加
-        setPosts(prevPosts => [...prevPosts, ...sortedPosts]);
+        setPosts(prevPosts => [...prevPosts, ...notes]);
       } else {
         // リロード: 投稿を置き換え
-        setPosts([...sortedPosts]);
+        setPosts([...notes]);
       }
       
       setFetchMore(total > offset + notes.length);
