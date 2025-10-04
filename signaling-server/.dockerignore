@@ -1,0 +1,33 @@
+# Node.js関連の不要ファイル
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ログファイル
+*.log
+
+# 環境変数ファイル
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git関連
+.git
+.gitignore
+
+# Docker関連
+Dockerfile
+.dockerignore
+
+# その他の不要ファイル
+README.md
+.editorconfig
+.vscode
+.idea
+
+# OS関連のファイル
+.DS_Store
+Thumbs.db

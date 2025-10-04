@@ -27,6 +27,7 @@ clientApp/yarn-error.log*
 
 # local env files
 clientApp/.env*
+signaling-server/.env*
 
 # vercel
 clientApp/.vercel
