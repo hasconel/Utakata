@@ -16,14 +16,14 @@ services:
     
     # ポートマッピング
     ports:
-      - "6000:6000"
+      - "6150:6150"
       # デバッグ用ポート（必要に応じて）
       - "9229:9229"
     
     # 開発用環境変数
     environment:
       - NODE_ENV=development
-      - PORT=6000
+      - PORT=6150
       - DEBUG=*
       # ホットリロード用
       - CHOKIDAR_USEPOLLING=true

@@ -16,12 +16,12 @@ services:
     
     # ポートマッピング（ホスト:コンテナ）
     ports:
-      - "6000:6000"
+      - "6150:6150"
     
     # 環境変数の設定
     environment:
       - NODE_ENV=production
-      - PORT=6000
+      - PORT=6150
       # 必要に応じて他の環境変数を追加
       # - CORS_ORIGIN=http://localhost:3000
     
@@ -41,7 +41,7 @@ services:
     
     # ヘルスチェック設定
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:6000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:6150', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3

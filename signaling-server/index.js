@@ -81,13 +81,13 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 6150;
 server.listen(PORT, () => {
   console.log(`Signaling server running on port ${PORT}`);
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use. Please kill the process using this port or use a different port.`);
-    console.error('You can kill the process with: lsof -ti:3001 | xargs kill -9');
+    console.error('You can kill the process with: lsof -ti:6150 | xargs kill -9');
     process.exit(1);
   } else {
     console.error('Server error:', err);

@@ -21,12 +21,12 @@ RUN addgroup -g 1001 -S nodejs && \
 RUN chown -R nextjs:nodejs /app
 USER nextjs
 
-# ポート6000を公開（WebRTC signaling server用）
-EXPOSE 6000
+# ポート6150を公開（WebRTC signaling server用）
+EXPOSE 6150
 
 # ヘルスチェック用のコマンド
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:6150', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 # アプリケーションを起動
 CMD ["npm", "start"]
