@@ -4,6 +4,9 @@
 clientApp/node_modules
 clientApp/.pnp
 clientApp/.pnp.js
+signaling-server/node_modules
+signaling-server/.pnp
+signaling-server/.pnp.js
 
 # testing
 clientApp/coverage
