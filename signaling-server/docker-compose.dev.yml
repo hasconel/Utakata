@@ -1,0 +1,73 @@
+# 開発環境用のDocker Compose設定
+version: '3.9'
+
+services:
+  # 開発用WebRTC signaling server
+  netradio-server-dev:
+    # ローカルでビルド
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # 開発用のマルチステージビルド（必要に応じて）
+      target: development
+    
+    # コンテナ名
+    container_name: netradio-signaling-server-dev
+    
+    # ポートマッピング
+    ports:
+      - "6000:6000"
+      # デバッグ用ポート（必要に応じて）
+      - "9229:9229"
+    
+    # 開発用環境変数
+    environment:
+      - NODE_ENV=development
+      - PORT=6000
+      - DEBUG=*
+      # ホットリロード用
+      - CHOKIDAR_USEPOLLING=true
+    
+    # ソースコードをマウント（ホットリロード対応）
+    volumes:
+      - .:/app
+      - /app/node_modules
+      # ログディレクトリ
+      - ./logs:/app/logs
+    
+    # ネットワーク
+    networks:
+      - netradio-dev-network
+    
+    # 開発時は再起動しない（手動で制御）
+    restart: "no"
+    
+    # 開発用コマンド（nodemonでホットリロード）
+    command: npm run dev
+    
+    # 開発用のリソース制限（緩めに設定）
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    
+    # 開発用のセキュリティ設定（緩め）
+    security_opt:
+      - no-new-privileges:false
+    
+    # 開発用ログ設定
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+# 開発用ネットワーク
+networks:
+  netradio-dev-network:
+    driver: bridge
+    name: netradio-dev-network

@@ -1,0 +1,83 @@
+# Docker Compose version 3.9を使用（最新の安定版）
+version: '3.9'
+
+services:
+  # WebRTC signaling server
+  netradio-server:
+    # カスタムイメージ名を指定
+    image: netradio-server:latest
+    # または、ローカルでビルドする場合
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    
+    # コンテナ名を指定（わかりやすくするため）
+    container_name: netradio-signaling-server
+    
+    # ポートマッピング（ホスト:コンテナ）
+    ports:
+      - "6000:6000"
+    
+    # 環境変数の設定
+    environment:
+      - NODE_ENV=production
+      - PORT=6000
+      # 必要に応じて他の環境変数を追加
+      # - CORS_ORIGIN=http://localhost:3000
+    
+    # ボリュームマウント（ログやデータの永続化が必要な場合）
+    volumes:
+      # ログディレクトリをマウント（必要に応じて）
+      - ./logs:/app/logs
+      # 設定ファイルをマウント（必要に応じて）
+      # - ./config:/app/config
+    
+    # ネットワーク設定
+    networks:
+      - netradio-network
+    
+    # 再起動ポリシー（コンテナが落ちた場合の自動再起動）
+    restart: unless-stopped
+    
+    # ヘルスチェック設定
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:6000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # リソース制限（本番環境では重要）
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    
+    # セキュリティ設定
+    security_opt:
+      - no-new-privileges:true
+    
+    # ユーザー設定（非rootユーザーで実行）
+    user: "1001:1001"
+    
+    # ログ設定
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# カスタムネットワークの定義
+networks:
+  netradio-network:
+    driver: bridge
+    name: netradio-network
+
+# ボリュームの定義（必要に応じて）
+volumes:
+  netradio-logs:
+    driver: local
