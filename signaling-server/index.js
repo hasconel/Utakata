@@ -1,4 +1,6 @@
 const { Server } = require('socket.io');
+const dotenv = require('dotenv');
+dotenv.config();
 const http = require('http');
 const express = require('express');
 const path = require('path');
@@ -20,10 +22,23 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   // 配信者として参加
-  socket.on('broadcaster', () => {
-    broadcaster = socket.id;
-    console.log('Broadcaster connected:', socket.id);
-    socket.emit('broadcaster-confirmed');
+  socket.on('broadcaster',(userId)  => {
+    if (broadcaster) {
+      socket.emit('broadcaster-exists', broadcaster.userId);
+    } else {   
+      if(userId){
+           
+    broadcaster = {
+      id:socket.id,
+      userId:userId
+    };
+    console.log('Broadcaster connected:', socket.id,'userId:',userId);
+    socket.emit('broadcaster-confirmed',userId);
+    }
+    else{
+      socket.emit('broadcaster-rejected','配信者idが存在しません');
+    }
+    }
   });
 
   // 聴取者として参加
@@ -33,7 +48,9 @@ io.on('connection', (socket) => {
     
     // 配信者がいる場合、オファーを送信
     if (broadcaster) {
-      socket.to(broadcaster).emit('new-listener', socket.id);
+      socket.emit('broadcaster-id', broadcaster.userId);
+      console.log('ListenerがBroadcasterに接続しました:', broadcaster.id,"userId:",broadcaster.userId);
+      socket.to(broadcaster.id).emit('new-listener', socket.id);
     }
   });
 
@@ -64,8 +81,8 @@ io.on('connection', (socket) => {
   // 接続切断時の処理
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
-    
-    if (broadcaster === socket.id) {
+    console.log('broadcaster:',broadcaster);
+    if (broadcaster && broadcaster.id === socket.id) {
       broadcaster = null;
       // 全聴取者に配信終了を通知
       listeners.forEach(listenerId => {
@@ -75,9 +92,35 @@ io.on('connection', (socket) => {
       listeners.delete(socket.id);
       // 配信者に聴取者切断を通知
       if (broadcaster) {
-        socket.to(broadcaster).emit('listener-disconnected', socket.id);
+        socket.to(broadcaster.id).emit('listener-disconnected', socket.id);
       }
     }
+  });
+
+  // 管理者用:配信者切断
+  socket.on('broadcaster-disconnect',(password) => {
+    console.log("broadcaster-disconnect",socket.id,broadcaster.id,password);
+    if(socket.id === broadcaster.id){
+      console.log("配信者によって配信者が切断されました");
+      listeners.forEach(listenerId => {
+        io.to(listenerId).emit('broadcaster-disconnected');
+      });
+      broadcaster = null;
+    }
+    if(password == process.env.ADMIN_PASSWORD) {
+      console.log("管理者によって配信者が切断されました");
+      if(broadcaster && broadcaster.id){
+            
+    io.to(broadcaster.id).emit('broadcaster-rejected','管理者によって配信者が切断されました');
+
+    }
+    listeners.forEach(listenerId => {
+      io.to(listenerId).emit('broadcaster-disconnected');
+    });
+    broadcaster = null;
+  }else{
+    socket.emit('rejected-password','管理者パスワードが間違っています');
+  }
   });
 });
 
