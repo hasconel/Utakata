@@ -7,7 +7,8 @@ const path = require('path');
 
 // 許可するドメインのリスト
 const allowedOrigins = [
-  process.env.ALLOWED_ORIGIN || 'http://localhost:3000'
+  process.env.ALLOWED_ORIGIN ,
+   'http://localhost:3000'
 ];
 
 const app = express();
