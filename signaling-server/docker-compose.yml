@@ -28,10 +28,3 @@ services:
     
     # 再起動ポリシー（コンテナが落ちた場合の自動再起動）
     restart: unless-stopped
-    
-    # ログ設定
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"

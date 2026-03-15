@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getActorByUserId } from '@/lib/appwrite/database';
 
 /**
  * ミドルウェア！✨
  * Acceptヘッダーをチェックして、ActivityPubリクエストを適切にルーティングするよ！💖
+ * ※ Edge Runtime のため database（crypto 使用）は import せず、API を fetch するよ！🔒
  */
 export async function middleware(request: NextRequest) {
   // request.nextUrlがundefinedの場合はスキップ！✨
@@ -41,10 +41,17 @@ export async function middleware(request: NextRequest) {
   if (pathname && pathname.startsWith("/users/") ) {
     // acceptHeaderがapplication/activity+jsonもしくはapplication/ld+json; profile="https://www.w3.org/ns/activitystreams"の場合はユーザープロフィールページにリダイレクト！✨
     if (acceptHeader !== 'application/activity+json' && acceptHeader !== 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' && pathname.split('/').length === 3) {
-      //console.log("pathname", pathname);
-      const actor = await getActorByUserId(pathname.split('/').pop()!);
-      if(actor) return NextResponse.redirect(new URL(`/@${actor.preferredUsername}`, request.url));
-    }else{
+      const userId = pathname.split('/').pop()!;
+      try {
+        const res = await fetch(new URL(`/api/users/${userId}/preferred-username`, request.url));
+        if (res.ok) {
+          const { preferredUsername } = await res.json();
+          if (preferredUsername) return NextResponse.redirect(new URL(`/@${preferredUsername}`, request.url));
+        }
+      } catch {
+        // fetch 失敗時はそのまま next
+      }
+    } else {
       // クエリパラメータを保持してAPI Routeにリライト
       const apiUrl = new URL(`${pathname}`, request.url);
       // 元のURLのクエリパラメータをコピー

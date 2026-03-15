@@ -76,12 +76,32 @@ const ActorSchema = z.object({
     const result = ActorSchema.safeParse(doc);
     return result.success;
   }
-  /**
-   * ユーザーIDからアクターを取得！🔍
-   * @param userId AppwriteのユーザーID
-   * @returns Actorオブジェクト（見つからない場合はnull）
-   * @throws Error データベースエラー
-   */
+/**
+ * ユーザーIDから preferredUsername のみ取得（管理者クライアント使用・Edge 用 API から呼ぶ用）！🔍
+ * middleware は Edge のため crypto を読めないので、この関数を API 経由で使うよ！✨
+ */
+export async function getPreferredUsernameByUserId(userId: string): Promise<string | null> {
+  try {
+    const { databases } = await createAdminClient();
+    const { documents } = await databases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+      [Query.equal("userId", userId)]
+    );
+    if (documents.length === 0) return null;
+    if (documents.length > 1) throw new Error("アクターが複数見つかったよ！💦");
+    return (documents[0] as { preferredUsername?: string }).preferredUsername ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ユーザーIDからアクターを取得！🔍
+ * @param userId AppwriteのユーザーID
+ * @returns Actorオブジェクト（見つからない場合はnull）
+ * @throws Error データベースエラー
+ */
   export async function getActorByUserId(userId: string): Promise<ActivityPubActor | null> {
     try {
         const {databases} = await createSessionClient();
