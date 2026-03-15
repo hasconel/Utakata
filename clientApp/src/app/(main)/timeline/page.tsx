@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState,  } from "react";
+import { useEffect, useState } from "react";
 import PostForm from "@/components/features/post/form/PostForm";
 import {  ActivityPubActor, } from "@/types/activitypub";
 import { useAuth } from "@/hooks/auth/useAuth";
