@@ -221,10 +221,10 @@ export function useTimelineManager(user: string, actor?: string) {
       const url = new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/api/posts`);
       url.searchParams.set("offset", offset.toString());
       url.searchParams.set("limit", "10");
+      url.searchParams.set("skipLikes", "1"); // 一覧はいいね取得スキップで高速化
       if(actor){
         url.searchParams.set("attributedTo", actor);
       }
-      
       // キャッシュバスティング用のタイムスタンプを追加
       url.searchParams.set("_t", Date.now().toString());
       const response = await fetch(url,

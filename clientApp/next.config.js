@@ -7,9 +7,10 @@ const nextConfig = {
   images: {
     domains: [
       'localhost',
-      process.env.NEXT_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '') ,
-      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\//, '').replace(/\/v1/,"") ,
-    ].filter(Boolean), // undefinedやnullを除外
+      process.env.APPWRITE_ENDPOINT_OLD?.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, ''),
+      process.env.NEXT_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, ''),
+    ].filter(Boolean),
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
