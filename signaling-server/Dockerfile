@@ -7,8 +7,8 @@ WORKDIR /app
 # package.jsonとpackage-lock.jsonをコピー（依存関係のキャッシュ最適化のため）
 COPY package*.json ./
 
-# 依存関係をインストール（本番用のみ、devDependenciesは除外）
-RUN npm ci --only=production && npm cache clean --force
+# 依存関係をインストール（package-lock.json で再現ビルド）
+RUN npm ci && npm cache clean --force
 
 # アプリケーションのソースコードをコピー
 COPY . .

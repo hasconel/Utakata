@@ -8,8 +8,9 @@ const path = require('path');
 // 許可するドメインのリスト
 const allowedOrigins = [
   process.env.ALLOWED_ORIGIN ,
-   'http://localhost:3000'
-];
+].filter(origin => origin); // undefined/nullを除外
+
+console.log('Allowed CORS origins:', allowedOrigins);
 
 const app = express();
 
@@ -17,8 +18,12 @@ const app = express();
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
+  console.log('Request from origin:', origin, '- Allowed:', allowedOrigins.includes(origin));
+  
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    console.log('CORS blocked! Origin not in allowed list:', origin);
   }
   
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

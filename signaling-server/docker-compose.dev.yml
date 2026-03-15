@@ -12,13 +12,7 @@ services:
       target: development
     
     # コンテナ名
-    container_name: netradio-signaling-server-dev
-    
-    # ポートマッピング
-    ports:
-      - "6150:6150"
-      # デバッグ用ポート（必要に応じて）
-      - "9229:9229"
+    container_name: netradio-signaling-server-dev    
     
     # 開発用環境変数
     environment:
