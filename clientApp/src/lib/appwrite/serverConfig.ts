@@ -14,16 +14,16 @@ const meilisearch = new MeiliSearch({
  * Appwriteのクライアント設定！✨
  * セッション管理とデータベース接続をキラキラに設定！💖
  */
-const client = new Client()
-  .setEndpoint(process.env.APPWRITE_ENDPOINT!)
-  .setProject(process.env.APPWRITE_PROJECT_ID!);
-
 /**
  * セッションクライアントを作成！✨ 
  * ログイン済みユーザーのセッションで接続するよ！💖
  */
 export async function createSessionClient(cookie?: Request) {
   try {
+    const client = new Client()
+      .setEndpoint(process.env.APPWRITE_ENDPOINT!)
+      .setProject(process.env.APPWRITE_PROJECT_ID!);
+    
     let session: string | undefined;
     
     if (cookie) {
