@@ -33,7 +33,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     },
     "discoverable": true,
   }
-  return NextResponse.json(responseActivityPub);
+  // MisskeyはこのContent-Type以外のactorを受け付けない
+  return NextResponse.json(responseActivityPub, {
+    headers: { "Content-Type": "application/activity+json" },
+  });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
