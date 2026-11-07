@@ -1,10 +1,11 @@
+import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { getActorByUserId } from "@/lib/appwrite/database";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
   const { user } = await params;
   const headers = request.headers;
-  if(!headers.get("Accept")?.includes("application/activity+json") && !headers.get("Accept")?.includes('application/ld+json; profile="https://www.w3.org/ns/activitystreams"')) {
+  if(!wantsActivityJson(headers.get("Accept"))) {
     return NextResponse.redirect(new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/@${user}`, request.url));
   }
   const actor = await getActorByUserId(user);

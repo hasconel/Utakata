@@ -5,6 +5,8 @@ import { MeiliSearch } from "meilisearch";
 import { Actor, Post  } from "@/types/appwrite";
 import { signRequest } from "../activitypub/crypto";
 import { getEncryptedPrivateKey } from "../activitypub/privateKeyStore";
+import { fetchRemoteActor } from "../activitypub/remoteActor";
+import { isInternalUrl } from "../utils";
 import { ActivityPubNote, ActivityPubNoteInClient } from "@/types/activitypub";
 
 const meilisearch = new MeiliSearch({
@@ -708,7 +710,16 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
   const session = await account.get();
   const actorId = process.env.NEXT_PUBLIC_DOMAIN+"/users/"+session.$id;
   try{
-    const appwritePostId = postId.split("/").pop();
+    // リモート投稿はURLの末尾がドキュメントIDではないので、activityIdで探す
+    let appwritePostId = postId.split("/").pop();
+    if(postId.startsWith("http") && !isInternalUrl(postId)){
+      const { documents: [remotePost] } = await databases.listDocuments(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_POSTS_COLLECTION_ID!,
+        [Query.equal("activityId", postId)]
+      );
+      appwritePostId = remotePost?.$id;
+    }
     if(!appwritePostId){
       throw new Error("投稿が見つからないわ！💦");
     }
@@ -719,7 +730,8 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
     process.env.APPWRITE_ACTORS_COLLECTION_ID!,
     [Query.equal("actorId", noteData.attributedTo)]
   )
-  if(!actorDocument){
+  const remoteActor = actorDocument ? null : await fetchRemoteActor(noteData.attributedTo, session.$id);
+  if(!actorDocument && !remoteActor){
     //console.log("ユーザーが見つからないわ！💦");
     throw new Error("ユーザーが見つからないわ！💦");
   };
@@ -747,19 +759,19 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
       last: noteData.id + "/replies?page=" + Math.ceil(0 / 20),
     },
     "_isLiked": isLiked,
-    "_user": {
+    "_user": remoteActor ?? {
       "@context": "https://www.w3.org/ns/activitystreams",
       "type": "Person",
-      "id": actorId,
+      "id": actorDocument.actorId,
       "preferredUsername": actorDocument.preferredUsername,
       "displayName": actorDocument.displayName,
-      "followers": actorId + "/followers",
-      "following": actorId + "/following",
-      "inbox": actorId + "/inbox",
-      "outbox": actorId + "/outbox",
+      "followers": actorDocument.actorId + "/followers",
+      "following": actorDocument.actorId + "/following",
+      "inbox": actorDocument.actorId + "/inbox",
+      "outbox": actorDocument.actorId + "/outbox",
       "publicKey": {
-        "id": actorId + "#main-key",
-        "owner": actorId,
+        "id": actorDocument.actorId + "#main-key",
+        "owner": actorDocument.actorId,
         "publicKeyPem": actorDocument.publicKey,
       },
       "icon":{
@@ -767,7 +779,7 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
         "url": actorDocument.avatarUrl || "",
       }
     },
-    "_canDelete": actorDocument.$id === session.$id
+    "_canDelete": actorDocument?.$id === session.$id
   } ;
     return note;
   } catch (error) {

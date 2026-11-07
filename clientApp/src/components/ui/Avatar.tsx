@@ -1,6 +1,5 @@
-import { HTMLAttributes, forwardRef, useState } from 'react';
-import { cn } from '@/lib/utils';
-import Image from 'next/image';
+import { HTMLAttributes, forwardRef, useEffect, useState } from 'react';
+import { cn, convertToInternalUrl, isInternalUrl } from '@/lib/utils';
 import React from 'react';
 import Link from 'next/link';
 import Modal from './Modal';
@@ -30,15 +29,21 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
       '2xl': 'w-20 h-20',
     };
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [hasError, setHasError] = useState(false);
+    const imageSrc = src ? convertToInternalUrl(src) : '';
+
+    // 画像が変わったら、読み込み失敗の状態をリセットする
+    useEffect(() => {
+      setHasError(false);
+    }, [imageSrc]);
 
     const variants = {
       default: 'bg-purple-100 dark:bg-pink-100',
       outline: 'border-2 border-purple-600 dark:border-pink-500 bg-transparent',
       ghost: 'bg-transparent hover:bg-purple-50 dark:hover:bg-pink-900/20',
     };
-    const AvatarIcon = () => {
-      
-      return <div
+    const avatarIcon = (
+      <div
       ref={ref}
       className={cn(
         'relative rounded-full overflow-hidden transition-all duration-200',
@@ -48,13 +53,13 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
       )}
       {...props}
     >
-      {src ? (
-        <Image
-          src={src}
+      {imageSrc && !hasError ? (
+        <img
+          src={imageSrc}
           alt={alt}
-          width={100}
-          height={100}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          loading="lazy"
+          decoding="async"
+          onError={() => setHasError(true)}
           className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
         />
       ) : (
@@ -73,23 +78,22 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
         />
       )}
     </div>
-
-    }
+    );
     if (attributedTo) {
     return (
-      <Link href={`/users/${attributedTo?.split("/").pop()}`}>
-      <AvatarIcon />
+      <Link href={isInternalUrl(attributedTo) ? `/users/${attributedTo.split("/").pop()}` : attributedTo}>
+      {avatarIcon}
       </Link>
     );
   }
   return (
     <><div onClick={() => setIsModalOpen(true)}>
-    <AvatarIcon />
+    {avatarIcon}
     </div>
-    {isModalOpen && src && (
+    {isModalOpen && imageSrc && !hasError && (
       <div >
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-          <img src={src} alt={alt} />
+          <img src={imageSrc} alt={alt} />
         </Modal>
       </div>
     )}

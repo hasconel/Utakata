@@ -5,7 +5,7 @@ import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Avatar, } from "@/components/ui/Avatar";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { convertToInternalUrl, formatDate } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
 import { useState, useEffect } from "react";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
@@ -85,13 +85,13 @@ export default function ReplyToPost({ post, setIsLoading }: ReplyToPostProps) {
           {images.map((image, index) => (
             index < 3 && (
               <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
-                <Image src={image.url} alt={image.name} width={100} height={100} style={{objectFit: "cover"}}/>
+                <Image src={convertToInternalUrl(image.url)} alt={image.name} width={100} height={100} style={{objectFit: "cover"}}/>
               </div>
             )
           ))}
           {images.length === 4 && (
             <div className="aspect-square relative rounded-lg overflow-hidden">
-              <Image src={images[3].url} alt={images[3].name} width={100} height={100} style={{objectFit: "cover"}}/>
+              <Image src={convertToInternalUrl(images[3].url)} alt={images[3].name} width={100} height={100} style={{objectFit: "cover"}}/>
             </div>
           )}
           {images.length > 4 && (
@@ -100,7 +100,7 @@ export default function ReplyToPost({ post, setIsLoading }: ReplyToPostProps) {
                 <div className="absolute bg-pink-500/50 dark:bg-pink-900/50 w-full h-full mx-auto flex items-center justify-center ">
                 <p className="text-white text-xl font-bold mx-auto">+{images.length - 3}</p>
                 </div>
-                <Image src={images[3].url} alt={images[3].name} width={100} height={100} className="rounded-xl" />
+                <Image src={convertToInternalUrl(images[3].url)} alt={images[3].name} width={100} height={100} className="rounded-xl" />
               </div>
             </div>
           )}

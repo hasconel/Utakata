@@ -1,3 +1,4 @@
+import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { deletePostOutbox } from "@/lib/activitypub/post";
@@ -17,7 +18,7 @@ export async function GET(
   
   
   // ActivityPubリクエストの場合はJSON形式で返す！✨
-  if (acceptHeader === "application/activity+json") {
+  if (wantsActivityJson(acceptHeader)) {
     if (!id) {
       return NextResponse.json(
         { error: "Post ID is required" }, 

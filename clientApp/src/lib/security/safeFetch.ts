@@ -21,6 +21,8 @@ export class BlockedUrlError extends Error {
 }
 
 export interface SafeFetchOptions {
+  method?: "GET" | "POST";
+  body?: string;
   headers?: Record<string, string>;
   /** 本文の上限（バイト） */
   maxBytes?: number;
@@ -112,7 +114,7 @@ function requestOnce(
     const req = client.request(
       url,
       {
-        method: "GET",
+        method: options.method ?? "GET",
         signal,
         // 自動展開しないので、圧縮されないように明示する
         headers: { ...options.headers, "Accept-Encoding": "identity" },
@@ -140,7 +142,7 @@ function requestOnce(
       }
     );
     req.on("error", reject);
-    req.end();
+    req.end(options.body);
   });
 }
 
@@ -171,7 +173,8 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
 
     const res = await requestOnce(url, options, own, signal);
     const location = res.headers.location;
-    if (res.status >= 300 && res.status < 400 && location) {
+    // POSTのリダイレクトは追わない（署名が宛先に結びついているため）
+    if (options.method !== "POST" && res.status >= 300 && res.status < 400 && location) {
       current = new URL(location, url).toString();
       continue;
     }

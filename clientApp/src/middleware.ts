@@ -1,3 +1,4 @@
+import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -22,8 +23,8 @@ export async function middleware(request: NextRequest) {
 
   // 投稿詳細ページのパスをチェック！✨
   if (pathname && pathname.startsWith('/posts/') ) {
-    // Acceptヘッダーがapplication/activity+jsonもしくはapplication/ld+json; profile="https://www.w3.org/ns/activitystreams"の場合はAPI Routeにルーティング！✨
-    if (acceptHeader === 'application/activity+json' || acceptHeader === 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"') {
+    // ActivityPubのJSONを求めるリクエストはAPI Routeにルーティング！✨
+    if (wantsActivityJson(acceptHeader)) {
       // クエリパラメータを保持してAPI Routeにリライト
       const apiUrl = new URL(`/api${pathname}`, request.url);
       // 元のURLのクエリパラメータをコピー
@@ -39,8 +40,8 @@ export async function middleware(request: NextRequest) {
   //console.log("pathname", pathname,pathname.split('/').length,pathname.startsWith("/users/"));
   // ユーザープロフィールページのパスをチェック！✨
   if (pathname && pathname.startsWith("/users/") ) {
-    // acceptHeaderがapplication/activity+jsonもしくはapplication/ld+json; profile="https://www.w3.org/ns/activitystreams"の場合はユーザープロフィールページにリダイレクト！✨
-    if (acceptHeader !== 'application/activity+json' && acceptHeader !== 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' && pathname.split('/').length === 3) {
+    // ActivityPub以外のリクエストはユーザープロフィールページにリダイレクト！✨
+    if (!wantsActivityJson(acceptHeader) && pathname.split('/').length === 3) {
       const userId = pathname.split('/').pop()!;
       try {
         const res = await fetch(new URL(`/api/users/${userId}/preferred-username`, request.url));

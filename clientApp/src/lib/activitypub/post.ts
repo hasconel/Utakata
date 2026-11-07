@@ -6,7 +6,9 @@
 import { z } from "zod";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { Query, Role } from "node-appwrite";
-import { createNote, fetchActorInbox, getFollowers } from "@/lib/activitypub/utils";
+import { createNote, getFollowers } from "@/lib/activitypub/utils";
+import { fetchRemoteActor } from "@/lib/activitypub/remoteActor";
+import { isInternalUrl } from "@/lib/utils";
 import { signRequest } from "@/lib/activitypub/crypto";
 import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { Errors } from "@/lib/activitypub/errors";
@@ -49,6 +51,22 @@ export interface PostInput {
  */
 export async function validatePostInput(input: unknown): Promise<PostInput> {
   return PostSchema.parse(input);
+}
+
+/** 検索インデックスへの追加と削除。失敗しても投稿の処理は止めない。 */
+export async function addToSearchIndex(document: Record<string, unknown>) {
+  try {
+    await meilisearch.index("posts").addDocuments([document]);
+  } catch (err: any) {
+    console.error("検索インデックスへの追加に失敗:", err?.message);
+  }
+}
+export async function removeFromSearchIndex(documentId: string) {
+  try {
+    await meilisearch.index("posts").deleteDocument(documentId);
+  } catch (err: any) {
+    console.error("検索インデックスからの削除に失敗:", err?.message);
+  }
 }
 
 /**
@@ -159,6 +177,12 @@ export async function deliverActivity(
 ) {
   // 配信先inboxを収集
   const inboxes = new Set<string>();
+  const signerUserId = actor.id.split("/").pop();
+  const fetchActorInbox = async (actorId: string): Promise<string | null> => {
+    if(isInternalUrl(actorId)) return `${actorId}/inbox`;
+    const remoteActor = await fetchRemoteActor(actorId, signerUserId);
+    return typeof remoteActor?.inbox === "string" ? remoteActor.inbox : null;
+  };
   const userFollwer = async ()=>{
     const followers = await getFollowers(actor.followers);
     for (const follower of followers) {
@@ -169,7 +193,7 @@ export async function deliverActivity(
   }
   for (const to of activity.to){
     if(to === actor.followers) await userFollwer();
-    else if(to === "https://www.w3.org/ns/activitystreams#Public") inboxes.add("https://www.w3.org/ns/activitystreams#Public");
+    else if(to === "https://www.w3.org/ns/activitystreams#Public") continue;
     else{
       const inbox = await fetchActorInbox(to);
       if (inbox) inboxes.add(inbox);
@@ -178,7 +202,7 @@ export async function deliverActivity(
   //console.log("activity.cc", activity.cc);
   for (const cc of activity.cc){
     if(cc === actor.followers) await userFollwer();
-    else if(cc === "https://www.w3.org/ns/activitystreams#Public") inboxes.add("https://www.w3.org/ns/activitystreams#Public");
+    else if(cc === "https://www.w3.org/ns/activitystreams#Public") continue;
     else{
       const inbox = await fetchActorInbox(cc);
       if (inbox) inboxes.add(inbox);

@@ -30,21 +30,20 @@ export function cn(...inputs: ClassValue[]) {
 
 // URLが内部ドメインか検証する関数！✨
 export function isInternalUrl(url: string): boolean {
-  if(url.startsWith(`${process.env.NEXT_PUBLIC_DOMAIN}`)){
-    return true;
+  try {
+    return new URL(url).origin === new URL(`${process.env.NEXT_PUBLIC_DOMAIN}`).origin;
+  } catch {
+    return false;
   }
-  //if(url.startsWith(`https://pbs.hasconel.com`)){
-  //  return true;
-  //}
-  return false;
 }
 
 // 外部メディアURLを内部ドメインに変換する関数！✨
 export function convertToInternalUrl(url: string): string {
-  if(isInternalUrl(url)) {
+  // 空、サイト内のパス、選択中ファイルのプレビューは変換しない
+  if(!url || url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:") || isInternalUrl(url)) {
     return url;
   }
-  return `${process.env.NEXT_PUBLIC_DOMAIN}/api/image?url=${encodeURIComponent(url)}`;
+  return `/api/image?url=${encodeURIComponent(url)}`;
 }
 
 // 外部URLを内部URLに変換する関数！✨

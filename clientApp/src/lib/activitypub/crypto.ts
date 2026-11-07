@@ -6,7 +6,7 @@
 import { createHash, createSign, createVerify } from "crypto";
 import { Errors } from "./errors";
 import { decrypt } from "@/lib/activitypub/privateKeyStore";
-import { safeFetch } from "@/lib/security/safeFetch";
+import { fetchActivityDocument } from "@/lib/activitypub/remoteActor";
 
 /** 署名に必ず含まれていなければならないヘッダー */
 const REQUIRED_SIGNED_HEADERS = ["(request-target)", "host", "date", "digest"];
@@ -59,6 +59,22 @@ export async function signRequest(url: string, body: any, privateKey: string, ke
 }
 
 /**
+ * GETリクエスト用のHTTP Signatureを生成する。
+ * authorized_fetch を有効にしているサーバーから取得するときに使う。
+ */
+export async function signGetRequest(url: string, privateKey: string, keyId: string): Promise<Record<string, string>> {
+  const parsedUrl = new URL(url);
+  const date = new Date().toUTCString();
+  const signingString = `(request-target): get ${parsedUrl.pathname}${parsedUrl.search}\nhost: ${parsedUrl.host}\ndate: ${date}`;
+  const signature = createSign("RSA-SHA256").update(signingString).sign(decrypt(privateKey), "base64");
+  return {
+    Host: parsedUrl.host,
+    Date: date,
+    Signature: `keyId="${keyId}",algorithm="rsa-sha256",headers="(request-target) host date",signature="${signature}"`,
+  };
+}
+
+/**
  * Signatureヘッダーをパース！🔍
  * HTTP Signatureのフォーマットを解析して検証用データを抽出！✨
  * @param headers リクエストヘッダー
@@ -85,7 +101,8 @@ function parseSignatureHeader(headers: Record<string, string>, method: string, u
       throw new Error("Invalid Signature header format");
     }
 
-    if (algorithm !== "rsa-sha256") {
+    // hs2019 は実際のアルゴリズムを鍵側で決める方式で、ここではRSA鍵として検証する
+    if (algorithm !== "rsa-sha256" && algorithm !== "hs2019") {
       throw new Error("Unsupported algorithm");
     }
 
@@ -118,9 +135,10 @@ function parseSignatureHeader(headers: Record<string, string>, method: string, u
  * @param req Next.jsのリクエストオブジェクト
  * @param rawBody 受信した本文（パース前の文字列）
  * @param actor アクティビティのactorのID
+ * @param signerUserId 相手が署名付きの取得を求めたときに署名するユーザー（inboxの受信者）
  * @returns すべての検証に通れば true
  */
-export async function verifySignature(req: import("next/server").NextRequest, rawBody: string, actor: string): Promise<boolean> {
+export async function verifySignature(req: import("next/server").NextRequest, rawBody: string, actor: string, signerUserId?: string): Promise<boolean> {
   try {
     const headers = Object.fromEntries(req.headers);
     const { keyId, signature, signingString, signedHeaders } = parseSignatureHeader(headers, req.method || "POST", req.url);
@@ -143,10 +161,7 @@ export async function verifySignature(req: import("next/server").NextRequest, ra
     }
 
     // actorを取得（内部ネットワーク宛てはsafeFetchが拒否する）
-    const response = await safeFetch(actor, {
-      headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
-      maxBytes: 1024 * 1024,
-    });
+    const response = await fetchActivityDocument(actor, { signer: signerUserId });
     if (!response.ok) {
       throw new Error(Errors.PublicKeyFetchFailed);
     }

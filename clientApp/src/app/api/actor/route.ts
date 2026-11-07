@@ -3,7 +3,9 @@
  * 外部ドメインのActorエンドポイントにキラキラアクセス！💖
  */
 import { NextRequest, NextResponse } from "next/server";
-import { BlockedUrlError, safeFetch } from "@/lib/security/safeFetch";
+import { BlockedUrlError } from "@/lib/security/safeFetch";
+import { fetchActivityDocument } from "@/lib/activitypub/remoteActor";
+import { createSessionClient } from "@/lib/appwrite/serverConfig";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,12 +20,17 @@ export async function GET(request: NextRequest) {
     }
 
     // 外部ドメインのActorエンドポイントにアクセス
-    const response = await safeFetch(actorUrl, {
-      headers: {
-        "Accept": "application/activity+json",
-        "User-Agent": "Utakata/1.0",
+    const response = await fetchActivityDocument(actorUrl, {
+      accept: "application/activity+json",
+      // authorized_fetch のサーバーには、ログイン中のユーザーの鍵で署名して取得する
+      signer: async () => {
+        try {
+          const { account } = await createSessionClient(request);
+          return (await account.get()).$id;
+        } catch {
+          return null;
+        }
       },
-      maxBytes: 1024 * 1024,
     });
 
     if (!response.ok) {

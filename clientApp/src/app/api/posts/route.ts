@@ -8,6 +8,8 @@ import { createSessionClient,  } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 import {  savePost, deliverActivity } from "@/lib/activitypub/post";
 import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
+import { fetchRemoteActor } from "@/lib/activitypub/remoteActor";
+import { isInternalUrl } from "@/lib/utils";
 import { ENV } from "@/lib/api/config";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 import { Post } from "@/types/appwrite";
@@ -264,6 +266,16 @@ const convertPostsToNotes = async (posts: any[], databases: any, userId: string,
         /* 1件失敗しても続行 */
       }
     }
+
+    // ローカルにいない投稿者はリモートから取得する
+    await Promise.all(
+      uniqueAttributedTo
+        .filter((actorId) => !actorMap.has(actorId) && !isInternalUrl(actorId))
+        .map(async (actorId) => {
+          const actor = await fetchRemoteActor(actorId, userId.split("/").pop());
+          if (actor) actorMap.set(actorId, actor);
+        })
+    );
 
     let likeResults: { totalLikes: number; isLiked: boolean }[];
     if (skipLikes) {

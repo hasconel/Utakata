@@ -33,11 +33,19 @@ export async function GET(request: NextRequest) {
         // URLからファイルIDを抽出 urlの例＝https://appwrite.utakata.net/files/646464646464646464646464/view?project=646464646464646464646464
         const fileIdIndex = imageUrl.split("/").findIndex((item:string) => (item.startsWith("files")))
         const fileId = imageUrl.split("/")[fileIdIndex+1]
-        const file = await storage.getFileView(process.env.APPWRITE_STORAGE_ID!, fileId);
+        const [meta, file] = await Promise.all([
+          storage.getFile(process.env.APPWRITE_STORAGE_ID!, fileId),
+          storage.getFileView(process.env.APPWRITE_STORAGE_ID!, fileId),
+        ]);
+        if (!isAllowedMediaType(meta.mimeType)) {
+          return NextResponse.json({ error: "対応していない形式だよ！💦" }, { status: 415 });
+        }
         return new NextResponse(file, {
           status: 200,
           headers: {
-            "Content-Type": "image/png",
+            "Content-Type": meta.mimeType,
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
           },
         })
 

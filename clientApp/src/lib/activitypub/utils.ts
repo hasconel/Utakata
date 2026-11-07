@@ -94,25 +94,6 @@ export async function getFollowers(followersUrl: string) {
     }
   return followers;
 }
-/**
- * リモートアクターのinboxを取得！📬
- * @param actorId アクターのID（例：https://example.com/actor）
- * @returns inbox URL（取得失敗時はnull）
- */
-export async function fetchActorInbox(actorId: string): Promise<string | null> {
-  try {
-    if(isInternalUrl(actorId)) {
-      return `${actorId}/inbox`;
-    }
-    const actor = await fetch(`api/actor?url=${encodeURIComponent(actorId)}`, {
-      headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
-    }).then(res => res.json());
-    return actor.inbox;
-  } catch {
-    return null;
-  }
-}
-
 export function getActorDisplayPreferredUsername(actor: any) {
   //console.log( "actor", actor)
   if(isInternalUrl(actor.id)) {

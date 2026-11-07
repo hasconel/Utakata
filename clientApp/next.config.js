@@ -3,19 +3,9 @@ const nextConfig = {
   // 環境に関係なく同じ設定
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   
-  // 画像設定（next/image用）
+  // 画像は /_next/image で変換しない。外部画像は /api/image を経由する（lib/utils.ts の convertToInternalUrl）
   images: {
-    domains: [
-      'localhost',
-      process.env.APPWRITE_ENDPOINT_OLD?.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, ''),
-      process.env.NEXT_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/$/, ''),
-      process.env.APPWRITE_ENDPOINT?.replace(/^https?:\/\//, '').replace(/\/v1\/?$/, ''),
-    ].filter(Boolean),
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    unoptimized: true,
   },
   
   // セキュリティヘッダー

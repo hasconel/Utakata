@@ -1,12 +1,13 @@
 // ユーザーのいいねを取得するAPI
 // 返答はOrderedCollectionPage
 
+import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
-    if(!request.headers.get("Accept")?.includes("application/activity+json")){
+    if(!wantsActivityJson(request.headers.get("Accept"))){
         return NextResponse.json({ error: "Accept header is required" }, { status: 400 });
     }
     const url = new URL(request.url);

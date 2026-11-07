@@ -172,7 +172,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
       <div className="bg-gradient-to-br from-purple-50/90 to-pink-50/90 dark:from-gray-800/90 dark:to-gray-900/90 rounded-2xl p-8 shadow-lg">
         <div className="flex items-center space-x-6 flex-col sm:flex-row">
           <Avatar
-            src={`/api/image?url=${encodeURIComponent(targetActor?.icon?.url ?? "")}`}
+            src={targetActor?.icon?.url}
             alt={targetActor?.name || targetActor?.preferredUsername}
             fallback={(targetActor?.name || targetActor?.preferredUsername || "U").charAt(0)}
             size="2xl"
