@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Notification, { NotificationWithData } from "@/components/features/user/Notification";
 import { showToast } from "@/components/ui/Toast";
+import { NOTIFICATIONS_READ_EVENT } from "@/lib/events";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationWithData[]>([]);
@@ -23,7 +24,10 @@ export default function NotificationsPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ids: unread }),
-          }).catch(() => {});
+          })
+            // ヘッダーの未読バッジを消す
+            .then(() => window.dispatchEvent(new Event(NOTIFICATIONS_READ_EVENT)))
+            .catch(() => {});
         }
       } catch {
         if (!cancelled) showToast("通知が読み込めなかったの…ごめんね💦");

@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "../styles/globals.css";
 //import OfflineStatus from "@/components/offline/OfflineStatus";
 import { ThemeProvider } from "@/components/theme-provider";
-import {Header} from "@/components/layout/Header";
+import { Header, BottomNav } from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/Toast";
 import { AuthProvider } from "@/components/providers/AuthProvider";
@@ -60,18 +60,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
         <AuthProvider>
-        <div className="relative flex flex-col min-h-screen">
-          <div className="fixed inset-0 z-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 animate-gradient" />
-            <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
-          </div>
-          <div className="relative z-10 flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow container mx-auto px-4 py-8">
-              {children}
-            </main>
-            <Footer />
-          </div>
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="container mx-auto flex-grow px-4 py-4 sm:py-6">
+            {children}
+          </main>
+          <Footer />
+          <BottomNav />
         </div>
         <Toaster />
         </AuthProvider>

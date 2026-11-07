@@ -11,6 +11,8 @@ interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   src?: string;
   alt?: string;
   attributedTo?: string;
+  /** リンク先を直接指定する（attributedTo より優先） */
+  href?: string;
   size?: AvatarSize;
   variant?: AvatarVariant;
   fallback?: string;
@@ -19,7 +21,7 @@ interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
 
 // キラキラなアバターコンポーネント！✨
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, src, alt = 'Avatar', size = 'md', variant = 'default', fallback, isOnline, attributedTo, ...props }, ref) => {
+  ({ className, src, alt = 'Avatar', size = 'md', variant = 'default', fallback, isOnline, attributedTo, href, ...props }, ref) => {
     const sizes = {
       xs: 'w-6 h-6',
       sm: 'w-8 h-8',
@@ -38,15 +40,15 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
     }, [imageSrc]);
 
     const variants = {
-      default: 'bg-purple-100 dark:bg-pink-100',
-      outline: 'border-2 border-purple-600 dark:border-pink-500 bg-transparent',
-      ghost: 'bg-transparent hover:bg-purple-50 dark:hover:bg-pink-900/20',
+      default: 'bg-accent',
+      outline: 'ring-2 ring-primary bg-accent',
+      ghost: 'bg-transparent',
     };
     const avatarIcon = (
       <div
       ref={ref}
       className={cn(
-        'relative rounded-full overflow-hidden transition-all duration-200',
+        'relative shrink-0 rounded-full overflow-hidden',
         sizes[size],
         variants[variant],
         className
@@ -60,11 +62,11 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
           loading="lazy"
           decoding="async"
           onError={() => setHasError(true)}
-          className="object-cover w-full h-full hover:scale-105 transition-transform duration-200"
+          className="object-cover w-full h-full"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
-          <span className="text-purple-600 dark:text-pink-600 font-semibold">
+          <span className="text-accent-foreground font-semibold">
             {fallback || alt.charAt(0).toUpperCase()}
           </span>
         </div>
@@ -72,16 +74,21 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
       {isOnline !== undefined && (
         <span
           className={cn(
-            'absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full border-2 border-white dark:border-gray-800',
+            'absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full border-2 border-card',
             isOnline ? 'bg-green-500' : 'bg-gray-400'
           )}
         />
       )}
     </div>
     );
-    if (attributedTo) {
+    if (href || attributedTo) {
     return (
-      <Link href={isInternalUrl(attributedTo) ? `/users/${attributedTo.split("/").pop()}` : attributedTo}>
+      <Link
+        href={href || (isInternalUrl(attributedTo!) ? `/users/${attributedTo!.split("/").pop()}` : attributedTo!)}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={alt}
+        className="shrink-0 rounded-full"
+      >
       {avatarIcon}
       </Link>
     );

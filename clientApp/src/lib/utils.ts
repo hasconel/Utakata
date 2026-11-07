@@ -53,3 +53,15 @@ export function convertToExternalUrl(url: string): string {
   }
   return `${process.env.NEXT_PUBLIC_DOMAIN}/api/actor?url=${encodeURIComponent(url)}`;
 }
+/**
+ * プロフィール画面へのリンク先。
+ * ローカルのユーザーは /@ユーザー名（/users/<id> だと middleware でもう一度リダイレクトされる）、
+ * 外部のユーザーは相手のサーバーのURL。
+ */
+export function profileHref(actorId?: string | null, preferredUsername?: string | null): string {
+  if (!actorId) return "#";
+  if (isInternalUrl(actorId)) {
+    return preferredUsername ? `/@${preferredUsername}` : `/users/${actorId.split("/").pop()}`;
+  }
+  return actorId;
+}

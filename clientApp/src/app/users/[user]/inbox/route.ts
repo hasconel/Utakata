@@ -6,7 +6,7 @@ import { verifySignature } from "@/lib/activitypub/crypto";
 import { Permission, Role } from "node-appwrite";
 import { buildAttachments, buildContent, isPublicNote, toArray } from "@/lib/activitypub/remoteNote";
 import { sendAccept } from "@/lib/activitypub/remoteActor";
-import { addToSearchIndex, removeFromSearchIndex } from "@/lib/activitypub/post";
+import { removePostFromIndex } from "@/lib/search/meili";
 
 /** 受け取ったが処理しないアクティビティへの応答。4xxを返すと相手が再送や失敗扱いをする。 */
 const ignored = () => new NextResponse(null, { status: 202 });
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return ignored();
     }
     const postId = ID.unique();
-    const note = await adminDatabases.createDocument(
+    await adminDatabases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,
       postId,
@@ -293,18 +293,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
       [Permission.read(Role.users()), Permission.update(Role.users())]
     );
-    await addToSearchIndex({
-      $id: note.$id,
-      content: note.content,
-      username: note.username,
-      activityId: note.activityId,
-      to: note.to,
-      cc: note.cc,
-      published: note.published,
-      inReplyTo: note.inReplyTo,
-      attributedTo: note.attributedTo,
-      attachment: note.attachment,
-    });
+    // 外部の投稿は検索の対象外（検索はローカルの投稿だけ）
     return ignored();
   }
   // いいねの場合
@@ -476,7 +465,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
         note.$id,
       ).catch(() => null);
-      await removeFromSearchIndex(note.$id);
+      await removePostFromIndex(note.$id);
       const Accept = {
         "type": "Accept",
         "actor": ActorId,

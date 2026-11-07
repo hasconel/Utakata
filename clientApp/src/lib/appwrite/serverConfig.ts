@@ -1,7 +1,7 @@
 "use server";
 import { Client, Account, Databases, Storage, Users, Query, ID, Models } from "node-appwrite";
 import { cookies } from "next/headers";
-import { MeiliSearch } from "meilisearch";
+import { removePostFromIndex } from "@/lib/search/meili";
 import { Actor, Post  } from "@/types/appwrite";
 import { signRequest } from "../activitypub/crypto";
 import { getEncryptedPrivateKey } from "../activitypub/privateKeyStore";
@@ -9,10 +9,6 @@ import { fetchRemoteActor } from "../activitypub/remoteActor";
 import { isInternalUrl } from "../utils";
 import { ActivityPubNote, ActivityPubNoteInClient } from "@/types/activitypub";
 
-const meilisearch = new MeiliSearch({
-  host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
-  apiKey: process.env.MEILISEARCH_API_KEY!,
-});
 /**
  * Appwriteのクライアント設定！✨
  * セッション管理とデータベース接続をキラキラに設定！💖
@@ -366,7 +362,8 @@ export async function deletePost(postId: string) {
       process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,
       postId
     );
-    meilisearch.index("posts").deleteDocument(postId);
+    // 以前は await していなかったので、消した投稿が検索に残ることがあった
+    await removePostFromIndex(postId);
     return true;
   } catch (error) {
     console.error("投稿の削除に失敗したわ！💦", error);

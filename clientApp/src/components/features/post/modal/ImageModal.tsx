@@ -73,22 +73,23 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
   return (
     <>
       {/* 画像グリッド！✨ */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 1枚なら横長で大きく、2枚以上は正方形で並べる */}
+      <div className={`grid gap-1.5 overflow-hidden rounded-xl ${images.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
         {images.slice(0, 4).map((image, index) => (
-          <div key={index} className="aspect-square relative">
+          <div key={index} className={`relative ${images.length === 1 ? "aspect-video" : "aspect-square"}`}>
             {isLoading ? (
-              <div className="w-full h-full bg-pink-100 dark:bg-pink-900/20 rounded-xl animate-pulse flex items-center justify-center">
-                <ImageIcon className="w-8 h-8 text-pink-500 dark:text-pink-400 animate-bounce" />
+              <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-muted-foreground" />
               </div>
             ) : (
-              <div className="w-full h-full rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
+              <div className="w-full h-full overflow-hidden bg-muted">
                 {image.type==="Image"&&(
                                   <Image
                                   src={convertToInternalUrl(image.url)}
                                   alt={image.name || "画像"}
                                   width={400}
                                   height={400}
-                                  className="w-full h-full object-cover transition-all duration-300 hover:scale-110 cursor-pointer border-2 border-pink-200 dark:border-pink-800"
+                                  className="w-full h-full object-cover cursor-zoom-in transition-opacity hover:opacity-90"
                                   onClick={handleClick(index)}
                                 />
                 )}
@@ -98,16 +99,16 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
                     poster={convertToInternalUrl(imagePreview[index] || image.url)}
                     width={400}
                     height={400}
-                    className="w-full h-full object-cover transition-all duration-300 hover:scale-110 cursor-pointer border-2 border-pink-200 dark:border-pink-800"
+                    className="w-full h-full object-cover cursor-pointer"
                     onClick={handleClick(index)}
                   />
-                    <Play className="w-8 h-8 text-pink-500 dark:text-pink-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white"><Play className="h-5 w-5 fill-current" /></span>
                   </>
                 )}
-                {image.type==="Audio"&&(<div className="relative overflow-hidden flex w-full h-full object-cover transition-all duration-300 cursor-pointer border-2 border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 rounded-xl "> 
+                {image.type==="Audio"&&(<div className="relative overflow-hidden flex w-full h-full cursor-pointer bg-accent"> 
                   <audio
                     src={convertToInternalUrl(imagePreview[index] || image.url)}
-                    className=" w-full h-full object-cover transition-all duration-300 cursor-pointer border-2 border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/20 "
+                    className="w-full h-full"
 
                   />
                   <span className="whitespace-nowrap text-pink-500 dark:text-pink-400 absolute top-0 left-0 text-8xl font-bold font-mono animate-marquee">{image.name}</span>
@@ -124,8 +125,8 @@ export default function ImageModal({ images,  setIsModalOpen, isModalOpen , Moda
               </div>
             )}
             {index === 3 && images.length > 4 && (
-              <div className="absolute inset-0 bg-pink-500/50 dark:bg-pink-900/50 rounded-xl flex items-center justify-center transition-all duration-300 hover:bg-pink-500/60 dark:hover:bg-pink-900/60 backdrop-blur-sm">
-                <span className="text-white text-xl font-bold animate-pulse">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45">
+                <span className="text-xl font-semibold text-white tabular-nums">
                   +{images.length - 4}
                 </span>
               </div>

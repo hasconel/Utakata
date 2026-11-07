@@ -142,9 +142,5 @@ export async function toClientNotes(posts: any[], databases: any, viewerUserId: 
   });
 }
 
-/** 投稿と通知の表示期間（意図的に3.5日に限っている。古い投稿を掘り返されないようにするため） */
-export const POST_WINDOW_HOURS = 84;
-
-export function postWindowStart(): string {
-  return new Date(Date.now() - POST_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-}
+/** 表示期間は lib/postWindow.ts で決めている（画面からも使うため） */
+export { POST_WINDOW_HOURS, postWindowStart } from "@/lib/postWindow";

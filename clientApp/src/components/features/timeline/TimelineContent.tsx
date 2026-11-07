@@ -1,119 +1,134 @@
+"use client";
 
+import { useEffect, useRef, useState } from "react";
+import { Loader2, RotateCw } from "lucide-react";
 import PostCard from "@/components/features/post/card/PostCard";
-import Alert from "@/components/ui/Alert";
 import ImageModalContent from "@/components/features/post/modal/ImageModalContent";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 import { ApiError } from "@/lib/api/client";
-import { useState } from "react";
-import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
-// コンポーネント: もっと見るボタン
+/** 投稿リストを載せる面（タイムラインとプロフィールで共通） */
+export const FEED_SURFACE = "overflow-hidden rounded-2xl border border-border bg-card shadow-soft";
+
+/** 「もっと見る」ボタン。押す代わりに、画面の下まで来たら自動で読み込む */
 const LoadMoreButton = ({ onLoadMore, isLoading = false }: { onLoadMore: () => void; isLoading?: boolean }) => {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+
+  // 読み込みが終わるたびに監視し直す（画面が短くて下端が見えたままでも、続けて読み込めるように）
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (isLoading || !el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) onLoadMoreRef.current();
+      },
+      // 下端に着く少し前から読み込み始める
+      { rootMargin: "600px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isLoading]);
+
+  return (
+    <div ref={sentinelRef} className="flex justify-center py-6">
+      {/* 自動で読み込めない環境のための、押せる予備 */}
+      <button
+        type="button"
+        onClick={onLoadMore}
+        disabled={isLoading}
+        aria-label="続きを読み込む"
+        title="続きを読み込む"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none"
+      >
+        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+      </button>
+    </div>
+  );
+};
+
+/** 投稿がないとき。浮かぶ泡だけを見せる */
+const EmptyState = ({ isUser = false }: { isUser?: boolean }) => (
+  <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+    <div aria-hidden className="relative h-16 w-16">
+      <span className="absolute bottom-0 left-1 h-9 w-9 rounded-full border-2 border-current opacity-40" />
+      <span className="absolute right-1 top-2 h-5 w-5 rounded-full border-2 border-current opacity-30" />
+      <span className="absolute left-7 top-0 h-2.5 w-2.5 rounded-full border-2 border-current opacity-20" />
+    </div>
+    <p className="text-sm">{isUser ? "最近の投稿はないみたい🫧" : "まだ投稿がないわ🫧"}</p>
+  </div>
+);
+
+const TimelineContent = ({
+  isLoading,
+  posts,
+  error,
+  onRetry,
+  empty,
+}: {
+  isLoading: boolean | null;
+  posts: ActivityPubNoteInClient[];
+  error: ApiError | null;
+  onRetry?: () => void;
+  /** 投稿が0件のときに出すもの（省略すると「まだ投稿がない」） */
+  empty?: React.ReactNode;
+}) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
+  const [modalIndex, setModalIndex] = useState(0);
+
+  if (isLoading) return <LoadingSkeleton />;
+
+  if (error && posts.length === 0) {
     return (
-      <div className="flex justify-center mt-8">
-        <button
-          onClick={onLoadMore}
-          disabled={isLoading}
-          className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 disabled:opacity-60 disabled:hover:scale-100"
-        >
-          <span className="flex items-center">
-            <span className={`mr-2 ${isLoading ? "animate-spin" : ""}`}>✨</span>
-            {isLoading ? "読み込み中…" : "もっと見る"}
-          </span>
-        </button>
+      <div role="alert" className="flex flex-col items-center gap-3 py-12 text-sm text-destructive">
+        <p>{error.message}</p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            aria-label="もう一度読み込む"
+            title="もう一度読み込む"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <RotateCw className="h-5 w-5" />
+          </button>
+        )}
       </div>
     );
-  };
-  
-  // コンポーネント: 空の状態
-  const EmptyState = ({ isUser }: { isUser: boolean }) => (
-    <div className="flex flex-col items-center justify-center py-12 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-purple-100 dark:border-purple-900">
-      <div className="text-6xl mb-4 animate-bounce">💫</div>
-      <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-2">
-        {isUser ?  "最近投稿をしていないみたい！":"まだ投稿がないよ！✨" }
-      </p>
-      <p className="text-gray-600 dark:text-gray-400">
-        {isUser ? "" : "最初の投稿をしてみよう！💖"}
-      </p>
-    </div>
-  );
-  
-  // コンポーネント: 投稿リスト（シンプル版）
-  const PostList = ({ 
-    posts, 
-    setIsModalOpen, 
-    isModalOpen, 
-    setModalImages, 
-    setModalIndex 
-  }: {
-    posts: ActivityPubNoteInClient[]; // ActivityPubのNote形式の配列
-    setIsModalOpen: (open: boolean) => void;
-    isModalOpen: boolean;
-    setModalImages: (images: ActivityPubImage[]) => void;
-    setModalIndex: (index: number) => void;
-  }) => (
-    <div className="space-y-4">
-      {Array.isArray(posts) && posts.map((post) => (
-        <PostCard 
-          key={post.id} // $idを使用
-          post={post} 
-          setIsModalOpen={setIsModalOpen} 
-          isModalOpen={isModalOpen} 
-          setModalImages={setModalImages}
-          setModalIndex={setModalIndex}
-        />
-      ))}
-    </div>
-  );
-  
-  // メインのタイムラインコンテンツコンポーネント
-     const TimelineContent = ({ 
-    isLoading, 
-    posts, 
-    error,
-  }: {
-    isLoading: boolean | null;
-    posts: ActivityPubNoteInClient[]; // ActivityPubのNote形式の配列
-    error: ApiError | null;
-  }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalImages, setModalImages] = useState<ActivityPubImage[]>([]);
-    const [modalIndex, setModalIndex] = useState(0);
-    if (isLoading) {
-      return <LoadingSkeleton />;
-    }
-  
-    if (error) {
-      return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-          <Alert type="error" message={error.message} />
+  }
+
+  if (posts.length === 0) return <>{empty ?? <EmptyState />}</>;
+
+  return (
+    <>
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50">
+          <ImageModalContent
+            imagesTable={modalImages}
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            index={modalIndex}
+          />
         </div>
-      );
-    }
-  
-    return (
-      <div>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50">
-            <ImageModalContent 
-              imagesTable={modalImages} 
-              isModalOpen={isModalOpen} 
-              setIsModalOpen={setIsModalOpen} 
-              index={modalIndex}
-            />
-          </div>
-        )}
-        
-          <PostList 
-            posts={posts}
+      )}
+      <div className="divide-y divide-border">
+        {posts.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
             setIsModalOpen={setIsModalOpen}
             isModalOpen={isModalOpen}
             setModalImages={setModalImages}
             setModalIndex={setModalIndex}
           />
+        ))}
       </div>
-    );
-  };
+    </>
+  );
+};
 
-  export { LoadMoreButton, EmptyState,  TimelineContent };
+export { LoadMoreButton, EmptyState, TimelineContent };

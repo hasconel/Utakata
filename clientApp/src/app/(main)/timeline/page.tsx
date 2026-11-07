@@ -1,82 +1,75 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { RotateCw } from "lucide-react";
 import PostForm from "@/components/features/post/form/PostForm";
-import {  ActivityPubActor, } from "@/types/activitypub";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { getActorByUserId } from "@/lib/appwrite/database";
-import { TimelineContent, LoadMoreButton } from "@/components/features/timeline/TimelineContent";
+import { TimelineContent, LoadMoreButton, FEED_SURFACE } from "@/components/features/timeline/TimelineContent";
 import { useTimelineManager } from "@/hooks/api/useApi";
-//import { getTimelinePosts } from "@/lib/appwrite/serverConfig";// 使えなかった
+import { TIMELINE_REFRESH_EVENT } from "@/lib/events";
 
-
-// カスタムフック: タイムライン管理
-// カスタムフック: ユーザー認証とアクター情報
-const useUserAndActor = () => {
+/**
+ * タイムラインページ！🫧
+ * 投稿フォームと、直近84時間の投稿の流れだけを置く。
+ */
+export default function TimelinePage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [actor, setActor] = useState<ActivityPubActor | null>(null);
+  const {
+    posts,
+    fetchMore,
+    isLoading,
+    isRefreshing,
+    isLoadingMore,
+    error,
+    handleTimelineReload,
+    handleLoadMore,
+  } = useTimelineManager(user?.$id || "");
 
   useEffect(() => {
-    if (!user && !isAuthLoading) {
-      window.location.href = "/login";
-    }
+    if (!user && !isAuthLoading) window.location.href = "/login";
   }, [user, isAuthLoading]);
 
   useEffect(() => {
-    if (user) {
-      getActorByUserId(user.$id)
-        .then(res => setActor(res))
-        .catch(err => console.error(err));
-    }
-  }, [user]);
+    const onRefresh = () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      handleTimelineReload();
+    };
+    window.addEventListener(TIMELINE_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(TIMELINE_REFRESH_EVENT, onRefresh);
+  }, [handleTimelineReload]);
 
-  return { user, isAuthLoading, actor };
-};
-
-// コンポーネント: タイムラインヘッダー
-const TimelineHeader = ({ onRefresh, isRefreshing }: { onRefresh: () => void; isRefreshing: boolean }) => {
   return (
-    <div className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/40 dark:via-gray-700/80 dark:to-gray-900/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
-      <button 
-        className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4 hover:scale-105 transition-transform duration-200" 
-        onClick={onRefresh}
-        disabled={isRefreshing}
-        aria-label="タイムラインを更新"
-      >
-        タイムライン ✨
-      </button>
-      {isRefreshing && (
-        <span className="ml-3 text-sm text-purple-500 dark:text-pink-400 animate-pulse">更新中…✨</span>
-      )}
-      <PostForm refreshTimeline={onRefresh} />
-    </div>
-  );
-};/**
- * タイムラインページ！✨
- * みんなの投稿が見れるよ！💖
- */
-export default function TimelinePage() {
-  // 投稿の取得は自分のactor（背景画像用）を待たずに始める
-  const { user, actor } = useUserAndActor();
-  const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, isRefreshing, isLoadingMore, error,  handleTimelineReload, handleLoadMore } = useTimelineManager(user?.$id || "");
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
+      <section className={`${FEED_SURFACE} p-3`}>
+        <PostForm refreshTimeline={handleTimelineReload} />
+      </section>
 
-  return (  
-    <>
-      <div 
-        className="w-full h-full bg-cover bg-center z-[-1] bg-fixed absolute top-0 left-0" 
-        style={{backgroundImage: `url(${actor?.image?.url})`}}
-      />
-      <div 
-        className="max-w-2xl mx-auto md:px-4"
-      >
-        <TimelineHeader onRefresh={handleTimelineReload} isRefreshing={isRefreshing} />
-          <TimelineContent 
-            isLoading={isLoadingNextPosts} 
-            posts={nextPosts} 
-            error={error}
-          />
-        {fetchMore && !isLoadingNextPosts && <LoadMoreButton onLoadMore={handleLoadMore} isLoading={isLoadingMore} />}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleTimelineReload}
+          disabled={isRefreshing}
+          aria-label="タイムラインを更新"
+          title="更新"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <RotateCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+        </button>
       </div>
-    </>
+
+      <section className={`${FEED_SURFACE} relative`} aria-busy={isRefreshing || undefined}>
+        {/* 更新中は上端に細い帯を流す */}
+        {isRefreshing && (
+          <div aria-hidden className="absolute inset-x-0 top-0 h-0.5 overflow-hidden">
+            <div className="h-full w-1/3 animate-[marquee_1.2s_linear_infinite] bg-primary" />
+          </div>
+        )}
+        <TimelineContent isLoading={isLoading} posts={posts} error={error} onRetry={handleTimelineReload} />
+      </section>
+
+      {fetchMore && !isLoading && posts.length > 0 && (
+        <LoadMoreButton onLoadMore={handleLoadMore} isLoading={isLoadingMore} />
+      )}
+    </div>
   );
 }

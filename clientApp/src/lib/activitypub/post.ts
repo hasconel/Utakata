@@ -14,14 +14,10 @@ import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { Errors } from "@/lib/activitypub/errors";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Permission } from "node-appwrite";
-import { MeiliSearch } from "meilisearch";
+import { addPostToIndex, removePostFromIndex } from "@/lib/search/meili";
   import {  getActorById } from "@/lib/appwrite/database";
 import { Databases } from "node-appwrite";
 
-const meilisearch = new MeiliSearch({
-  host: process.env.NEXT_PUBLIC_MEILISEARCH_HOST!,
-  apiKey: process.env.MEILISEARCH_API_KEY!,
-});
 
 /**
  * 投稿入力のスキーマ！💎
@@ -53,21 +49,6 @@ export async function validatePostInput(input: unknown): Promise<PostInput> {
   return PostSchema.parse(input);
 }
 
-/** 検索インデックスへの追加と削除。失敗しても投稿の処理は止めない。 */
-export async function addToSearchIndex(document: Record<string, unknown>) {
-  try {
-    await meilisearch.index("posts").addDocuments([document]);
-  } catch (err: any) {
-    console.error("検索インデックスへの追加に失敗:", err?.message);
-  }
-}
-export async function removeFromSearchIndex(documentId: string) {
-  try {
-    await meilisearch.index("posts").deleteDocument(documentId);
-  } catch (err: any) {
-    console.error("検索インデックスからの削除に失敗:", err?.message);
-  }
-}
 
 /**
  * 投稿をデータベースに保存！📝
@@ -158,8 +139,8 @@ export async function savePost(
     LikedActors: subdocument.LikedActors,
     replyCount: subdocument.replyCount,
   };
-  // メイリスケのインデックスに追加
-  meilisearch.index("posts").addDocuments([document]);
+  // 検索インデックスに追加（以前は await していなかったので、追加されないことがあった）
+  await addPostToIndex(userdocument);
   return { document, activity };
 }
 
@@ -281,5 +262,5 @@ export async function deletePostOutbox(postId: string) {
   });
   await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, post[0].$id);
   await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, postsub[0].$id);
-  await meilisearch.index("posts").deleteDocument(post[0].$id);
+  await removePostFromIndex(post[0].$id);
 }

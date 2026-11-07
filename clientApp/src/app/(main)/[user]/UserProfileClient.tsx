@@ -10,7 +10,7 @@ import MuteButton from "@/components/features/user/MuteButton";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { getUserPostCount, followUser, unfollowUser } from "@/lib/appwrite/serverConfig";
 import { useActor } from "@/hooks/useActor";
-import { TimelineContent, LoadMoreButton, EmptyState } from "@/components/features/timeline/TimelineContent";
+import { TimelineContent, LoadMoreButton, EmptyState, FEED_SURFACE } from "@/components/features/timeline/TimelineContent";
 import { useTimelineManager } from "@/hooks/api/useApi";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import { getMutedUsers } from "@/lib/appwrite/database";
@@ -227,11 +227,13 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
           投稿一覧 💫
           </h2>
       {posts.filter((post: any) => post.attributedTo.includes(targetActor?.id)).length > 0 && !isLoading  ? (<>
+      <div className={FEED_SURFACE}>
       <TimelineContent 
         isLoading={isLoading} 
         posts={posts.filter((post: any) => post.attributedTo.includes(targetActor?.id))} 
         error={error}
       />
+      </div>
 
       {isLoading && <LoadingSkeleton />}
       {fetchMore && !isLoading && posts.filter((post: any) => post.attributedTo.includes(targetActor?.id)).length > 0 && <LoadMoreButton onLoadMore={handleLoadMore} />}

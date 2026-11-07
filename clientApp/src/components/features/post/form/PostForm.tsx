@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReplyToPost from "../reply/ReplyToPost";
-import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import { ImagePlus, X, ToggleRight, ToggleLeft, Loader2 } from "lucide-react";
+import { ImagePlus, X, Loader2, Globe, Lock, SendHorizontal } from "lucide-react";
+
+const MAX_LENGTH = 500;
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 
@@ -259,160 +260,148 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
     fileInputRef.current?.click();
   }, []);
 
+  // 本文の高さを内容に合わせて伸ばす
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 320)}px`;
+  }, [content]);
+
+  const canSubmit = !isSubmitting && (content.trim().length > 0 || images.length > 0);
+  const isPublic = visibility === "public";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* リプライ先の投稿を表示するよ！✨ */}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {/* リプライ先の投稿 */}
       {replyToPost && isReplyDisplay && post?.note && <ReplyToPost note={post.note} />}
 
-      <div className="space-y-8">
-        {/* 投稿内容の入力エリア！✨ */}
-        <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group">
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="キラキラな投稿を書いてね！✨"
-            className="active:border-none active:outline-none focus:border-none rounded-xl focus:outline-none bg-transparent focus:ring-0"
-            rows={3}
-            maxLength={500}
-            aria-label="投稿内容"
-          />
-          {/* 文字数カウンター！✨ */}
-          <div className="absolute bottom-0 right-0">
-            <span className={`px-4 pb-2 text-xs ${content.length > 450 ? 'text-red-500' : 'text-gray-400'}`}>
-              {content.length}/500
-            </span>
-          </div>
-        </div>
+      <Textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onKeyDown={(e) => {
+          // Ctrl / ⌘ + Enter で送信
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canSubmit) {
+            e.preventDefault();
+            e.currentTarget.form?.requestSubmit();
+          }
+        }}
+        placeholder={isReply ? "" : "キラキラな投稿を書いてね！✨"}
+        className="min-h-[72px] resize-none border-none bg-transparent px-1 py-1 text-[15px] leading-relaxed shadow-none focus-visible:ring-0"
+        rows={2}
+        maxLength={MAX_LENGTH}
+        aria-label={isReply ? "リプライの内容" : "投稿の内容"}
+        aria-describedby={error ? "post-form-error" : undefined}
+      />
 
-        {/* エラーメッセージを表示するよ！✨ */}
-        {error && (
-          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-200 border-2 border-red-200 dark:border-red-800 animate-bounce">
-            <p className="font-bold">エラーが発生したよ！💦</p>
-            <p>{error}</p>
-          </div>
-        )}
-      </div>
-
-      {/* 画像プレビューエリア！✨ */}
+      {/* 選んだファイルのプレビュー */}
       {previewUrls.length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2">
           {previewUrls.map((url, index) => (
-            <div key={index} className="relative group">
-              {url.type === "image" && (
-                <img
-                  src={url.url}
-                  alt={`プレビュー ${index + 1}`}
-                  className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
-                />
-              )}
-              {url.type === "video" && (
-                <video
-                  src={url.url}
-                  className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
-                  controls
-                />
-              )}
-              {url.type === "audio" && (
-                <audio
-                  src={url.url}
-                  className="w-full h-40 object-cover rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-purple-100 dark:border-pink-100 group-hover:border-purple-200 dark:group-hover:border-pink-200"
-                  controls
-                />
-              )}
+            <div key={url.url} className="relative overflow-hidden rounded-xl border border-border bg-muted">
+              {url.type === "image" && <img src={url.url} alt="" className="h-36 w-full object-cover" />}
+              {url.type === "video" && <video src={url.url} className="h-36 w-full object-cover" controls />}
+              {url.type === "audio" && <audio src={url.url} className="w-full p-2" controls />}
               <button
                 type="button"
                 onClick={() => handleRemoveImage(index)}
-                className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 active:scale-95"
-                aria-label="ファイルを削除"
+                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-black/75"
+                aria-label="このファイルを外す"
+                title="外す"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ボタンエリア！✨ */}
-      <div className="flex flex-row justify-between items-center gap-4">
-        {/* 左側のボタン群！✨ */}
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={openFileDialog}
-            className="flex items-center gap-2 bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-900 transition-all duration-300 hover:scale-105 active:scale-95 rounded-xl border-2 border-pink-200 dark:border-pink-800 px-4 py-2" 
-          >
-            <ImagePlus className="w-5 h-5" />
-            <span className="hidden sm:block">メディア追加 📸</span>
-          </Button>
-          
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageSelect}
-            accept="image/*,video/*,audio/*"
-            multiple
-            className="hidden"
-          />
+      {error && (
+        <p id="post-form-error" role="alert" className="px-1 text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
-          {/* 公開範囲の設定！✨ */}
-          <button 
-            type="button"
-            onClick={toggleVisibility}
-            className="px-4 py-2 rounded-2xl hover:scale-105 active:scale-95 transition-all duration-300 border-2 border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg bg-white dark:bg-gray-800"
-            aria-label="公開範囲を切り替え"
-          >
-            <div className="flex items-center gap-2">
-              {visibility === "public" ? (
-                <ToggleRight className="w-4 h-4 text-green-500" />
-              ) : (
-                <ToggleLeft className="w-4 h-4 text-orange-500" />
-              )}
-              <span className="hidden text-xs sm:block">
-                {visibility === "public" ? "公開" : "限定"}
-              </span>
-            </div>
-          </button>
-        </div>
+      <div className="flex items-center gap-1 border-t border-border pt-2">
+        <button
+          type="button"
+          onClick={openFileDialog}
+          className={iconButton}
+          aria-label="画像・動画・音声を添付"
+          title="添付"
+        >
+          <ImagePlus className="h-5 w-5" />
+        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImageSelect}
+          accept="image/*,video/*,audio/*"
+          multiple
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={toggleVisibility}
+          className={`${iconButton} ${isPublic ? "text-primary" : ""}`}
+          aria-label={isPublic ? "公開（押すとフォロワー限定にする）" : "フォロワー限定（押すと公開にする）"}
+          title={isPublic ? "公開" : "フォロワー限定"}
+        >
+          {isPublic ? <Globe className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+        </button>
 
-        {/* 右側のボタン群！✨ */}
-        <div className="flex items-center gap-3">
-          <Button
+        <div className="ml-auto flex items-center gap-3">
+          <CharacterRing length={content.length} max={MAX_LENGTH} />
+          <button
             type="submit"
-            disabled={isSubmitting || (!content.trim() && images.length === 0)}
-            className="px-8 py-4 bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 dark:from-pink-600 dark:via-purple-500 dark:to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:via-pink-600 hover:to-purple-700 dark:hover:from-pink-700 dark:hover:via-purple-600 dark:hover:to-pink-700 hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg hover:shadow-xl"
-            aria-label={isReply ? "リプライを投稿" : "投稿する"}
+            disabled={!canSubmit}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.94] disabled:opacity-40 disabled:pointer-events-none"
+            aria-label={isReply ? "リプライを送る" : "投稿する"}
+            title={isReply ? "リプライ（Ctrl + Enter）" : "投稿（Ctrl + Enter）"}
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                投稿中...
-              </>
-            ) : isReply ? (
-              <>
-                <span className="text-transparent bg-clip-text bg-purple-700 dark:bg-pink-300">💭</span>
-                リプライ！
-              </>
-            ) : (
-              <>
-                <span className="hidden sm:block text-transparent bg-clip-text bg-purple-700 dark:bg-pink-300">✨</span>
-                投稿する！
-              </>
-            )}
-          </Button>
-          
-          {isReply && (
-            <Button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 text-gray-800 dark:text-gray-200 rounded-2xl hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-700 dark:hover:to-gray-600 hover:scale-105 active:scale-95 transition-all duration-300 border-2 border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg"
-              aria-label="キャンセル"
-            >
-              キャンセル
-            </Button>
-          )}
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+          </button>
         </div>
       </div>
     </form>
+  );
+}
+
+const iconButton =
+  "flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground";
+
+/** 文字数の輪。残りが少なくなったら数字を出し、超えそうになると赤くなる */
+function CharacterRing({ length, max }: { length: number; max: number }) {
+  if (length === 0) return null;
+  const remaining = max - length;
+  const ratio = Math.min(1, length / max);
+  const near = remaining <= 50;
+  const size = near ? 26 : 20;
+  const radius = (size - 4) / 2;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 26, height: 26 }} aria-label={`残り${remaining}文字`} role="img">
+      <svg width={size} height={size} className="-rotate-90 transition-all">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth={2.5} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={remaining <= 20 ? "var(--destructive)" : "var(--primary)"}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - ratio)}
+        />
+      </svg>
+      {near && (
+        <span className={`absolute text-[10px] tabular-nums ${remaining <= 20 ? "text-destructive" : "text-muted-foreground"}`}>
+          {remaining}
+        </span>
+      )}
+    </div>
   );
 }

@@ -1,37 +1,21 @@
-
-
 /**
- * スケルトンローディングコンポーネント！✨
- * 投稿の読み込み中をキラキラに表示するよ！💖
+ * 投稿の読み込み中に出す、投稿の形をした影🫧
+ * タイムラインの1件と同じ並び（アイコン・名前・本文・ボタン）にしてあるので、読み込み後にガタつかない。
  */
-export default function LoadingSkeleton() {
+export default function LoadingSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="space-y-6 mt-4">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-100 dark:border-purple-900 animate-pulse">
-          {/* ユーザー情報のスケルトン！✨ */}
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/6"></div>
+    <div aria-busy="true" aria-label="読み込み中" className="divide-y divide-border">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="flex gap-3 px-4 py-3.5 animate-pulse">
+          <div className="h-10 w-10 shrink-0 rounded-full bg-muted" />
+          <div className="flex flex-1 flex-col gap-2.5 pt-1">
+            <div className="h-3 w-1/3 rounded-full bg-muted" />
+            <div className="h-3 w-full rounded-full bg-muted" />
+            <div className="h-3 w-2/3 rounded-full bg-muted" />
+            <div className="mt-1 flex gap-6">
+              <div className="h-4 w-4 rounded-full bg-muted" />
+              <div className="h-4 w-4 rounded-full bg-muted" />
             </div>
-          </div>
-          {/* 投稿内容のスケルトン！✨ */}
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
-          </div>
-          {/* 画像のスケルトン！✨ */}
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-            <div className="aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-          </div>
-          {/* アクションボタンのスケルトン！✨ */}
-          <div className="mt-4 flex space-x-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
           </div>
         </div>
       ))}

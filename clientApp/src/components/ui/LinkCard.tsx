@@ -56,12 +56,12 @@ export default function LinkCard({ url, className = "", onLoad, onError }: LinkC
 
   if (isLoading) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden ${className}`}>
+      <div className={`mt-1 overflow-hidden rounded-xl border border-border bg-card ${className}`}>
         <div className="animate-pulse">
-          <div className="h-48 bg-gray-200 dark:bg-gray-700" />
+          <div className="h-48 bg-muted" />
           <div className="p-4 space-y-3">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+            <div className="h-4 bg-muted rounded w-3/4" />
+            <div className="h-4 bg-muted rounded w-1/2" />
           </div>
         </div>
       </div>
@@ -70,14 +70,14 @@ export default function LinkCard({ url, className = "", onLoad, onError }: LinkC
 
   if (error || !metadata) {
     return (
-      <a
+      <a onClick={(e) => e.stopPropagation()}
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`block bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-200 ${className}`}
+        className={`block mt-1 overflow-hidden rounded-xl border border-border bg-card transition-colors hover:bg-accent/40 ${className}`}
       >
-        <div className="p-4">
-          <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+        <div className="px-3 py-2.5">
+          <div className="flex items-center space-x-2 text-muted-foreground">
             <ExternalLink className="w-4 h-4" />
             <span className="truncate">{url}</span>
           </div>
@@ -87,14 +87,14 @@ export default function LinkCard({ url, className = "", onLoad, onError }: LinkC
   }
 
   return (
-    <a
+    <a onClick={(e) => e.stopPropagation()}
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`block bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-200 ${className}`}
+      className={`block mt-1 overflow-hidden rounded-xl border border-border bg-card transition-colors hover:bg-accent/40 ${className}`}
     >
       {metadata.image ? (
-        <div className="relative h-48">
+        <div className="relative aspect-[1.91/1] max-h-56 w-full">
           <img
             src={metadata.image}
             alt={metadata.title || "リンクのプレビュー画像"}
@@ -102,12 +102,12 @@ export default function LinkCard({ url, className = "", onLoad, onError }: LinkC
           />
         </div>
       ) : (
-        <div className="h-48 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-          <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+        <div className="h-48 bg-muted flex items-center justify-center">
+          <ImageIcon className="w-12 h-12 text-muted-foreground" />
         </div>
       )}
 
-      <div className="p-4">
+      <div className="px-3 py-2.5">
         <div className="flex items-center space-x-2 mb-2">
           {metadata.favicon && (
             <img
@@ -116,17 +116,17 @@ export default function LinkCard({ url, className = "", onLoad, onError }: LinkC
               className="w-4 h-4"
             />
           )}
-          <span className="text-sm text-gray-500 dark:text-gray-400">
+          <span className="text-sm text-muted-foreground">
             {metadata.siteName || new URL(url).hostname}
           </span>
         </div>
 
-        <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 line-clamp-2">
+        <h3 className="mb-0.5 line-clamp-2 text-sm font-semibold text-foreground">
           {metadata.title || url}
         </h3>
 
         {metadata.description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+          <p className="text-sm text-muted-foreground line-clamp-2">
             {metadata.description}
           </p>
         )}

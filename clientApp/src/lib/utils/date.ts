@@ -55,3 +55,17 @@ export function getRelativeTime(date: string | Date): string {
   const diffInYears = Math.floor(diffInDays / 365);
   return `${diffInYears}年前 🎉`;
 } 
+
+/**
+ * タイムライン用の短い相対時間（「3分」「2時間」など）。絵文字は付けない。
+ */
+export function getShortRelativeTime(date: string | Date, now = Date.now()): string {
+  const seconds = Math.floor((now - new Date(date).getTime()) / 1000);
+  if (!Number.isFinite(seconds)) return "";
+  if (seconds < 60) return "今";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}分`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間`;
+  return `${Math.floor(hours / 24)}日`;
+}

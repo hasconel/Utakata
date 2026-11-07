@@ -6,7 +6,7 @@ import { Avatar, } from "@/components/ui/Avatar";
 import Image from "next/image";
 import Link from "next/link";
 import { convertToInternalUrl, formatDate } from "@/lib/utils";
-import { getRelativeTime } from "@/lib/utils/date";
+import { getShortRelativeTime } from "@/lib/utils/date";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 import PostContent from "@/components/features/post/PostContent";
 interface ReplyToPostProps {
@@ -31,7 +31,7 @@ export default function ReplyToPost({ note: postData }: ReplyToPostProps) {
 
   // メインのレンダリング
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-900 dark:border dark:border-pink-900/30 rounded-xl p-4 mb-4 shadow-sm hover:shadow-md hover:from-purple-50 dark:hover:from-gray-900/50 transition-all duration-200">
+    <div className="rounded-xl bg-muted/60 p-3 text-sm">
       <Link href={`${postData?.id}`}>
       <div className="flex items-center mb-2">
         <Avatar
@@ -40,28 +40,22 @@ export default function ReplyToPost({ note: postData }: ReplyToPostProps) {
           fallback={postData?._user?.preferredUsername?.charAt(0) || ""}
           size="sm"
           variant="default"
-          className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
         />
         <div className="flex flex-col items-start justify-start w-full gap-1 ml-2">
-          <div className="flex flex-row items-start justify-start w-full mr-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="flex min-w-0 w-full items-baseline gap-1.5">
+            <p className="truncate font-semibold text-foreground">
               {postData?._user?.displayName || postData?._user?.preferredUsername}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="truncate text-muted-foreground">
               @{postData?._user?.preferredUsername}
             </p>
+            <time dateTime={postData?.published} title={formatDate(postData?.published)} className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+              {getShortRelativeTime(postData?.published)}
+            </time>
           </div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {formatDate(postData?.published)}
-            </span>
-        </div>
-        <div className="ml-auto">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {getRelativeTime(postData?.published)}
-          </span>
         </div>
       </div>
-      <PostContent content={postData?.content} className="text-gray-700 dark:text-gray-300" />
+      <PostContent content={postData?.content} className="line-clamp-4 text-foreground/90" />
       {images.length > 0 && (
         <div className="flex justify-left grid-cols-4 gap-2">
           {images.map((image, index) => (
