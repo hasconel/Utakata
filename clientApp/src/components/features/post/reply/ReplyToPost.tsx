@@ -7,38 +7,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { convertToInternalUrl, formatDate } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
-import { useState, useEffect } from "react";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
-import { getInternalPostWithActor } from "@/lib/appwrite/serverConfig";
+import PostContent from "@/components/features/post/PostContent";
 interface ReplyToPostProps {
-  post: string;
-  setIsLoading: (isLoading: boolean) => void;
+  /** 表示する投稿（取得は呼び出し側でまとめて行う） */
+  note: ActivityPubNoteInClient | null;
 }
 /**
  * リプライ先の投稿を表示するコンポーネント！✨
  * かわいいデザインでリプライ先の投稿を表示するよ！💖
- * @param post リプライ先の投稿ID (https://example.com/posts/123)
  */
-export default function ReplyToPost({ post, setIsLoading }: ReplyToPostProps) {
-  const [postData, setPostData] = useState<ActivityPubNoteInClient | null>(null);
-  useEffect(() => {
-    const fetchPost = async () => {
-      const postData = await getInternalPostWithActor(post);
-      setPostData(postData);
-    };
-    fetchPost();
-  }, [post]);
-  
-
-  const [images, setImages] = useState<ActivityPubImage[]>([]);
-  useEffect(() => {
-    if(postData){
-      setImages(postData?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
-      setIsLoading(false);
-    }
-  }, [postData, setIsLoading]);
-  
-
+export default function ReplyToPost({ note: postData }: ReplyToPostProps) {
+  const images: ActivityPubImage[] = (postData?.attachment ?? []).flatMap((image: any) => {
+    try { return [JSON.parse(image) as ActivityPubImage]; } catch { return []; }
+  });
 
   // 投稿データのチェック
   if(!postData?.id){
@@ -79,7 +61,7 @@ export default function ReplyToPost({ post, setIsLoading }: ReplyToPostProps) {
           </span>
         </div>
       </div>
-      <p className="text-gray-700 dark:text-gray-300 ">{postData?.content}</p>
+      <PostContent content={postData?.content} className="text-gray-700 dark:text-gray-300" />
       {images.length > 0 && (
         <div className="flex justify-left grid-cols-4 gap-2">
           {images.map((image, index) => (

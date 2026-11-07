@@ -34,15 +34,20 @@ const useUserAndActor = () => {
 };
 
 // コンポーネント: タイムラインヘッダー
-const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => {
+const TimelineHeader = ({ onRefresh, isRefreshing }: { onRefresh: () => void; isRefreshing: boolean }) => {
   return (
     <div className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/40 dark:via-gray-700/80 dark:to-gray-900/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 mb-8 border border-purple-100 dark:border-purple-900">
       <button 
         className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4 hover:scale-105 transition-transform duration-200" 
         onClick={onRefresh}
+        disabled={isRefreshing}
+        aria-label="タイムラインを更新"
       >
         タイムライン ✨
       </button>
+      {isRefreshing && (
+        <span className="ml-3 text-sm text-purple-500 dark:text-pink-400 animate-pulse">更新中…✨</span>
+      )}
       <PostForm refreshTimeline={onRefresh} />
     </div>
   );
@@ -51,8 +56,9 @@ const TimelineHeader = ({ onRefresh }: { onRefresh: () => void }) => {
  * みんなの投稿が見れるよ！💖
  */
 export default function TimelinePage() {
-  const { actor } = useUserAndActor();
-  const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, error,  handleTimelineReload, handleLoadMore } = useTimelineManager(actor?.id.split("/").pop() || "");
+  // 投稿の取得は自分のactor（背景画像用）を待たずに始める
+  const { user, actor } = useUserAndActor();
+  const { posts:nextPosts, fetchMore, isLoading :isLoadingNextPosts, isRefreshing, isLoadingMore, error,  handleTimelineReload, handleLoadMore } = useTimelineManager(user?.$id || "");
 
   return (  
     <>
@@ -63,13 +69,13 @@ export default function TimelinePage() {
       <div 
         className="max-w-2xl mx-auto md:px-4"
       >
-        <TimelineHeader onRefresh={handleTimelineReload} />
+        <TimelineHeader onRefresh={handleTimelineReload} isRefreshing={isRefreshing} />
           <TimelineContent 
             isLoading={isLoadingNextPosts} 
             posts={nextPosts} 
             error={error}
           />
-        {fetchMore && !isLoadingNextPosts && <LoadMoreButton onLoadMore={handleLoadMore} />}
+        {fetchMore && !isLoadingNextPosts && <LoadMoreButton onLoadMore={handleLoadMore} isLoading={isLoadingMore} />}
       </div>
     </>
   );

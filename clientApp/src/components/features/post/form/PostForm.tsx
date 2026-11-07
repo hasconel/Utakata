@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ImagePlus, X, ToggleRight, ToggleLeft, Loader2 } from "lucide-react";
 import { ActivityPubImage } from "@/types/activitypub/collections";
+import { ActivityPubNoteInClient } from "@/types/activitypub";
 
 /**
  * 投稿フォームのプロパティ！✨
@@ -14,7 +15,8 @@ import { ActivityPubImage } from "@/types/activitypub/collections";
  * @property isReplyDisplay - リプライ表示の有効/無効
  */
 interface PostFormProps {
-  post?: { activityId: string; preferredUsername: string; attributedTo: string };
+  /** note: リプライ先の投稿そのもの。渡すとフォームの上に表示する（取得はしない） */
+  post?: { activityId: string; preferredUsername: string; attributedTo: string; note?: ActivityPubNoteInClient | null };
   onClose?: () => void;
   isReplyDisplay?: boolean;
   refreshTimeline?: () => void;
@@ -260,7 +262,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* リプライ先の投稿を表示するよ！✨ */}
-      {replyToPost && isReplyDisplay && <ReplyToPost post={replyToPost} setIsLoading={()=>{}} />}
+      {replyToPost && isReplyDisplay && post?.note && <ReplyToPost note={post.note} />}
 
       <div className="space-y-8">
         {/* 投稿内容の入力エリア！✨ */}

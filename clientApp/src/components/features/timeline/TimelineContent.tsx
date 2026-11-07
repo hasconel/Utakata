@@ -9,16 +9,17 @@ import { useState } from "react";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
 // コンポーネント: もっと見るボタン
-const LoadMoreButton = ({ onLoadMore }: { onLoadMore: () => void }) => {
+const LoadMoreButton = ({ onLoadMore, isLoading = false }: { onLoadMore: () => void; isLoading?: boolean }) => {
     return (
       <div className="flex justify-center mt-8">
         <button
           onClick={onLoadMore}
-          className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50"
+          disabled={isLoading}
+          className="px-6 py-3 rounded-full text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 disabled:opacity-60 disabled:hover:scale-100"
         >
           <span className="flex items-center">
-            <span className="mr-2">✨</span>
-            もっと見る
+            <span className={`mr-2 ${isLoading ? "animate-spin" : ""}`}>✨</span>
+            {isLoading ? "読み込み中…" : "もっと見る"}
           </span>
         </button>
       </div>

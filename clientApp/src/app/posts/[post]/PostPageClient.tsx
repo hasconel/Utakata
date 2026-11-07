@@ -27,7 +27,7 @@ export default function PostPageClient({ postId }: { postId: string }) {
     useEffect(() => {
         if (post === null && !isAuthLoading) {
             setHasError(true);
-        } else if (post && post.post) {
+        } else if (post?.id) {
             setHasError(false);
         }
     }, [post, isAuthLoading]);
@@ -46,12 +46,12 @@ export default function PostPageClient({ postId }: { postId: string }) {
             />
             
             {/* エラーがない場合のみリプライフォームを表示 */}
-            {isReplyOpen && !isDetailOpen && user && !hasError && post?.post && (
+            {isReplyOpen && !isDetailOpen && user && !hasError && post?.id && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl py-2 px-4 mb-2">
                     <PostForm post={{
                         activityId: `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${postId}`,
-                        preferredUsername: post?.actor?.preferredUsername || "",
-                        attributedTo: post?.actor?.id || ""
+                        preferredUsername: post?._user?.preferredUsername || "",
+                        attributedTo: post?._user?.id || ""
                     }} onClose={()=>{setIsReplyOpen(false)}} isReplyDisplay={false} />
                 </div>
             )}

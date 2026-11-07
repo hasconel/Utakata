@@ -19,6 +19,43 @@ function isSameOrigin(a: unknown, b: string): boolean {
   }
 }
 
+function idOf(value: any): string | undefined {
+  return typeof value === "string" ? value : typeof value?.id === "string" ? value.id : undefined;
+}
+
+/** 受信者宛ての通知を作る。同じアクティビティの再送では作らない。 */
+async function notify(
+  databases: any,
+  username: string,
+  notification: { id: string; type: "Like" | "Reply"; from: string; target: string }
+): Promise<void> {
+  const to = process.env.NEXT_PUBLIC_DOMAIN + "/users/" + username;
+  const { documents } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+    [Query.equal("id", notification.id), Query.equal("to", to)]
+  );
+  if (documents.length > 0) return;
+  await databases.createDocument(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
+    ID.unique(),
+    { ...notification, to, read: false },
+    [Permission.read(Role.user(username)), Permission.update(Role.user(username))]
+  );
+}
+
+/** 指定した投稿がこのサーバーに保存されていて、受信者の投稿なら返す */
+async function findRecipientPost(databases: any, activityId: string | undefined, recipientActorId: string) {
+  if (!activityId) return null;
+  const { documents } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    process.env.APPWRITE_POSTS_COLLECTION_ID!,
+    [Query.equal("activityId", activityId), Query.limit(1)]
+  );
+  return documents[0]?.attributedTo === recipientActorId ? documents[0] : null;
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
   const { user: username } = await params;
   const header = request.headers;
@@ -196,8 +233,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return ignored();
     }
     const isAddressed = [...to, ...cc].includes(recipient.actorId);
-    // 関係のない投稿を保存しない（宛先に含まれるか、受信者がフォローしている相手だけ）
-    if(!isLocalNote && !isAddressed){
+    // 受信者の投稿へのリプライか（自分へのリプライは通知しない）
+    const repliedPost = await findRecipientPost(adminDatabases, idOf(object.inReplyTo), recipient.actorId);
+    const isReplyToRecipient = repliedPost !== null && ActorId !== recipient.actorId;
+    // 関係のない投稿を保存しない（宛先に含まれるか、受信者へのリプライか、受信者がフォローしている相手だけ）
+    if(!isLocalNote && !isAddressed && !isReplyToRecipient){
       const { documents : following } = await adminDatabases.listDocuments(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
@@ -207,30 +247,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return ignored();
       }
     }
-    // リプライの通知（同じアクティビティの再送では増やさない）
-    if(object.inReplyTo && isAddressed){
-      const { documents : existingNotifications } = await adminDatabases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-        [Query.equal("id", activity.id)]
-      );
-      if(!existingNotifications.some((notification) => notification.to === process.env.NEXT_PUBLIC_DOMAIN+"/users/"+username)){
-        await adminDatabases.createDocument(
-          process.env.APPWRITE_DATABASE_ID!,
-          process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-          ID.unique(),
-          {
-            "id": activity.id,
-            "type": "Reply",
-            "from": ActorId,
-            "to": process.env.NEXT_PUBLIC_DOMAIN+"/users/"+username,
-            "target": NoteId,
-            "read": false
-          },[
-            Permission.read(Role.user(username)),
-            Permission.update(Role.user(username)),
-          ]);
-      }
+    // 通知するのは受信者の投稿へのリプライだけ（同じアクティビティの再送では増やさない）
+    if(isReplyToRecipient){
+      await notify(adminDatabases, username, { id: activity.id, type: "Reply", from: ActorId, target: NoteId });
     }
     // 自サーバーの投稿はすでに保存済み
     if(isLocalNote){
@@ -290,41 +309,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   // いいねの場合
   if(activity.type === "Like"){
-    // 先に通知を作ってしまう
-    const notification = await adminDatabases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
-      ID.unique(),
-      {
-        "id": activity.id,
-        "type": "Like",
-        "from": ActorId,
-        "to": process.env.NEXT_PUBLIC_DOMAIN+"/users/"+username,
-        "target": ObjectId,
-        "read": false
-      },[
-        Permission.read(Role.user(username)),
-        Permission.update(Role.user(username)),
-      ]);
-    if(!notification){
-      return NextResponse.json({ error: "Failed to create notification" }, { status: 400 });
+    // 他人の投稿へのいいねも届くことがあるので、受信者の投稿へのいいねだけ扱う
+    const likedPost = await findRecipientPost(adminDatabases, ObjectId, recipient.actorId);
+    if(!likedPost || typeof activity.id !== "string"){
+      return ignored();
     }
-    // いいねのオブジェクトがstringの場合
-    if(typeof activity.object === "string"){
-      const { documents : likeDocuments } = await adminDatabases.listDocuments(
-        process.env.APPWRITE_DATABASE_ID!,
-        process.env.APPWRITE_LIKES_COLLECTION_ID!,
-        [Query.equal("id", activity.id)]
-      );
-      if(likeDocuments.length > 0){
-        return NextResponse.json({ 
-          "type": "Accept",
-          "actor": ActorId,
-          "object": activity,
-        }, { status: 200 });
-      }
-      // いいねを作成
-      const newLike = await adminDatabases.createDocument(
+    // ローカルのいいねは送信側ですでに保存しているので、同じIDなら作らない
+    const { documents : likeDocuments } = await adminDatabases.listDocuments(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_LIKES_COLLECTION_ID!,
+      [Query.equal("id", activity.id)]
+    );
+    if(likeDocuments.length === 0){
+      await adminDatabases.createDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_LIKES_COLLECTION_ID!,
         ID.unique(),
@@ -333,39 +330,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           "actor": ActorId,
           "object": ObjectId,
         }
-      )
-      if(newLike){
-        const Accept = {
-          "type": "Accept",
-          "actor": ActorId,
-          "object": activity,
-        }
-        return NextResponse.json(Accept, { status: 200 });
-      }
-      return NextResponse.json({ error: "Failed to create like" }, { status: 400 });
+      );
     }
-    if(activity.object.type === "Note"){
-      const actorId = activity.object.attributedTo===activity.actor? activity.actor : activity.actor.id;
-    const like = await adminDatabases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_LIKES_COLLECTION_ID!,
-      ID.unique(),
-      {
-        "id": activity.id,
-        "actor": actorId,
-        "object": ObjectId,
-      }
-    )
-    if(like){
-      const Accept = {
-        "type": "Accept",
-        "actor": ActorId,
-          "object": activity,
-        }
-        return NextResponse.json(Accept, { status: 200 });
-      }
+    // 自分の投稿への自分のいいねは通知しない
+    if(ActorId !== recipient.actorId){
+      await notify(adminDatabases, username, { id: activity.id, type: "Like", from: ActorId, target: ObjectId });
     }
-    return NextResponse.json({ error: "Failed to create like" }, { status: 400 });
+    return ignored();
   }
   // Undoの場合
   if(activity.type === "Undo"){

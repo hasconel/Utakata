@@ -204,86 +204,93 @@ export function useUser(userId: string) : UseApiResult<ActivityPubActor> {
 
 /**
  * タイムラインを取得するフック！✨
- * @param userId ユーザーID
- * @param actor アクターID(https://example.com/users/123)
+ * 続きはカーソルで取得するので、新しい投稿が来ても重複やずれが出ないよ。
+ * 再読み込みのときも、新しい一覧が届くまで今の一覧を表示したままにするよ。
+ * @param user ログイン中のユーザーID（空なら取得しない）
+ * @param actor アクターID(https://example.com/users/123)。指定するとその人の投稿だけ
  * @returns タイムラインの結果
  */
 export function useTimelineManager(user: string, actor?: string) {
   const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
-  const [offset, setOffset] = useState<number>(10);
+  const [cursor, setCursor] = useState<string | null>(null);
   const [fetchMore, setFetchMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
+  // 古いリクエストの結果で上書きしないための番号
+  const requestRef = useRef(0);
 
-  const fetchPosts = useCallback(async (offset: number, isLoadMore: boolean = false) => {
-    setIsLoading(true);
+  const fetchPosts = useCallback(async (after: string | null) => {
+    const requestId = ++requestRef.current;
+    const isLoadMore = after !== null;
+    if (isLoadMore) setIsLoadingMore(true);
+    else setIsLoading(true);
     try {
-      const url = new URL(`${process.env.NEXT_PUBLIC_DOMAIN}/api/posts`);
-      url.searchParams.set("offset", offset.toString());
+      const url = new URL("/api/posts", window.location.origin);
       url.searchParams.set("limit", "10");
-      url.searchParams.set("skipLikes", "1"); // 一覧はいいね取得スキップで高速化
-      if(actor){
-        url.searchParams.set("attributedTo", actor);
-      }
-      // キャッシュバスティング用のタイムスタンプを追加
-      url.searchParams.set("_t", Date.now().toString());
-      const response = await fetch(url,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/activity+json",
-          },
-        }
-      );
+      if (actor) url.searchParams.set("attributedTo", actor);
+      if (after) url.searchParams.set("lastId", after);
+      const response = await fetch(url, { cache: "no-store" });
       if (!response.ok) {
-        throw new Error("Failed to fetch posts");
+        throw new Error("投稿が読み込めなかったの…💦");
       }
       const data = await response.json();
-      const notes :ActivityPubNoteInClient[] = data.notes;
-      const total = data.total;
-      if (isLoadMore) {
-        // もっと見る: 既存の投稿に追加
-        setPosts(prevPosts => [...prevPosts, ...notes]);
-      } else {
-        // リロード: 投稿を置き換え
-        setPosts([...notes]);
-      }
-      
-      setFetchMore(total > offset + notes.length);
-      setIsLoading(false);
+      if (requestId !== requestRef.current) return;
+      const notes: ActivityPubNoteInClient[] = data.notes ?? [];
+      setPosts((prev) => {
+        if (!isLoadMore) return notes;
+        const seen = new Set(prev.map((post) => post.id));
+        return [...prev, ...notes.filter((note) => !seen.has(note.id))];
+      });
+      setCursor(data.nextCursor ?? null);
+      setFetchMore(!!data.nextCursor);
+      setError(null);
     } catch (error) {
-      setError(error as ApiError);
+      if (requestId === requestRef.current) setError(error as ApiError);
     } finally {
-      setIsLoading(false);
+      if (requestId === requestRef.current) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
-  }, [user, actor]);
-  
+  }, [actor]);
+
   // 初期化とuser/actorの変更時の処理
   useEffect(() => {
-    if (user) {
-      // 初期化時は投稿をクリア
-      setPosts([]);
-      setOffset(10);
-      fetchPosts(0, false);
-    }
-    if(actor){
-      setPosts([]);
-      setOffset(10);
-      fetchPosts(0, false);
-    }
-  }, [user, actor, fetchPosts]);
-  
-  const handleLoadMore = async () => {
-    fetchPosts(offset, true); 
-    setOffset(offset + 10);
-  }
-
-  const handleTimelineReload = async () => {
-    // リロード時は投稿をクリアしてから再取得
+    if (!user) return;
     setPosts([]);
-    setOffset(10);
-    await fetchPosts(0, false);
+    setCursor(null);
+    fetchPosts(null);
+  }, [user, actor, fetchPosts]);
+
+  // 投稿を削除したら一覧からも消す（PostDetailCard が postDeleted を送る）
+  useEffect(() => {
+    const onDeleted = (event: Event) => {
+      const postId = (event as CustomEvent<{ postId?: string }>).detail?.postId;
+      if (postId) setPosts((prev) => prev.filter((post) => post.id !== postId));
+    };
+    window.addEventListener("postDeleted", onDeleted);
+    return () => window.removeEventListener("postDeleted", onDeleted);
+  }, []);
+
+  const handleLoadMore = async () => {
+    if (!cursor || isLoadingMore) return;
+    await fetchPosts(cursor);
   };
 
-  return { posts, fetchMore, isLoading, error, handleLoadMore, handleTimelineReload };
+  const handleTimelineReload = async () => {
+    await fetchPosts(null);
+  };
+
+  // isLoading は「まだ何も表示していない状態で読み込み中」のときだけ true
+  return {
+    posts,
+    fetchMore,
+    isLoading: isLoading && posts.length === 0,
+    isRefreshing: isLoading && posts.length > 0,
+    isLoadingMore,
+    error,
+    handleLoadMore,
+    handleTimelineReload,
+  };
 }

@@ -4,6 +4,7 @@
  */
 import { ActivityPubNote, CreateActivity } from "@/types/activitypub/collections";
 import {isInternalUrl, convertToExternalUrl} from "@/lib/utils"
+import { textToHtml } from "@/lib/activitypub/localNote";
 
 /**
  * NoteとCreateアクティビティを生成！📝
@@ -48,7 +49,8 @@ export async function createNote(
     type: "Note",
     published,
     attributedTo: actorId,
-    content,
+    // 保存するのはプレーンテキスト、配信するのはHTML
+    content: textToHtml(content),
     to,
     cc,
     ...(inReplyTo && { inReplyTo }),

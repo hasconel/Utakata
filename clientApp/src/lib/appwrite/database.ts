@@ -292,10 +292,12 @@ export async function getMutedUsers(): Promise<string[]> {
   if(!userId){
     throw new Error("ユーザーが見つからないよ！💦");
   }
-  const {documents} : Actor = await databases.getDocument(
+  // getDocument はドキュメントそのものを返す（documents ではない）
+  const actor = await databases.getDocument(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_ACTORS_COLLECTION_ID!,
     userId.$id
   );
-  return documents.mutedUsers || [];
+  // 以前のバグで空文字が入っていることがあるので除く
+  return ((actor.mutedUsers as string[] | undefined) || []).filter(Boolean);
 }

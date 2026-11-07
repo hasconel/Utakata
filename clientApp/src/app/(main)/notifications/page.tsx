@@ -1,41 +1,38 @@
 "use client";
-import { getUserNotifications, readNotification } from "@/lib/appwrite/serverConfig";
 import { useEffect, useState } from "react";
-import { Notification as NotificationType } from "@/types/appwrite";
-import Notification from "@/components/features/user/Notification";
+import Notification, { NotificationWithData } from "@/components/features/user/Notification";
+import { showToast } from "@/components/ui/Toast";
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [notifications, setNotifications] = useState<NotificationWithData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    // 初期化済みの場合は実行しない
-    
-    getUserNotifications().then(notifications => {
-      const mappedNotifications = notifications.map((notification:any)=>({
-        ...notification,
-        read: notification.read,
-        type: notification.type,
-        from: notification.from,
-        to: notification.to,
-        target: notification.target,
-        id: notification.id,
-        $id: notification.$id,
-        $createdAt: notification.$createdAt,
-        $updatedAt: notification.$updatedAt,
-      }));
-      
-      setNotifications(mappedNotifications);
-      setIsLoading(false);
-      const unreadNotifications = mappedNotifications.filter(n => !n.read);
-      if (unreadNotifications.length > 0) {
-        Promise.all(
-          unreadNotifications.map(notification => 
-            readNotification(notification.$id)
-          )
-        ).catch(console.error);
+    let cancelled = false;
+    (async () => {
+      try {
+        // 相手のユーザーと対象の投稿も、1回でまとめて取得する
+        const res = await fetch("/api/notifications", { cache: "no-store" });
+        if (!res.ok) throw new Error(String(res.status));
+        const { notifications } = (await res.json()) as { notifications: NotificationWithData[] };
+        if (cancelled) return;
+        setNotifications(notifications);
+        // 未読はまとめて1回で既読にする
+        const unread = notifications.filter((n) => !n.read).map((n) => n.$id);
+        if (unread.length > 0) {
+          fetch("/api/notifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: unread }),
+          }).catch(() => {});
+        }
+      } catch {
+        if (!cancelled) showToast("通知が読み込めなかったの…ごめんね💦");
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-    });
-  }, []); // hasInitializedのみを依存配列に
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   if (isLoading) {
     return (

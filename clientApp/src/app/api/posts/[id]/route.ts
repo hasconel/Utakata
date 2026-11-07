@@ -1,9 +1,9 @@
 import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
+import { postToNote } from "@/lib/activitypub/localNote";
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { deletePostOutbox } from "@/lib/activitypub/post";
 import { Post as AppwritePost} from "@/types/appwrite";
-import { ActivityPubNote } from "@/types/activitypub";
 /**
  * 投稿を取得するAPIエンドポイント！✨
  * Acceptヘッダーによって振る舞いを変えるよ！💖
@@ -49,17 +49,10 @@ export async function GET(
       if (post instanceof NextResponse) return post;
 
       // ここで投稿データをActivityPubのNote形式に変換するよ！💖
-      const postData : ActivityPubNote = {
+      // 配信時やoutboxと同じ形で返す
+      const postData = {
         "@context": ["https://www.w3.org/ns/activitystreams"],
-        "id": post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`,
-        "type": "Note",
-        "content": post.content,
-        "published": post.published,
-        "attributedTo": post.attributedTo || post.username,
-        "to": post.to || [],
-        "cc": post.cc || [],
-        "inReplyTo": post.inReplyTo || "",
-        "attachment": post.attachment || [],        
+        ...postToNote({ ...post, activityId: post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`, attributedTo: post.attributedTo || post.username }),
       };
 
       return NextResponse.json(postData, {

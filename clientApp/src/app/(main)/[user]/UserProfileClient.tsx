@@ -13,6 +13,8 @@ import { useActor } from "@/hooks/useActor";
 import { TimelineContent, LoadMoreButton, EmptyState } from "@/components/features/timeline/TimelineContent";
 import { useTimelineManager } from "@/hooks/api/useApi";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { getMutedUsers } from "@/lib/appwrite/database";
+import { showToast } from "@/components/ui/Toast";
 
 /**
  * ユーザープロフィール画面！✨
@@ -104,6 +106,10 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
       setIsFollowing(res.id);
       //console.log("response",res);
     });}
+  // 今のミュート状態を読み込む（ミュート一覧にはactorのURLが入っている）
+  getMutedUsers()
+    .then((muted) => setIsMuted(muted.includes(targetActor?.id)))
+    .catch(() => {});
   if(targetActor?.id.startsWith(process.env.NEXT_PUBLIC_DOMAIN)){
     getUserPostCount(targetActor?.id).then((res) => setPostCount(res));
   }
@@ -111,41 +117,40 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
   },[user,targetActor])
 
 
+  // 失敗したときの戻り値は { error } なので、成功したかを確かめてから表示を変える
   const handleFollow = async (userId: string) => {
-    try {
-      const response = await followUser(userId);
+    const response = await followUser(userId).catch(() => null);
+    if (typeof response === "string") {
       setIsFollowing(response);
-    } catch (error) {
-      console.error("フォローに失敗したわ！", error);
+    } else {
+      showToast("フォローできなかったの…もう一回試してみて💦");
     }
   };
 
   const handleUnfollow = async (activityId: string) => {
-    try {
-      const response = await unfollowUser(activityId);
-      if(response){
-        setIsFollowing(false);
-      }
-    } catch (error) {
-      console.error("フォロー解除に失敗したわ！", error);
+    const response = await unfollowUser(activityId).catch(() => null);
+    if (response === true) {
+      setIsFollowing(false);
+    } else {
+      showToast("フォロー解除できなかったの…もう一回試してみて💦");
     }
   };
 
   const handleMute = async (userId: string) => {
-    try {
-      await muteUser(userId);
+    const response = await muteUser(userId).catch(() => false);
+    if (response === true) {
       setIsMuted(true);
-    } catch (error) {
-      console.error("ミュートに失敗したわ！", error);
+    } else {
+      showToast("ミュートできなかったの…💦");
     }
   };
 
   const handleUnmute = async (userId: string) => {
-    try {
-      await unmuteUser(userId);
+    const response: any = await unmuteUser(userId).catch(() => null);
+    if (response && !response.error) {
       setIsMuted(false);
-    } catch (error) {
-      console.error("ミュート解除に失敗したわ！", error);
+    } else {
+      showToast("ミュート解除できなかったの…💦");
     }
   };
 
@@ -204,7 +209,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
                   onUnfollow={handleUnfollow}
                 />
                 <MuteButton
-                  userId={targetActor?.actorId ?? ""}
+                  userId={targetActor?.id ?? ""}
                   username={targetActor?.name || targetActor?.preferredUsername || ""}
                   isMuted={isMuted}
                   onMute={handleMute}

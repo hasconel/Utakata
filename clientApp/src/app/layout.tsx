@@ -5,6 +5,7 @@ import "../styles/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import {Header} from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { Toaster } from "@/components/ui/Toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -70,6 +71,7 @@ export default function RootLayout({
             <Footer />
           </div>
         </div>
+        <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -1,37 +1,33 @@
 "use client";
-import { Notification as NotificationType } from "@/types/appwrite";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
-import { useState, useEffect } from "react";
 import ReplyToPost from "../post/reply/ReplyToPost";
 import PostReplies from "../post/reply/PostReplies";
-import { Loader2 } from "lucide-react";
-import { useUser } from "@/hooks/api/useApi";
+import { ActivityPubActor, ActivityPubNoteInClient } from "@/types/activitypub";
+
+/** /api/notifications が返す通知（相手のユーザーと対象の投稿つき） */
+export interface NotificationWithData {
+    $id: string;
+    $createdAt: string;
+    id: string;
+    type: string;
+    from: string;
+    to: string;
+    target?: string;
+    read: boolean;
+    actor: (ActivityPubActor & { name?: string; displayName?: string }) | null;
+    post: ActivityPubNoteInClient | null;
+}
 
 /**
  * 通知コンポーネント！✨
  * キラキラな通知を表示するよ！💖
+ * 相手と投稿はAPIでまとめて取得済みなので、ここでは取得しない。
  */
-export default function Notification({ notification }: { notification: NotificationType }) {
-    const [post, setPost] = useState<string | null>(null);
-    const { data: actor, isLoading: isActorLoading } = useUser(notification.from);
-    const [isLoading, setIsLoading] = useState(false);
-
-    useEffect(() => {
-        setIsLoading(true);
-        if(notification.type === "Reply" || notification.type === "Like"){
-            setPost(notification?.target || null);
-        }
-        setIsLoading(false);
-    }, [notification]);
-    if(isLoading || isActorLoading ){
-        return (
-            <div className="flex items-center justify-center h-40 w-full bg-gray-100 dark:bg-gray-900 rounded-2xl">
-                <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-        );
-    }
-    
+export default function Notification({ notification }: { notification: NotificationWithData }) {
+    const actor = notification.actor;
+    const actorName = actor?.displayName || actor?.name || actor?.preferredUsername || notification.from;
+    const post = notification.post;
     return (
         <div className="w-full p-2">
             <Card className={`w-full ${notification.read ? "dark:bg-gray-800/80 bg-gray-100/80" : "dark:bg-gray-700/80 bg-gray-200/80"} backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-purple-100 dark:border-purple-900`}>       
@@ -52,10 +48,10 @@ export default function Notification({ notification }: { notification: Notificat
                             </div>
                             <div className="flex-grow">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actor?.name}</a></span>
+                                    <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actorName}</a></span>
                                     <span className="text-gray-600 dark:text-gray-300">があなたの投稿をいいねしてくれたよ！</span>
                                 </div>
-                                {post && <ReplyToPost post={post} setIsLoading={setIsLoading} />}
+                                {post ? <ReplyToPost note={post} /> : <p className="text-sm text-gray-500 dark:text-gray-400">投稿はもう見られないみたい…💦</p>}
                             </div>
                         </div>
                     ) : notification.type === "Follow" ? (
@@ -73,7 +69,7 @@ export default function Notification({ notification }: { notification: Notificat
                             </div>
                             <div className="flex-grow">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actor?.name}</a></span>
+                                    <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actorName}</a></span>
                                     <span className="text-gray-600 dark:text-gray-300">がフォローしてくれたよ！</span>
                                 </div>
                             </div>
@@ -93,10 +89,10 @@ export default function Notification({ notification }: { notification: Notificat
                             </div>
                             <div className="flex-grow">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actor?.name}</a></span>
+                                    <span className="font-bold text-purple-600 dark:text-pink-400"><a href={actor?.id}>{actorName}</a></span>
                                     <span className="text-gray-600 dark:text-gray-300">があなたの投稿にリプライしてくれたよ！</span>
                                 </div>
-                                {post && <PostReplies post={post} setIsLoading={setIsLoading} />}
+                                {post ? <PostReplies note={post} /> : <p className="text-sm text-gray-500 dark:text-gray-400">投稿はもう見られないみたい…💦</p>}
                             </div>
                         </div>
                     ) : (   

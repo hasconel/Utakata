@@ -5,7 +5,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { getRelativeTime } from "@/lib/utils/date";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
-import { getReplyPost } from "@/lib/appwrite/client";
+import PostContent from "@/components/features/post/PostContent";
+import { showToast } from "@/components/ui/Toast";
 import ContentsCard from "@/components/ui/ContentsCard";
 import { likePost, unlikePost } from "@/lib/appwrite/serverConfig";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
@@ -70,6 +71,7 @@ export const LikeButton = ({
     } catch (error) {
       console.error("ライクに失敗したわ！", error);
       setIsLiked(isLiked);
+      showToast(isLiked ? "いいねを取り消せなかったの…💦" : "いいねが届かなかったみたい…もう一回押してみて💦");
     }
 
     setTimeout(() => setIsAnimating(false), 500);
@@ -121,32 +123,10 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
   //const [replyPosts, setReplyPosts] = useState<any[]>([]);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isReplyOpen, setIsReplyOpen] = useState(false);
-  const images = post?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
+  const images: ActivityPubImage[] = post?.attachment?.flatMap((image: any) => {
+    try { return [JSON.parse(image) as ActivityPubImage]; } catch { return []; }
+  }) || [];
 
-  // ActivityPubのNote形式のデータを処理！✨
-  useEffect(() => {
-    if (post) {
-      // Note形式のデータを直接設定
-
-    }
-  }, [post]);
-
-  function ReplyPosts() {
-    // 既に取得済みの場合はスキップ
-    if (post?.inReplyTo && !post?.inReplyTo.includes("undefined")) {
-      getReplyPost(post.inReplyTo).then((data) => {
-        if (data && data.length > 0) {
-          //setReplyPosts(data);
-          if(data.length > 0){
-          }
-          //console.log("✅ リプライ投稿を取得:", data.length, "件");
-        }
-      }).catch((error) => {
-        console.error("❌ リプライ投稿の取得に失敗:", error);
-      });
-    }
-  }
-  
   if(!post.published){
     return <LoadingSkeleton />;
   }
@@ -156,14 +136,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         <div className="flex flex-col gap-2 w-full">
       <div 
         className="bg-gradient-to-br from-white/90 via-gray-100/80 to-gray-50/80 dark:from-gray-800/90 dark:via-gray-700/80 dark:to-gray-900/80 border border-pink-500/80 dark:border-purple-800/80 backdrop-blur-sm rounded-3xl shadow-lg p-5 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer relative overflow-hidden group z-0 w-full"
-        onClick={() => {
-          setIsDetailOpen(true);
-          // リプライがある場合のみReplyPostsを実行
-          
-          if (post?.replies?.totalItems && post?.replies?.totalItems > 0 && post?.inReplyTo) {
-            ReplyPosts();
-          }
-        }}
+        onClick={() => setIsDetailOpen(true)}
       >
         {/* キラキラな背景エフェクト！✨ */}
         <div className="absolute inset-0 bg-gradient-to-br from-pink-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-pink-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
@@ -194,7 +167,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
               <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post?.published)}</span>
             </div>
           </div>
-          <div className="text-gray-800 dark:text-gray-200 text-base leading-relaxed">{post?.content}</div>
+          <PostContent content={post?.content} className="text-gray-800 dark:text-gray-200 text-base leading-relaxed" />
           {images.length > 0 ? (
              <div 
                onClick={(e) => {
@@ -253,6 +226,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         <Modal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)}>
           <PostDetailCard 
             post={post?.id} 
+            initialPost={post}
             setIsDetailOpen={setIsDetailOpen} 
             setIsReplyOpen={setIsReplyOpen} 
             setIsModalOpen={setIsModalOpen} 
@@ -269,7 +243,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
             <h2 className="text-2xl font-bold text-purple-600 dark:text-pink">
               言及する？💫
             </h2>
-            <PostForm post={{activityId: post?.id, preferredUsername: post?._user?.preferredUsername || "", attributedTo: post?._user?.id || ""}} onClose={() => setIsReplyOpen(false)} />
+            <PostForm post={{activityId: post?.id, preferredUsername: post?._user?.preferredUsername || "", attributedTo: post?._user?.id || "", note: post}} onClose={() => setIsReplyOpen(false)} />
           </div>
         </Modal>
       )}

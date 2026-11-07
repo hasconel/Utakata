@@ -20,7 +20,10 @@ import  {getActorById} from "@/lib/appwrite/database";
 //import { useAuth } from "@/hooks/auth/useAuth";
 import { Loader2, X } from "lucide-react";
 import { getActorDisplayPreferredUsername } from "@/lib/activitypub/utils";
-import { getInternalPostWithActor,getLikedActivities } from "@/lib/appwrite/serverConfig";
+import { getLikedActivities } from "@/lib/appwrite/serverConfig";
+import PostReplies from "@/components/features/post/reply/PostReplies";
+import PostContent from "@/components/features/post/PostContent";
+import { showToast } from "@/components/ui/Toast";
 
 // いいねしたユーザーの一覧を表示するボタン！✨
 const LikedUsersButton = ({ likeCount, onClick }: { 
@@ -58,14 +61,10 @@ const LikedUsersModal = ({
       async function getLikedActors(){
         //console.log("postId",postId);
         const likedActivities = await getLikedActivities(postId);
-        
-        // forEachをfor...ofに変更して順次処理に
-        for (const activity of likedActivities) {
-          const user = await getActorById(activity.actor);
-          if(user && !users.some((u) => u.id === user.id)){
-            setUsers((prev) => [...prev, user]);
-          } 
-        }
+        // 1人ずつ待つと遅いので、まとめて取得する
+        const actorIds = [...new Set(likedActivities.map((activity: any) => activity.actor as string))];
+        const actors = await Promise.all(actorIds.map((id) => getActorById(id).catch(() => null)));
+        setUsers(actors.filter((actor): actor is ActivityPubActor => !!actor));
       }
       getLikedActors();
     }
@@ -150,7 +149,7 @@ const DeleteButton = ({ postId, onDelete }: { postId: string; onDelete?: () => v
       //console.log('🗑️ 投稿削除完了:', postId);
     } catch (error) {
       //console.error('削除に失敗したよ！💦', error);
-      alert('投稿の削除に失敗しました');
+      showToast('投稿を消せなかったの…もう一回試してみて💦');
     } finally {
       setIsDeleting(false);
     }
@@ -248,8 +247,11 @@ export default function PostDetailCard({
   setModalImages,
   setModalIndex,
   setPost,
+  initialPost,
 }: {
   post: string;
+  /** カードから開いたときの投稿。渡すとすぐに表示し、裏で最新の状態とリプライを取得する */
+  initialPost?: ActivityPubNoteInClient | null;
   setIsDetailOpen: (isDetailOpen: boolean) => void;
   setIsReplyOpen: (isReplyOpen: boolean) => void;
   setIsModalOpen: (isModalOpen: boolean) => void;
@@ -260,53 +262,44 @@ export default function PostDetailCard({
 }) {
  // const [replyPosts,setReplyPosts] = useState<Post[]>([]);
   const [isLikedUsersOpen, setIsLikedUsersOpen] = useState(false);
-  const [postData, setPostData] = useState<ActivityPubNoteInClient | null>(null);
-  const [isPostLoading, setIsPostLoading] = useState(true);
+  const [postData, setPostData] = useState<ActivityPubNoteInClient | null>(initialPost ?? null);
+  const [parentPost, setParentPost] = useState<ActivityPubNoteInClient | null>(null);
+  const [replies, setReplies] = useState<ActivityPubNoteInClient[]>([]);
+  const [isPostLoading, setIsPostLoading] = useState(!initialPost);
   const [canDelete, setCanDelete] = useState<boolean>(false); 
-  const images = postData?.attachment?.map((image: any) => JSON.parse(image) as ActivityPubImage) || [];
+  const images = postData?.attachment?.flatMap((image: any) => {
+    try { return [JSON.parse(image) as ActivityPubImage]; } catch { return []; }
+  }) || [];
   const [relativeTime, setRelativeTime] = useState<string>("");
   const [isPostLiked, setIsPostLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);  
 
-  // Post情報を取得
+  // 投稿・リプライ先・リプライを1回でまとめて取得する
   useEffect(() => {
-    const fetchPost = async () => {
-      setIsPostLoading(true);
+    let cancelled = false;
+    (async () => {
       try {
-        const data = await getInternalPostWithActor(post);
-        //console.log("data",data);
-        // データが取得できない場合は404エラーとして扱う
-        if (!data) {
-          //console.log("❌ 投稿が見つかりません:", post);
-          setPostData(null);
+        const res = await fetch(`/api/thread?id=${encodeURIComponent(post)}`, { cache: "no-store" });
+        if (cancelled) return;
+        if (!res.ok) {
+          // カードから開いた場合は、手元の投稿をそのまま表示しておく
+          if (!initialPost) setPostData(null);
           return;
         }
-        
-        setPostData(data);
-      } catch (error) {
-        //console.error("Post取得エラー:", error);
-        setPostData(null);
+        const data = await res.json();
+        if (cancelled) return;
+        setPostData(data.post);
+        setParentPost(data.parent);
+        setReplies(data.replies ?? []);
+      } catch {
+        if (!cancelled && !initialPost) setPostData(null);
       } finally {
-        setIsPostLoading(false);
+        if (!cancelled) setIsPostLoading(false);
       }
-    };
-
-    // 404エラーの場合は再読み込みをスキップ
-    if (postData === null && !isPostLoading) {
-      //console.log("🚫 404エラーのため、再読み込みをスキップ");
-      return;
-    }
-
-    fetchPost();
+    })();
+    return () => { cancelled = true; };
   }, [post]);
-  const ContentsDocment = postData?.content ? (
-    <div className="space-y-2">
-      {postData?.content.split("\n").map((line: any, index: any) => (
-        <p key={index} className="text-gray-800 dark:text-gray-200">{line}</p>
-      ))}
-    </div>
-  ) : null;
-  
+
   useEffect(() => {
     //console.log("postData?.attributedTo",postData?.attributedTo);
     setCanDelete(postData?._canDelete || false);
@@ -344,9 +337,9 @@ export default function PostDetailCard({
   return (
     <div >
       <div className="space-y-6 m-4">
-        {postData?.inReplyTo && (
+        {parentPost && (
           <div className="">
-            <ReplyToPost post={postData?.inReplyTo} setIsLoading={setIsPostLoading} />
+            <ReplyToPost note={parentPost} />
           </div>
         )}
         <div className="flex items-center">
@@ -380,7 +373,7 @@ export default function PostDetailCard({
           </div>
         </div>
 
-        <div className="text-xl text-gray-800 dark:text-gray-200">{ContentsDocment}</div>
+        <PostContent content={postData?.content} className="text-xl text-gray-800 dark:text-gray-200" />
 
         {images.length > 0 ? (
           <div onClick={(e) => e.stopPropagation()}>
@@ -440,13 +433,13 @@ export default function PostDetailCard({
             postId={post} 
         />
 
-        {/**postData?.replyCount > 0 && (
-          replyPosts.map((reply) => (
-            <div key={reply.id} className="flex flex-col gap-2">
-              <PostReplies key={reply.id} post={reply.id} />
-            </div>
-          ))
-        )*/}
+        {replies.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {replies.map((reply) => (
+              <PostReplies key={reply.id} note={reply} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

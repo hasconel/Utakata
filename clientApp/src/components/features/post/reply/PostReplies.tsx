@@ -12,37 +12,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { convertToInternalUrl, formatDate } from "@/lib/utils";
 import { getRelativeTime } from "@/lib/utils/date";
-import { useState, useEffect } from "react";
-import { getInternalPostWithActor } from "@/lib/appwrite/serverConfig";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
+import PostContent from "@/components/features/post/PostContent";
 interface PostRepliesProps {
-  post: string; //https://example.com/posts/123
-  setIsLoading: (isLoading: boolean) => void;
+  /** 表示するリプライ（取得は呼び出し側でまとめて行う） */
+  note: ActivityPubNoteInClient | null;
 }
 
 
 /**
- * リプライ先の投稿を表示するコンポーネント！✨
- * かわいいデザインでリプライ先の投稿を表示するよ！💖
+ * リプライを表示するコンポーネント！✨
+ * かわいいデザインでリプライを表示するよ！💖
  */
-export default function PostReplies({ post, setIsLoading }: PostRepliesProps) {
-  const [postData, setPostData] = useState<ActivityPubNoteInClient | null>(null);
-  useEffect(() => {
-    const fetchPost = async () => {
-      const postData = await getInternalPostWithActor(post);
-      setPostData(postData);
-    };
-    fetchPost();
-    setIsLoading(false);
-  }, [post]);
-  const [images, setImages] = useState<ActivityPubImage[]>([]);
-  
-  useEffect(() => {
-    if(postData){
-      setImages(postData?.attachment?.map((image:any) => JSON.parse(image) as ActivityPubImage) || []);
-      setIsLoading(false);
-    }
-  }, [postData]);
+export default function PostReplies({ note: postData }: PostRepliesProps) {
+  const images: ActivityPubImage[] = (postData?.attachment ?? []).flatMap((image: any) => {
+    try { return [JSON.parse(image) as ActivityPubImage]; } catch { return []; }
+  });
 
   if(!postData?.id){
     return <div className="flex items-center justify-center h-40">
@@ -80,7 +65,7 @@ export default function PostReplies({ post, setIsLoading }: PostRepliesProps) {
             </span>  
           </div>
       </div>
-      <p className="text-gray-700 dark:text-gray-300 text-sm">{postData?.content}</p>
+      <PostContent content={postData?.content} className="text-gray-700 dark:text-gray-300 text-sm" />
       {images.length > 0 && (
         <div className="flex justify-left grid-cols-4 gap-2">
           {images.map((image, index) => (
