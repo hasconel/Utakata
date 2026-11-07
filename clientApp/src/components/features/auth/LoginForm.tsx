@@ -1,107 +1,88 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { signInWithEmail } from "@/lib/appwrite/auth";
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
 
-interface LoginFormProps {
-  error?: string | string[] | null;
-}
+const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
 
-export default function LoginForm({ error: initialError }: LoginFormProps) {
+export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (initialError) {
-      setError(Array.isArray(initialError) ? initialError[0] : initialError);
-    }
-  }, [initialError]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
-      await signInWithEmail({email,password});
-      window.location.href = "/timeline";
-    } catch (err: any) {
-      //console.log(err);
-      setError(err.message || "ログインに失敗したよ！もう一度試してみてね！💦");
-    } finally {
-      setIsLoading(false);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (response.ok) {
+        // ログイン状態を画面全体で読み直したいので、再読み込みで移動する
+        window.location.href = "/timeline";
+        return;
+      }
+      const data = await response.json().catch(() => null);
+      setError(data?.error || "ログインに失敗したわ！💦 もう一度試してみてね");
+    } catch {
+      setError("通信に失敗したわ！💦 ネットにつながってるか確認してね");
     }
+    setIsLoading(false);
   };
 
   return (
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl"
-        aria-label="utakataログインフォーム"
-      >
-        <h2 className="text-2xl font-bold text-purple dark:text-pink mb-4 text-center">
-          utakata ログイン ✨
-        </h2>
-        <div className="mb-4">
-          <label
-            htmlFor="email"
-            className="block text-gray-700 dark:text-gray-200 font-medium mb-1"
-          >
-            メールアドレス
-          </label>
-          <input
+    <Card className="p-6">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" aria-label="ログインフォーム">
+        <div>
+          <label htmlFor="email" className={labelClass}>メールアドレス</label>
+          <Input
             id="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="メールアドレスを入力してね！"
+            placeholder="you@example.com"
             required
-            className="w-full p-3 border-2 border-purple dark:border-pink rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink dark:focus:ring-purple transition-all duration-200"
             aria-invalid={!!error}
             aria-describedby={error ? "login-error" : undefined}
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="password"
-            className="block text-gray-700 dark:text-gray-200 font-medium mb-1"
-          >
-            パスワード
-          </label>
-          <input
+        <div>
+          <label htmlFor="password" className={labelClass}>パスワード</label>
+          <Input
             id="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="パスワードを入力してね！"
             required
-            className="w-full p-3 border-2 border-purple dark:border-pink rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink dark:focus:ring-purple transition-all duration-200"
             aria-invalid={!!error}
             aria-describedby={error ? "login-error" : undefined}
           />
         </div>
         {error && (
-          <p
-            id="login-error"
-            className="text-red-500 dark:text-red-400 text-sm mb-4"
-            aria-live="polite"
-          >
+          <p id="login-error" role="alert" className="text-sm text-destructive">
             {error}
           </p>
         )}
-        <button
-          type="submit"
-          disabled={isLoading || !email || !password}
-          className={`w-full p-3 rounded-lg text-white font-semibold transition-all duration-200 ${
-            isLoading || !email || !password
-              ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
-              : "bg-pink dark:bg-purple hover:bg-purple dark:hover:bg-pink hover:scale-105 active:scale-95"
-          }`}
-        >
-          {isLoading ? "ログイン中..." : "ログイン！🚀"}
-        </button>
+        <Button type="submit" size="lg" className="w-full" isLoading={isLoading} disabled={!email || !password}>
+          ログイン
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          はじめて？{" "}
+          <Link href="/register" className="link font-medium">
+            アカウントを作る
+          </Link>
+        </p>
       </form>
+    </Card>
   );
 }

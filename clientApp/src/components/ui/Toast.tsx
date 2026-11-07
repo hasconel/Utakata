@@ -44,10 +44,10 @@ export function Toaster() {
         <div
           key={toast.id}
           role={toast.type === "error" ? "alert" : "status"}
-          className={`pointer-events-auto max-w-sm rounded-full px-4 py-2 text-sm font-medium shadow-lg animate-in fade-in slide-in-from-bottom-2 ${
+          className={`pointer-events-auto max-w-sm rounded-full px-4 py-2 text-sm font-medium shadow-float animate-in fade-in slide-in-from-bottom-2 ${
             toast.type === "error"
-              ? "bg-pink-600 text-white dark:bg-pink-500"
-              : "bg-purple-600 text-white dark:bg-purple-500"
+              ? "bg-destructive text-destructive-foreground"
+              : "bg-foreground text-background"
           }`}
         >
           {toast.message}

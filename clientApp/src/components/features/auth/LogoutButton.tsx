@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
-import { signOut } from "@/lib/appwrite/auth";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 /**
  * ログアウトボタンコンポーネント！✨
@@ -10,15 +10,8 @@ import { signOut } from "@/lib/appwrite/auth";
  */
 export default function LogoutButton() {
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("ログアウトに失敗したよ！💦", error);
-    }
-  };
+  // ログアウト後はログイン画面へ移動する（Appwrite側で失敗してもクッキーは必ず消える）
+  const { logout: handleLogout } = useAuth();
 
   return (
     <>

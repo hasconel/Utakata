@@ -26,7 +26,7 @@ function linkify(text: string) {
         rel="nofollow noopener noreferrer"
         // カードの上のリンクを押したときに、投稿の詳細が開かないようにする
         onClick={(e) => e.stopPropagation()}
-        className="text-purple-600 dark:text-pink-400 underline underline-offset-2 break-all hover:opacity-80"
+        className="text-primary underline underline-offset-2 break-all hover:text-primary-hover"
       >
         {url}
       </a>

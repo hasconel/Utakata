@@ -1,187 +1,228 @@
 @import "tailwindcss";
+/* animate-in / fade-in / slide-in-from-* など（Toast・Sheet・Dialogで使っている） */
+@plugin "tailwindcss-animate";
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.75rem;
+/*
+ * ダークモードは <html class="dark">（next-themes が付ける）で切り替える。
+ * これが無いと Tailwind v4 は OS の設定（prefers-color-scheme）でしか dark: が効かない。
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * ===== デザイントークン 🫧 =====
+ * 色はここだけで決める。画面側では gray-800 / purple-600 などを直接書かずに、
+ * bg-background / bg-card / text-foreground / text-muted-foreground / border-border /
+ * bg-primary / text-primary / bg-accent / ring-ring / bg-destructive などを使う。
+ * リデザインで色を変えるときは、この :root と .dark の値を変えるだけで全画面に反映される。
+ */
+:root {
+  /* 画面の地とカード */
+  --background: oklch(0.985 0.006 310);
+  --foreground: oklch(0.24 0.03 300);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  /* 控えめな面と文字（補足・日時・プレースホルダー） */
+  --muted: oklch(0.96 0.01 310);
+  --muted-foreground: oklch(0.52 0.03 300);
+
+  /* ブランド色（ボタン・リンク・選択中） */
+  --primary: oklch(0.558 0.288 302.321); /* purple-600 */
+  --primary-hover: oklch(0.496 0.265 301.924); /* purple-700 */
+  --primary-foreground: oklch(1 0 0);
+
+  /* ふんわりした面（ホバー・選択中の背景・バッジ） */
+  --secondary: oklch(0.95 0.02 310);
+  --secondary-foreground: oklch(0.3 0.04 300);
+  --accent: oklch(0.955 0.03 320);
+  --accent-foreground: oklch(0.438 0.218 303.724); /* purple-800寄り */
+
+  /* 状態の色 */
+  --destructive: oklch(0.577 0.245 27.325); /* red-600 */
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.627 0.17 149);
+  --like: oklch(0.645 0.246 16.439); /* rose-500：いいね */
+
+  /* 線と入力欄 */
+  --border: oklch(0.91 0.015 310);
+  --input: oklch(0.89 0.02 310);
+  --ring: var(--primary);
+
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.17 0.02 300);
+  --foreground: oklch(0.95 0.01 310);
+  --card: oklch(0.215 0.025 300);
+  --popover: oklch(0.235 0.028 300);
+
+  --muted: oklch(0.255 0.025 300);
+  --muted-foreground: oklch(0.72 0.03 310);
+
+  --primary: oklch(0.656 0.241 354.308); /* pink-500 */
+  --primary-hover: oklch(0.592 0.249 0.584); /* pink-600 */
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.27 0.03 300);
+  --secondary-foreground: oklch(0.92 0.015 310);
+  --accent: oklch(0.29 0.05 330);
+  --accent-foreground: oklch(0.823 0.12 346.018); /* pink-300寄り */
+
+  --destructive: oklch(0.637 0.237 25.331); /* red-500 */
+  --success: oklch(0.723 0.19 149);
+  --like: oklch(0.712 0.194 13.428); /* rose-400 */
+
+  --border: oklch(0.3 0.025 300);
+  --input: oklch(0.34 0.03 300);
+}
+
+/* トークンを Tailwind のユーティリティ（bg-card, text-muted-foreground など）にする */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-like: var(--like);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* 角丸：カード=2xl、ボタン・入力=xl、アイコン・チップ=full を基本にする */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* 影は紫みのある、薄いものだけ */
+  --shadow-soft: 0 1px 2px oklch(0.3 0.05 300 / 0.06), 0 4px 16px oklch(0.3 0.05 300 / 0.06);
+  --shadow-float: 0 2px 6px oklch(0.3 0.05 300 / 0.08), 0 12px 32px oklch(0.3 0.05 300 / 0.12);
+
+  /* 欧文は Inter、和文は各OSの読みやすいゴシック */
+  --font-sans: var(--font-inter), "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI",
+    Meiryo, system-ui, sans-serif;
+
+  /* 以前 tailwind.config.ts にあって効いていなかったアニメーション */
+  --animate-bounce-slow: bounce-slow 2s infinite;
+  --animate-pulse-slow: pulse-slow 3s infinite;
+  --animate-spin-slow: spin-slow 3s linear infinite;
+  --animate-marquee: marquee 10s linear infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-glow: glow 2s ease-in-out infinite;
+  --animate-sparkle: sparkle 1.5s ease-in-out infinite;
+
+  @keyframes bounce-slow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
-
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  @keyframes spin-slow {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 10px oklch(0.627 0.265 303.9 / 0.5); }
+    50% { box-shadow: 0 0 20px oklch(0.627 0.265 303.9 / 0.8); }
+  }
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1); }
   }
 }
 
 @layer base {
-  * {
-    @apply border-gray-200 dark:border-gray-700;
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
   }
-  body {
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200;
+
+  html {
+    color-scheme: light;
   }
-  
-  /* ダークモードの強制適用 */
   html.dark {
     color-scheme: dark;
   }
-  
-  html.light {
-    color-scheme: light;
-  }
-}
 
-/* キラキラなスタイル！✨ */
-@layer components {
-  .btn-primary {
-    @apply px-4 py-2 bg-purple-600 dark:bg-pink-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-pink-600 transition-colors duration-200 hover:scale-105 active:scale-95;
-  }
-
-  .btn-secondary {
-    @apply px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200;
-  }
-
-  .card {
-    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 p-6;
-  }
-
-  .input {
-    @apply w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600 dark:focus:ring-pink-500 transition-all duration-200;
-  }
-
-  .badge {
-    @apply px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 dark:bg-pink-100 text-purple-600 dark:text-pink-600;
-  }
-
-  .link {
-    @apply text-purple-600 dark:text-pink-500 hover:text-purple-700 dark:hover:text-pink-600 transition-colors duration-200;
-  }
-}
-
-/* キラキラなアニメーション！✨ */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
-  }
-}
-
-@keyframes sparkle {
-  0%, 100% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-glow {
-  animation: glow 2s ease-in-out infinite;
-}
-
-.animate-sparkle {
-  animation: sparkle 1.5s ease-in-out infinite;
-}
-
-/* ダークモード対応！✨ */
-@media (prefers-color-scheme: dark) {
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-}
-
-/* スクロールバーのカスタマイズ！✨ */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-/* カスタムスクロールバー！✨ */
-@layer utilities {
   body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
     scrollbar-width: thin;
-    scrollbar-color: theme('colors.purple.400') theme('colors.gray.200');
-  }
-
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: theme('colors.gray.200');
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: theme('colors.purple.400');
-    border-radius: 4px;
+    scrollbar-color: var(--muted-foreground) transparent;
   }
 
   ::selection {
-    background: theme('colors.purple.200');
-    color: theme('colors.purple.900');
+    background: color-mix(in oklch, var(--primary) 25%, transparent);
   }
 
   :focus-visible {
-    outline: 2px solid theme('colors.purple.500');
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
   ::placeholder {
-    color: theme('colors.gray.400');
+    color: var(--muted-foreground);
   }
-} 
+}
+
+/* 古い画面用のクラス（新しい画面では components/ui の Button / Card / Input を使う） */
+@layer components {
+  .btn-primary {
+    @apply rounded-xl bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary-hover active:scale-[0.97];
+  }
+  .btn-secondary {
+    @apply rounded-xl bg-secondary px-4 py-2 text-secondary-foreground transition-colors hover:bg-accent;
+  }
+  .card {
+    @apply rounded-2xl bg-card p-6 text-card-foreground shadow-soft;
+  }
+  .input {
+    @apply w-full rounded-xl border border-input bg-card px-4 py-2 text-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+  .badge {
+    @apply rounded-full bg-accent px-2 py-1 text-xs font-semibold text-accent-foreground;
+  }
+  .link {
+    @apply text-primary transition-colors hover:text-primary-hover;
+  }
+}
+
+/* 動きを減らす設定の人には、アニメーションをほぼ止める */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

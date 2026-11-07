@@ -81,9 +81,12 @@ export async function RegisterUser(preferredUsername: string, displayName: strin
     }),
   });
   if (!response.ok) {
-    
-    const errorData = await response.json();
-    throw new Error(errorData.error);
+    // Cloudflare の制限などでJSON以外が返ってくることもある
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      errorData?.error ||
+        (response.status === 429 ? "登録の試行が多すぎるわ！💦 しばらく待ってね" : "登録に失敗したわ！💦 もう一度試してみてね")
+    );
   }
-  return response.json();
+  return response.json().catch(() => ({}));
 }

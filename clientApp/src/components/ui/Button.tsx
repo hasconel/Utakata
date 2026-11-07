@@ -26,30 +26,33 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     leftIcon,
     rightIcon,
     children, 
+    disabled,
     ...props 
   }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none hover:scale-105 active:scale-95';
+    // 押したときだけ少し縮む（ホバーで拡大すると周りがガタつくのでやめた）
+    const baseStyles = 'inline-flex items-center justify-center gap-2 font-medium transition-[background-color,color,border-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97]';
     
     const variants = {
-      primary: 'bg-purple-600 dark:bg-pink-500 text-white hover:bg-purple-700 dark:hover:bg-pink-600 focus:ring-purple-500 dark:focus:ring-pink-500',
-      secondary: 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-gray-500',
-      outline: 'border-2 border-purple-600 dark:border-pink-500 text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-900/20 focus:ring-purple-500 dark:focus:ring-pink-500',
-      ghost: 'text-purple-600 dark:text-pink-500 hover:bg-purple-50 dark:hover:bg-pink-900/20 focus:ring-purple-500 dark:focus:ring-pink-500',
-      link: 'text-purple-600 dark:text-pink-500 hover:underline focus:ring-purple-500 dark:focus:ring-pink-500',
-      gradient: 'bg-gradient-to-r from-purple-600 to-pink-500 dark:from-pink-500 dark:to-purple-600 text-white hover:from-purple-700 hover:to-pink-600 dark:hover:from-pink-600 dark:hover:to-purple-700 focus:ring-purple-500 dark:focus:ring-pink-500',
-      destructive: 'bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600 focus:ring-red-500 dark:focus:ring-red-500',
+      primary: 'bg-primary text-primary-foreground hover:bg-primary-hover',
+      secondary: 'bg-secondary text-secondary-foreground hover:bg-accent',
+      outline: 'border border-border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
+      ghost: 'bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+      link: 'bg-transparent text-primary underline-offset-4 hover:underline',
+      // ブランドのグラデーション。目立たせたい1か所（新規登録など）だけに使う
+      gradient: 'bg-linear-to-r from-purple-600 to-pink-500 text-white hover:brightness-110',
+      destructive: 'bg-destructive text-destructive-foreground hover:brightness-110',
     };
 
     const sizes = {
-      xs: 'px-2 py-1 text-xs',
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-base',
-      lg: 'px-6 py-3 text-lg',
-      xl: 'px-8 py-4 text-xl',
+      xs: 'h-7 px-2.5 text-xs',
+      sm: 'h-8 px-3 text-sm',
+      md: 'h-10 px-4 text-sm',
+      lg: 'h-11 px-6 text-base',
+      xl: 'h-12 px-8 text-lg',
     };
 
     const shapes = {
-      default: 'rounded-lg',
+      default: 'rounded-xl',
       pill: 'rounded-full',
       square: 'rounded-none',
     };
@@ -65,16 +68,18 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           isLoading ? 'opacity-70 cursor-not-allowed' : '',
           className
         )}
-        disabled={isLoading}
         {...props}
+        // 読み込み中は必ず押せなくする（以前は disabled を渡すと読み込み中でも押せた）
+        disabled={isLoading || disabled}
+        aria-busy={isLoading || undefined}
       >
         {isLoading ? (
-          <span className="mr-2 animate-spin">🌀</span>
+          <span className="animate-spin" aria-label="読み込み中">🫧</span>
         ) : (
           <>
-            {leftIcon && <span className="mr-2">{leftIcon}</span>}
+            {leftIcon && <span className="shrink-0">{leftIcon}</span>}
             {children}
-            {rightIcon && <span className="ml-2">{rightIcon}</span>}
+            {rightIcon && <span className="shrink-0">{rightIcon}</span>}
           </>
         )}
       </button>

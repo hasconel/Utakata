@@ -11,12 +11,12 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 // キラキラなカードコンポーネント！✨
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'default', ...props }, ref) => {
-    const baseStyles = 'rounded-2xl transition-all duration-200';
+    const baseStyles = 'rounded-2xl transition-colors duration-150';
     
     const variants = {
-      default: 'bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl',
-      outline: 'bg-transparent border-2 border-purple-600 dark:border-pink-500',
-      ghost: 'bg-transparent hover:bg-purple-50 dark:hover:bg-pink-900/20',
+      default: 'bg-card text-card-foreground border border-border shadow-soft',
+      outline: 'bg-transparent border border-border',
+      ghost: 'bg-transparent hover:bg-accent',
     };
 
     return (

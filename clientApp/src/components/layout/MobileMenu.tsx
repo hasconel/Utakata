@@ -1,6 +1,5 @@
 "use client";
 
-import { Models } from "appwrite";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -12,11 +11,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/Sheet";
 
-interface MobileMenuProps {
-  user: Models.User<Models.Preferences> | null;
-}
+import { useAuth } from "@/hooks/auth/useAuth";
 
-export function MobileMenu({ user }: MobileMenuProps) {
+export function MobileMenu() {
+  const { user, logout } = useAuth();
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -41,16 +39,17 @@ export function MobileMenu({ user }: MobileMenuProps) {
               <Link href="/settings" className="text-sm font-medium">
                 設定
               </Link>
-              <Link href="/logout" className="text-sm font-medium">
+              {/* /logout というページは無いので、ここで直接ログアウトする */}
+              <button type="button" onClick={logout} className="text-left text-sm font-medium text-destructive">
                 ログアウト
-              </Link>
+              </button>
             </>
           ) : (
             <>
               <Link href="/login" className="text-sm font-medium">
                 ログイン
               </Link>
-              <Link href="/signup" className="text-sm font-medium">
+              <Link href="/register" className="text-sm font-medium">
                 新規登録
               </Link>
             </>

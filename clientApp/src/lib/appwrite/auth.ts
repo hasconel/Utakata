@@ -5,47 +5,48 @@
 "use server";
 import {  Models,   Query } from "node-appwrite";
 import { createAdminClient, createSessionClient, deletePost } from "./serverConfig";
-import { cookies } from "next/headers";   
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, clearSessionCookie } from "@/lib/auth/sessionCookie";
 import { deletePrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { Actor, Post } from "@/types/appwrite";
 
 
-export async function signInWithEmail(formData:{email:string,password:string}) {
-  const email = formData.email;
-  const password = formData.password;
-  const { account } = await createAdminClient();
-  try {
-    const session = await account.createEmailPasswordSession(email, password);
+/** サーバーアクションの結果。本番ではエラー文が隠されるので、例外は投げずにこの形で返す */
+export type ActionResult = { ok: true } | { ok: false; error: string };
 
-    (await cookies()).set("my-custom-session", session.secret, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30, // 30日間
-      expires: new Date(Date.now() + 60 * 60 * 24 * 30 * 1000) // 30日後
-    });
-    // session.secret をブラウザに渡さないよう、セッション本体は返さない
-    return { success: true };
+/**
+ * ログイン中のユーザーを返す。ログインしていなければ null（例外は投げない）。
+ * クッキーが無いときは Appwrite に問い合わせないので速い。
+ */
+export async function getCurrentUser(): Promise<Models.User<Models.Preferences> | null> {
+  if (!(await cookies()).get(SESSION_COOKIE)?.value) return null;
+  try {
+    const { account } = await createSessionClient();
+    return await account.get();
   } catch (error: any) {
-    console.error("ログインエラー:", error);
-    if (error.code === 401) {
-      throw new Error("メールアドレスかパスワードが間違ってるよ！💦");
+    if (error?.code === 401) {
+      // 期限切れのクッキーは消しておく（残っていると毎回問い合わせてしまう）
+      await clearSessionCookie().catch(() => {});
+      return null;
     }
-    throw new Error("ログインに失敗したよ！もう一度試してみてね！��");
+    console.error("ログイン状態の確認に失敗:", error?.message);
+    return null;
   }
 }
 
 /**
- * サインアウト
- * @returns サインアウト成功かどうか
+ * サインアウト（ログインは /api/auth/login、ログアウトは /api/auth/logout でもできる）
+ * Appwrite側の削除に失敗しても、クッキーは必ず消す。
  */
-export async function signOut() {
-
-  const { account } = await createSessionClient();
-
-  (await cookies()).delete("my-custom-session");
-  await account.deleteSession("current");
+export async function signOut(): Promise<ActionResult> {
+  try {
+    const { account } = await createSessionClient();
+    await account.deleteSession("current");
+  } catch (error: any) {
+    if (error?.code !== 401) console.error("セッションの削除に失敗:", error?.message);
+  }
+  await clearSessionCookie();
+  return { ok: true };
 }
 
 /**
@@ -54,14 +55,17 @@ export async function signOut() {
  * @param password パスワード
  * @returns メールアドレスの変更成功かどうか
  */
-export async function changeEmail(email:string,password:string) {
-try{
-  const { account } = await createSessionClient();
-  await account.updateEmail(email,password);
-  return true;
-}catch(error:any){
-  throw new Error("メールアドレスの変更に失敗したわ！💦");
-}
+export async function changeEmail(email: string, password: string): Promise<ActionResult> {
+  try {
+    const { account } = await createSessionClient();
+    await account.updateEmail(email, password);
+    return { ok: true };
+  } catch (error: any) {
+    if (error?.code === 401) return { ok: false, error: "パスワードが違うわ！💦" };
+    if (error?.code === 409) return { ok: false, error: "そのメールアドレスはもう使われてるわ！💦" };
+    if (error?.code === 400) return { ok: false, error: "メールアドレスの形が正しくないわ！💦" };
+    return { ok: false, error: "メールアドレスの変更に失敗したわ！💦" };
+  }
 }
 
 /**
@@ -70,21 +74,23 @@ try{
  * @param oldPassword 古いパスワード
  * @returns パスワードの変更成功かどうか
  */
-export async function changePassword(password:string ,oldPassword:string) {
-try{
-  const { account } = await createSessionClient();
-  await account.updatePassword(password, oldPassword);
-  return true;
-}catch(error:any){
-  throw new Error("パスワードの変更に失敗したわ！💦");
-}
+export async function changePassword(password: string, oldPassword: string): Promise<ActionResult> {
+  try {
+    const { account } = await createSessionClient();
+    await account.updatePassword(password, oldPassword);
+    return { ok: true };
+  } catch (error: any) {
+    if (error?.code === 401) return { ok: false, error: "いまのパスワードが違うわ！💦" };
+    if (error?.code === 400) return { ok: false, error: "新しいパスワードは8文字以上にしてね！💦" };
+    return { ok: false, error: "パスワードの変更に失敗したわ！💦" };
+  }
 }
 
 /**
  * アカウントの削除
  * @returns アカウントの削除成功かどうか
  */
-export async function deleteAccount() {
+export async function deleteAccount(): Promise<ActionResult> {
   try{
     const { account, databases } = await createSessionClient();
     const targetUser = (await account.get()).$id;
@@ -106,8 +112,10 @@ export async function deleteAccount() {
     await account.deleteSession("current");
     const { users } = await createAdminClient();
     await users.delete(targetUser);
-    return true;
+    await clearSessionCookie();
+    return { ok: true };
   }catch(error:any){
-    throw new Error("アカウントの削除に失敗したわ！💦");
+    console.error("アカウントの削除に失敗:", error?.message);
+    return { ok: false, error: "アカウントの削除に失敗したわ！💦" };
   }
 }

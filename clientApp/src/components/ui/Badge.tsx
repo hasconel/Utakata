@@ -13,13 +13,13 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 // キラキラなバッジコンポーネント！✨
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = 'default', color = 'purple', ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const baseStyles = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
     
     const variants = {
       default: {
-        purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
-        pink: 'bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400',
-        gray: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+        purple: 'bg-accent text-accent-foreground',
+        pink: 'bg-pink-100 text-pink-700 dark:bg-pink-500/15 dark:text-pink-300',
+        gray: 'bg-muted text-muted-foreground',
       },
       outline: {
         purple: 'border border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400',

@@ -17,25 +17,22 @@ import { useAuth } from "@/hooks/auth/useAuth";
 export function Header() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [ topAnchor, setTopAnchor ] = useState("/");
-  
+
   useEffect(() => {
     if (user && !isAuthLoading) {
-      setTopAnchor("/timeline");
       // 未読通知の数を取得
-      getUnreadNotifications().then((res) => {
-        setUnreadCount(res);
-      });
+      getUnreadNotifications().then(setUnreadCount).catch(() => {});
     }
   }, [user, isAuthLoading]);
   
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 dark:supports-[backdrop-filter]:backdrop-blur-sm flex items-center justify-center">
-      <div className="container flex h-14 items-center justify-between">
+    <header className="sticky top-0 z-50 flex w-full items-center justify-center border-b border-border bg-background/80 backdrop-blur">
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <div className="flex">
-          <a href={topAnchor} className="mr-6 flex items-center space-x-2 text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
+          {/* ページ全体を読み込み直さないように Link を使う。未ログインで / を開くとトップ、ログイン済みならタイムライン */}
+          <Link href={user ? "/timeline" : "/"} className="mr-6 flex items-center space-x-2 text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
             <span className="font-bold">Utakata✨</span>
-          </a>
+          </Link>
         </div>
         <div className="flex items-center space-x-2">
           {/* デスクトップ用のナビゲーション！✨ */}
@@ -78,7 +75,7 @@ export function Header() {
                     ログイン
                   </Button>
                 </Link>
-                <Link href="/signup">
+                <Link href="/register">
                   <Button variant="gradient" size="sm">
                     新規登録
                   </Button>
@@ -88,7 +85,7 @@ export function Header() {
           </nav>
           {/* モバイル用のメニュー！✨ */}
           <div className="md:hidden">
-            <MobileMenu user={user} />
+            <MobileMenu />
           </div>
           {/*<ThemeToggle />*/}
         </div>

@@ -4,13 +4,8 @@
  */
 "use server"
 import { createSessionClient,createAdminClient } from "./serverConfig";
-import { Query,Models,Permission,Role } from "node-appwrite";
-import { generateKeyPairSync } from "crypto";
-import { Errors } from "../activitypub/errors";
+import { Query,Models } from "node-appwrite";
 import {z} from "zod"
-import { cookies } from "next/headers";
-import { savePrivateKey } from "@/lib/activitypub/privateKeyStore";
-import { Actor } from "@/types/appwrite";
 import { ActivityPubActor } from "@/types/activitypub";
 /**
  * ユーザーIDからアクターを取得！🔍
@@ -131,98 +126,6 @@ export async function getPreferredUsernameByUserId(userId: string): Promise<stri
     }
   }
   
-
-/**
- * 新しいアクターを作成！🌟
- * preferredUsernameはアルファベットのみ、displayNameで日本語/絵文字対応！✨
- * @param userId AppwriteのユーザーID
- * @param preferredUsername アルファベットのみのユーザー名（URI用）
- * @param displayName 表示名（日本語、絵文字対応）
- * @returns 作成したActorオブジェクト
- * @throws Error ユニーク制約違反やデータベースエラー
- */
-export async function createActor(userId: string, preferredUsername: string, displayName: string,email:string,password:string): Promise<Actor> {
-  try {
-    const {databases,account} = await createAdminClient();
-    // 鍵ペア生成
-    const { publicKey, privateKey } = generateKeyPairSync("rsa", {
-      modulusLength: 2048,
-      publicKeyEncoding: { type: "spki", format: "pem" },
-      privateKeyEncoding: { type: "pkcs8", format: "pem" },
-    });
-
-    // セッション作成
-    const session = await account.createEmailPasswordSession(email, password);
-
-    // 秘密鍵は専用コレクションに保存（actorsコレクションには置かない）
-    await savePrivateKey(userId, privateKey);
-
-    // アクター作成
-    const actor  = await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      userId,
-      {
-        userId: userId,
-        preferredUsername,
-        displayName: displayName,
-        actorId: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}`,
-        inbox: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/inbox`,
-        outbox: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/outbox`,
-        publicKey:publicKey,
-        following: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/following`,
-        followers: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/followers`,
-        avatarUrl: ``,
-        bio: "",
-      },
-      [
-        Permission.read(Role.users()),
-        Permission.write(Role.user(userId)),
-        Permission.delete(Role.user(userId))
-      ]
-    )
-     await databases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,
-      actor.$id,
-      {
-        id: actor.actorId,
-        followersCount: 0,
-        followingCount: 0,
-      }
-    );
-
-    // セッションクッキー保存
-    (await cookies()).set("my-custom-session", session.secret, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: true,
-    });
-
-    // クライアントに返す
-    return actor as Actor;
-  } catch (err: any) {
-    console.error("SignUp error:", {
-      message: err.message,
-      code: err.code,
-      type: err.type,
-      stack: err.stack,
-    });
-
-    if (err.code === 409) {
-      throw new Error(Errors.InvalidInput("このメールアドレスはすでに登録済みだよ！💦"));
-    }
-    if (err.code === 403) {
-      throw new Error(Errors.RegistrationFailed + " 権限エラーだよ！管理者に連絡してね！💦");
-    }
-    if (err instanceof z.ZodError) {
-      throw new Error(err.issues.map((e) => e.message).join(", "));
-    }
-
-    throw new Error(Errors.RegistrationFailed);
-  }
-}
 
 /**
  * アクターIDからアクターを取得！🔍

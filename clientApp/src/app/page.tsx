@@ -1,8 +1,6 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/hooks/auth/useAuth";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/appwrite/auth";
 
 interface CTAButtonProps {
   href: string;
@@ -24,36 +22,11 @@ const CTAButton = ({ href, text, primary = false }: CTAButtonProps) => (
   </Link>
 );
 
-export default function HomePage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const { user, isLoading: isAuthLoading } = useAuth();
-  const [redirect, setRedirect] = useState<string | null>(null);
-  useEffect(() => {
-    if (user && !isAuthLoading) {
-      setRedirect("/timeline");
-    }
-    setIsLoading(false);
-  }, [user, isAuthLoading]);
-  //console.log(user);
-  if(redirect) {
-        window.location.href = redirect;
-  }
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    );
-  }
+// ログイン済みならサーバー側でタイムラインへ移動する（以前は一度この画面を描いてから移動していた）
+export default async function HomePage() {
+  if (await getCurrentUser()) redirect("/timeline");
 
   return (
-    <>
-    {isLoading ? (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    ) : (
-    <>
     <div className="flex flex-col items-center justify-center min-h-screen">
       <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24">
         <div className="relative">
@@ -143,9 +116,6 @@ export default function HomePage() {
         </div>
       </main>
     </div>
-    </>
-    )}
-    </>
   );
 }
 

@@ -1,21 +1,17 @@
 import Link from "next/link";
 
+const linkClass = "text-sm text-muted-foreground transition-colors hover:text-foreground";
+
 export default function Footer() {
   return (
-    <footer className=" bg-pink dark:bg-dark-purple text-purple dark:text-pink py-4 px-6">
-      <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center">
-        <p className="text-sm">&copy; 2025 utakata. All rights reserved.</p>
-        <nav className="flex space-x-4 mt-2 sm:mt-0" aria-label="フッターナビゲーション">
-          <Link
-            href="/privacy"
-            className="text-sm hover:text-purple dark:hover:text-pink hover:scale-105 transition-all duration-200"
-          >
+    <footer className="border-t border-border bg-background py-4 px-6">
+      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 sm:flex-row">
+        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} utakata</p>
+        <nav className="flex gap-4" aria-label="フッターナビゲーション">
+          <Link href="/privacy" className={linkClass}>
             プライバシーポリシー
           </Link>
-          <Link
-            href="/terms"
-            className="text-sm hover:text-purple dark:hover:text-pink hover:scale-105 transition-all duration-200"
-          >
+          <Link href="/terms" className={linkClass}>
             利用規約
           </Link>
         </nav>

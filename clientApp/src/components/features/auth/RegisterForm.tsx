@@ -1,13 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { RegisterUser } from "@/lib/appwrite/client";
-import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+
+const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
+const hintClass = "mt-1 text-xs text-muted-foreground";
+
 export default function RegisterForm() {
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUserName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,126 +22,100 @@ export default function RegisterForm() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
-      await RegisterUser(username, displayName, email, password);
-      redirect("/timeline");
+      const result = await RegisterUser(username, displayName, email, password);
+      // 以前は redirect() を呼んでいたけど、クリック処理の中では例外になって移動できなかった
+      window.location.href = result?.loggedIn === false ? "/login" : "/timeline";
+      return;
     } catch (err: any) {
-      setError(err.message);
-      console.error("登録エラー:", err);
-    } finally {
-      setIsLoading(false);
+      setError(err?.message || "登録に失敗したわ！💦 もう一度試してみてね");
     }
+    setIsLoading(false);
   };
 
+  const describedBy = error ? "register-error" : undefined;
+  const filled = displayName && username && email && password;
+
   return (
-    <div>
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl"
-        aria-label="utakata登録フォーム"
-      >
-        <h2 className="text-2xl font-bold text-purple dark:text-pink mb-4 text-center">
-          utakata 登録 💫
-        </h2>
-        <div className="mb-4">
-          <label
-            htmlFor="displayName"
-            className="block text-gray-700 dark:text-gray-200 font-medium mb-1"
-          >
-            表示名
-          </label>
-          <input
+    <Card className="p-6">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" aria-label="新規登録フォーム">
+        <div>
+          <label htmlFor="displayName" className={labelClass}>表示名</label>
+          <Input
             id="displayName"
             type="text"
+            autoComplete="nickname"
+            maxLength={100}
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="キラキラな表示名を！"
+            placeholder="うたかた ちゃん"
             required
-            className="w-full p-3 border-2 border-purple dark:border-pink rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink dark:focus:ring-purple transition-all duration-200"
-            aria-invalid={!!error}
-            aria-describedby={error ? "register-error" : undefined}
+            aria-describedby={describedBy}
           />
+          <p className={hintClass}>日本語や絵文字もOK。あとから変えられるよ</p>
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="name"
-            className="block text-gray-700 dark:text-gray-200 font-medium mb-1"
-          >
-            ユーザー名
-          </label>
-          <input
+        <div>
+          <label htmlFor="name" className={labelClass}>ユーザー名</label>
+          <Input
             id="name"
             type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            minLength={3}
+            maxLength={20}
+            pattern="[A-Za-z]{3,20}"
             value={username}
             onChange={(e) => setUserName(e.target.value)}
-            placeholder="キラキラなユーザー名を！"
+            placeholder="utakata"
             required
-            className="w-full p-3 border-2 border-purple dark:border-pink rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink dark:focus:ring-purple transition-all duration-200"
-            aria-invalid={!!error}
-            aria-describedby={error ? "register-error" : undefined}
+            aria-describedby={describedBy}
           />
+          <p className={hintClass}>アルファベット3〜20文字。小文字にそろえて登録するよ（あとから変えられないの）</p>
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="email"
-            className="block text-gray-700 dark:text-gray-200 font-medium mb-1"
-          >
-            メールアドレス
-          </label>
-          <input
+        <div>
+          <label htmlFor="email" className={labelClass}>メールアドレス</label>
+          <Input
             id="email"
             type="email"
+            autoComplete="email"
+            inputMode="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="メールアドレスを入力してね！"
+            placeholder="you@example.com"
             required
-            className="w-full p-3 border-2 border-purple dark:border-pink rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink dark:focus:ring-purple transition-all duration-200"
-            aria-invalid={!!error}
-            aria-describedby={error ? "register-error" : undefined}
+            aria-describedby={describedBy}
           />
         </div>
-        <div className="mb-4">
-          <label
-            htmlFor="password"
-            className="block text-gray-700 dark:text-gray-200 font-medium mb-1"
-          >
-            パスワード
-          </label>
-          <input
+        <div>
+          <label htmlFor="password" className={labelClass}>パスワード</label>
+          <Input
             id="password"
             type="password"
+            autoComplete="new-password"
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="パスワードを入力してね！"
             required
-            className="w-full p-3 border-2 border-purple dark:border-pink rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-pink dark:focus:ring-purple transition-all duration-200"
-            aria-invalid={!!error}
-            aria-describedby={error ? "register-error" : undefined}
+            aria-describedby={describedBy}
           />
+          <p className={hintClass}>8文字以上</p>
         </div>
         {error && (
-          <div
-            id="register-error"
-            className="text-red-500 dark:text-red-400 text-sm mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
-            aria-live="polite"
-          >
-            <p className="font-medium">エラーが発生したよ！💦</p>
-            <p className="mt-1">{error}</p>
-          </div>
+          <p id="register-error" role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
         )}
-        <button
-          type="submit"
-          disabled={isLoading || !email || !password || !username || !displayName}
-          className={`w-full p-3 rounded-lg text-white font-semibold transition-all duration-200 ${
-            isLoading || !email || !password || !username || !displayName
-              ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
-              : "bg-pink dark:bg-purple hover:bg-purple dark:hover:bg-pink hover:scale-105 active:scale-95"
-          }`}
-        >
-          {isLoading ? "登録中..." : "登録！💫"}
-        </button>
+        <Button type="submit" size="lg" className="w-full" isLoading={isLoading} disabled={!filled}>
+          登録する
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          アカウントを持ってる？{" "}
+          <Link href="/login" className="link font-medium">
+            ログイン
+          </Link>
+        </p>
       </form>
-    </div>
+    </Card>
   );
 }
