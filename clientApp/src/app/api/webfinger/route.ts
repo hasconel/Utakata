@@ -3,6 +3,22 @@
  * 外部ドメインのWebFingerエンドポイントにキラキラアクセス！💖
  */
 import { NextRequest, NextResponse } from "next/server";
+import { BlockedUrlError, safeFetch } from "@/lib/security/safeFetch";
+
+/**
+ * ドメインからWebFingerのURLを作る。
+ * ホスト名（とポート）以外が混ざっていれば、別のパスを取得させられるので null を返す。
+ */
+function buildWebfingerUrl(domain: string, resource: string): string | null {
+  try {
+    const url = new URL(`https://${domain}/.well-known/webfinger`);
+    if (url.host !== domain.toLowerCase()) return null;
+    url.searchParams.set("resource", resource);
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,15 +33,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const webfingerUrl = buildWebfingerUrl(domain, resource);
+    if (!webfingerUrl) {
+      return NextResponse.json(
+        { error: "ドメインの形式が正しくないよ！💦" },
+        { status: 400 }
+      );
+    }
+
     // 外部ドメインのWebFingerエンドポイントにアクセス
-    const webfingerUrl = `https://${domain}/.well-known/webfinger?resource=${encodeURIComponent(resource)}`;
-    
-    const response = await fetch(webfingerUrl, {
-      method: "GET",
+    const response = await safeFetch(webfingerUrl, {
       headers: {
         "Accept": "application/activity+json, application/jrd+json",
         "User-Agent": "Utakata/1.0",
       },
+      maxBytes: 1024 * 1024,
+      timeoutMs: 5_000,
     });
 
     if (!response.ok) {
@@ -35,7 +58,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
+    const data = JSON.parse(response.body.toString("utf-8"));
 
     // CORSヘッダーを設定
     return NextResponse.json(data, {
@@ -46,6 +69,12 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof BlockedUrlError) {
+      return NextResponse.json(
+        { error: "このドメインは取得できないよ！💦" },
+        { status: 400 }
+      );
+    }
     console.error("WebFingerプロキシエラー:", error);
     return NextResponse.json(
       { error: "WebFingerの取得に失敗したよ！💦" },
