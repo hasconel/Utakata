@@ -15,6 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     "type": "Person",
     "id": actor.id,
     "preferredUsername": actor.preferredUsername,
+    "url": `${process.env.NEXT_PUBLIC_DOMAIN}/@${actor.preferredUsername}`,
     "name": actor.displayName,
     "summary": actor.summary,
     "icon": {
