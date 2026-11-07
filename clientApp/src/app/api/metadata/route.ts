@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { JSDOM } from "jsdom";
+import { BlockedUrlError, safeFetch } from "@/lib/security/safeFetch";
 
 /**
  * メタデータを取得するAPIエンドポイント！✨
@@ -18,8 +19,17 @@ export async function GET(request: Request) {
     }
 
     // URLからHTMLを取得
-    const response = await fetch(url);
-    const html = await response.text();
+    const response = await safeFetch(url, {
+      headers: { "User-Agent": "Utakata/1.0", Accept: "text/html,application/xhtml+xml" },
+      maxBytes: 2 * 1024 * 1024,
+    });
+    if (!/^(text\/html|application\/xhtml\+xml)/i.test(response.contentType)) {
+      return NextResponse.json(
+        { error: "HTMLではないわ！💦" },
+        { status: 415 }
+      );
+    }
+    const html = response.body.toString("utf-8");
     const dom = new JSDOM(html);
     const document = dom.window.document;
 
@@ -34,6 +44,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(metadata);
   } catch (error) {
+    if (error instanceof BlockedUrlError) {
+      return NextResponse.json({ error: "このURLは取得できないわ！💦" }, { status: 400 });
+    }
     console.error("メタデータの取得に失敗したわ！", error);
     return NextResponse.json(
       { error: "メタデータの取得に失敗したわ！💦" },

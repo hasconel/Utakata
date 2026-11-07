@@ -6,6 +6,7 @@
 import {  Models,   Query } from "node-appwrite";
 import { createAdminClient, createSessionClient, deletePost } from "./serverConfig";
 import { cookies } from "next/headers";   
+import { deletePrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { Actor, Post } from "@/types/appwrite";
 
 
@@ -20,10 +21,12 @@ export async function signInWithEmail(formData:{email:string,password:string}) {
       path: "/",
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 30, // 30日間
       expires: new Date(Date.now() + 60 * 60 * 24 * 30 * 1000) // 30日後
     });
-    return session;
+    // session.secret をブラウザに渡さないよう、セッション本体は返さない
+    return { success: true };
   } catch (error: any) {
     console.error("ログインエラー:", error);
     if (error.code === 401) {
@@ -99,6 +102,7 @@ export async function deleteAccount() {
     }
     await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, targetActor.$id);
     await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!, targetActor.$id);
+    await deletePrivateKey(targetUser);
     await account.deleteSession("current");
     const { users } = await createAdminClient();
     await users.delete(targetUser);

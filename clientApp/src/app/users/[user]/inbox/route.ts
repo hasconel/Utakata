@@ -4,6 +4,14 @@ import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverCon
 import { verifySignature } from "@/lib/activitypub/crypto";
 import { Permission, Role } from "node-appwrite";
 
+function isSameOrigin(a: unknown, b: string): boolean {
+  try {
+    return typeof a === "string" && new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
   const { user: username } = await params;
   const header = request.headers;
@@ -52,7 +60,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
   const { user: username } = await params;
   const header = request.headers;
-  const activity = await request.json();
+  const rawBody = await request.text();
+  let activity: any;
+  try {
+    activity = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
   //console.log("activity",activity)
   if(header.get("Content-Type") !== "application/activity+json"){
     return NextResponse.json({ error: "Content-Type header is required" }, { status: 400 });
@@ -62,14 +76,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   // actorがオブジェクト化されている場合はidを取得、そうでない場合はIdだろうということでそのまま
   console.log("activity",activity);
-  const ActorId = activity.actor.id? activity.actor.id : activity.actor;
+  const ActorId = activity.actor?.id ? activity.actor.id : activity.actor;
+  if(typeof ActorId !== "string"){
+    return NextResponse.json({ error: "Invalid actor" }, { status: 400 });
+  }
   //console.log(ActorId);
   // HTTPシグネチャの検証
 
-  const verified = await verifySignature(request, ActorId);
+  const verified = await verifySignature(request, rawBody, ActorId);
 
   if(!verified){
-    return NextResponse.json({ error: "Signature verification failed" }, { status: 400 });
+    return NextResponse.json({ error: "Signature verification failed" }, { status: 401 });
   }
   const { databases : adminDatabases } = await createAdminClient();
   
@@ -136,6 +153,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Noteの場合
     if(activity.object.type === "Note"){
       const NoteId = activity.object.id;
+      // 投稿者は送信者本人で、投稿のIDも送信者のドメインのものに限る
+      const attributedTo = activity.object.attributedTo?.id ?? activity.object.attributedTo;
+      if(attributedTo !== ActorId || !isSameOrigin(NoteId, ActorId)){
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       // 先に通知を作ってしまう
       if(activity.object.inReplyTo && activity.object.to.includes(process.env.NEXT_PUBLIC_DOMAIN! + "/users/" + username)){
         const notification = await adminDatabases.createDocument(
@@ -299,7 +321,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
         [Query.equal("id", activity.object.id)]
       );
-      if(notificationDocuments.length > 0){
+      // 取り消せるのは送信者本人のものだけ
+      if(notificationDocuments.length > 0 && notificationDocuments[0].from === ActorId){
         await adminDatabases.deleteDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
@@ -318,6 +341,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Multiple follows found" }, { status: 400 });
       }
       const follow = followDocuments[0];
+      if(follow.actor !== ActorId){
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       const deleted = await adminDatabases.deleteDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_FOLLOWS_COLLECTION_ID!,
@@ -361,7 +387,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
         [Query.equal("id", activity.object.id)]
       );
-      if(notificationDocuments.length > 0){
+      if(notificationDocuments.length > 0 && notificationDocuments[0].from === ActorId){
         await adminDatabases.deleteDocument(
           process.env.APPWRITE_DATABASE_ID!,
           process.env.APPWRITE_NOTIFICATIONS_COLLECTION_ID!,
@@ -375,6 +401,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         return NextResponse.json({ error: "Multiple likes found" }, { status: 400 });
       }
       const like = likeDocuments[0];
+      if(like.actor !== ActorId){
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       const deleted = await adminDatabases.deleteDocument(
         process.env.APPWRITE_DATABASE_ID!,
         process.env.APPWRITE_LIKES_COLLECTION_ID!,
@@ -396,7 +425,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { documents : noteDocuments } = await adminDatabases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      [Query.equal("activityId", activity.object.id)]
+      [Query.equal("activityId", ObjectId)]
     );
     if(noteDocuments.length === 0){
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
@@ -405,6 +434,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Multiple notes found" }, { status: 400 });
     }
     const note = noteDocuments[0];
+    // 削除できるのは投稿者本人だけ
+    if(note.attributedTo !== ActorId){
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const deleted = await adminDatabases.deleteDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_COLLECTION_ID!,

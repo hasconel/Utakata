@@ -4,6 +4,7 @@ dotenv.config();
 const http = require('http');
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 
 // 許可するドメインのリスト
 const allowedOrigins = [
@@ -39,6 +40,11 @@ app.use((req, res, next) => {
 
 const server = http.createServer(app);
 
+// 死活確認用（curl で応答を見る用）
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'signaling-server' });
+});
+
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
@@ -63,27 +69,63 @@ const io = new Server(server, {
 let broadcaster = null;
 const listeners = new Set();
 
+// 管理者パスワードの照合（未設定なら常に失敗させる）
+function isAdminPassword(password) {
+  const expected = process.env.ADMIN_PASSWORD;
+  if (!expected || typeof password !== 'string') return false;
+  const hash = (value) => crypto.createHash('sha256').update(value).digest();
+  return crypto.timingSafeEqual(hash(password), hash(expected));
+}
+
+// JWTをAppwriteに問い合わせてユーザーIDを確認する（確認できなければ null）
+async function verifyUserId(jwt) {
+  const endpoint = process.env.APPWRITE_ENDPOINT;
+  const project = process.env.APPWRITE_PROJECT_ID;
+  if (!endpoint || !project || typeof jwt !== 'string' || !jwt) return null;
+  try {
+    const res = await fetch(`${endpoint.replace(/\/$/, '')}/account`, {
+      headers: { 'X-Appwrite-Project': project, 'X-Appwrite-JWT': jwt },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const account = await res.json();
+    return typeof account.$id === 'string' ? account.$id : null;
+  } catch (err) {
+    console.error('JWT verification failed:', err.message);
+    return null;
+  }
+}
+
+// シグナリングの転送は「配信者と聴取者の間」だけ許可する
+function canRelay(socket, data) {
+  if (!data || typeof data.target !== 'string' || !broadcaster) return false;
+  if (socket.id === broadcaster.id) return listeners.has(data.target);
+  return data.target === broadcaster.id && listeners.has(socket.id);
+}
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   // 配信者として参加
-  socket.on('broadcaster',(userId)  => {
+  socket.on('broadcaster', async (credentials) => {
     if (broadcaster) {
       socket.emit('broadcaster-exists', broadcaster.userId);
-    } else {   
-      if(userId){
-           
-    broadcaster = {
-      id:socket.id,
-      userId:userId
-    };
-    console.log('Broadcaster connected:', socket.id,'userId:',userId);
-    socket.emit('broadcaster-confirmed',userId);
+      return;
     }
-    else{
-      socket.emit('broadcaster-rejected','配信者idが存在しません');
+    const userId = await verifyUserId(credentials?.jwt);
+    if (!userId) {
+      socket.emit('broadcaster-rejected', '配信者の本人確認に失敗しました');
+      return;
     }
+    // 確認を待っている間に状況が変わっていないか見直す
+    if (!socket.connected) return;
+    if (broadcaster) {
+      socket.emit('broadcaster-exists', broadcaster.userId);
+      return;
     }
+    broadcaster = { id: socket.id, userId };
+    console.log('Broadcaster connected:', socket.id, 'userId:', userId);
+    socket.emit('broadcaster-confirmed', userId);
   });
 
   // 聴取者として参加
@@ -101,6 +143,7 @@ io.on('connection', (socket) => {
 
   // SDPオファーを配信者から聴取者へ転送
   socket.on('offer', (data) => {
+    if (!canRelay(socket, data)) return;
     socket.to(data.target).emit('offer', {
       offer: data.offer,
       from: socket.id
@@ -109,6 +152,7 @@ io.on('connection', (socket) => {
 
   // SDPアンサーを聴取者から配信者へ転送
   socket.on('answer', (data) => {
+    if (!canRelay(socket, data)) return;
     socket.to(data.target).emit('answer', {
       answer: data.answer,
       from: socket.id
@@ -117,6 +161,7 @@ io.on('connection', (socket) => {
 
   // ICE候補を転送
   socket.on('ice-candidate', (data) => {
+    if (!canRelay(socket, data)) return;
     socket.to(data.target).emit('ice-candidate', {
       candidate: data.candidate,
       from: socket.id
@@ -143,29 +188,28 @@ io.on('connection', (socket) => {
   });
 
   // 管理者用:配信者切断
-  socket.on('broadcaster-disconnect',(password) => {
-    console.log("broadcaster-disconnect",socket.id,broadcaster.id,password);
-    if(socket.id === broadcaster.id){
-      console.log("配信者によって配信者が切断されました");
+  socket.on('broadcaster-disconnect', (password) => {
+    // 配信者本人による終了
+    if (broadcaster && socket.id === broadcaster.id) {
+      console.log('配信者によって配信者が切断されました');
       listeners.forEach(listenerId => {
         io.to(listenerId).emit('broadcaster-disconnected');
       });
       broadcaster = null;
+      return;
     }
-    if(password == process.env.ADMIN_PASSWORD) {
-      console.log("管理者によって配信者が切断されました");
-      if(broadcaster && broadcaster.id){
-            
-    io.to(broadcaster.id).emit('broadcaster-rejected','管理者によって配信者が切断されました');
-
+    if (!isAdminPassword(password)) {
+      socket.emit('rejected-password', '管理者パスワードが間違っています');
+      return;
+    }
+    console.log('管理者によって配信者が切断されました');
+    if (broadcaster) {
+      io.to(broadcaster.id).emit('broadcaster-rejected', '管理者によって配信者が切断されました');
     }
     listeners.forEach(listenerId => {
       io.to(listenerId).emit('broadcaster-disconnected');
     });
     broadcaster = null;
-  }else{
-    socket.emit('rejected-password','管理者パスワードが間違っています');
-  }
   });
 });
 

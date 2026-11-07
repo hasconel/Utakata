@@ -53,17 +53,6 @@ export async function fetchTimelinePosts(limit: number = 10, offset: number = 0)
   }
 }
 
-/**
- * セッション情報を取得する関数！✨
- * @returns セッション情報
- */
-export async function getSession() {
-  const response = await fetch("/api/auth/session");
-  if (!response.ok) {
-    throw new Error("セッションの取得に失敗したよ！💦");
-  }
-  return response.json();
-}
 
 
 

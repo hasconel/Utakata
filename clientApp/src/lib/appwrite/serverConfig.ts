@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { MeiliSearch } from "meilisearch";
 import { Actor, Post  } from "@/types/appwrite";
 import { signRequest } from "../activitypub/crypto";
+import { getEncryptedPrivateKey } from "../activitypub/privateKeyStore";
 import { ActivityPubNote, ActivityPubNoteInClient } from "@/types/activitypub";
 
 const meilisearch = new MeiliSearch({
@@ -124,7 +125,7 @@ export async function followUser(userId: string){
       "published": new Date().toISOString()
     };
     const actorInbox = userId+"/inbox";
-    const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+    const headers = await signRequest(actorInbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
 
     const response = await fetch(actorInbox, {
       method: "POST",
@@ -215,7 +216,7 @@ export async function unfollowUser(activityId: string){
       },
       "published": new Date().toISOString()
     };
-    const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+    const headers = await signRequest(actorInbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
     const response = await fetch(actorInbox, {
       method: "POST",
       headers: headers.headers,
@@ -409,7 +410,7 @@ export async function likePost(postId: string ,actorInbox: string) {
     if(!newLike){
       throw new Error("ライクの作成に失敗したわ！💦");  
     }
-    const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+    const headers = await signRequest(actorInbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
     const response = await fetch(actorInbox, {
       method: "POST",
       headers: headers.headers,
@@ -484,7 +485,7 @@ export async function unlikePost(postId: string, actorInbox: string) {
         },
         "published": new Date().toISOString()
       };
-      const headers = await signRequest(actorInbox, activity, currentUser.privateKey, `${currentUser.actorId}#main-key`)
+      const headers = await signRequest(actorInbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
       const response = await fetch(actorInbox, {
         method: "POST",
         headers: headers.headers,

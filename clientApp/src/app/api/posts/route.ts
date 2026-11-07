@@ -7,6 +7,7 @@ import {  NextResponse } from "next/server";
 import { createSessionClient,  } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 import {  savePost, deliverActivity } from "@/lib/activitypub/post";
+import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { ENV } from "@/lib/api/config";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 import { Post } from "@/types/appwrite";
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     // ActivityPubで配信
     await deliverActivity(activity, {
       id: user.actorId,
-      privateKey: user.privateKey,
+      privateKey: await getEncryptedPrivateKey(user.$id),
       followers: user.actorId + "/followers",
     });
     return NextResponse.json({ success: true, document }, {

@@ -38,7 +38,6 @@ export default function BroadcasterPage() {
 
   const handleKillBroadcaster = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('password',password);
     killBroadcaster(password);
   };
 
@@ -49,20 +48,29 @@ export default function BroadcasterPage() {
   };
 
   useEffect(() => {
-    if(!user && !isLoading){
-      console.log('user not found');
-      router.push('/login');
+    if(!user){
+      if(!isLoading){
+        console.log('user not found');
+        router.push('/login');
+      }
       return ;
     }
     // Socket.io接続
     const signalingUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL ;
     socketRef.current = io(signalingUrl!);
     console.log('signalingUrl',signalingUrl);
-    socketRef.current.on('connect', () => {
+    socketRef.current.on('connect', async () => {
       console.log('Connected to signaling server');
       setIsConnected(true);
-      // 既存のbroadcasterをチェック
-      socketRef.current?.emit('broadcaster',user?.$id);
+      // 既存のbroadcasterをチェック（本人確認用のトークンを添えて参加する）
+      try {
+        const res = await fetch('/api/radio/token', { method: 'POST' });
+        if (!res.ok) throw new Error('token request failed');
+        const { jwt } = await res.json();
+        socketRef.current?.emit('broadcaster', { jwt });
+      } catch {
+        setError('配信者の本人確認に失敗しました');
+      }
     });
     
 

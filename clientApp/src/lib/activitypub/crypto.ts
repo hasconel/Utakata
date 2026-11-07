@@ -5,8 +5,13 @@
  */
 import { createHash, createSign, createVerify } from "crypto";
 import { Errors } from "./errors";
-//import { Actor } from "../appwrite/database";
-import { decrypt } from "@/lib/appwrite/database";
+import { decrypt } from "@/lib/activitypub/privateKeyStore";
+import { safeFetch } from "@/lib/security/safeFetch";
+
+/** 署名に必ず含まれていなければならないヘッダー */
+const REQUIRED_SIGNED_HEADERS = ["(request-target)", "host", "date", "digest"];
+/** Dateヘッダーの許容誤差 */
+const MAX_DATE_SKEW_MS = 60 * 60 * 1000;
 
 /**
  * HTTP Signatureを生成！📝
@@ -38,7 +43,7 @@ export async function signRequest(url: string, body: any, privateKey: string, ke
     const headerString = `(request-target): post ${parsedUrl.pathname}\nhost: ${headers.Host}\ndate: ${headers.Date}\ndigest: ${headers.Digest}`;
     signer.update(headerString);
 
-    const signature = signer.sign(await decrypt(privateKey), "base64");
+    const signature = signer.sign(decrypt(privateKey), "base64");
     const signatureHeader = `keyId="${keyId}",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="${signature}"`;
     
     return {
@@ -62,22 +67,21 @@ export async function signRequest(url: string, body: any, privateKey: string, ke
  * @returns パース結果（キーID、署名、署名文字列）
  * @throws Error パースエラー
  */
-function parseSignatureHeader(headers: Record<string, string>, method: string, url: string): { keyId: string; signature: string; signingString: string } {
+function parseSignatureHeader(headers: Record<string, string>, method: string, url: string): { keyId: string; signature: string; signingString: string; signedHeaders: string[] } {
   try {
-    const signatureHeader = headers["Signature"] || headers["signature"];
+    const signatureHeader = headers["signature"];
     if (!signatureHeader) {
       throw new Error("Signature header missing");
     }
 
     // Signatureヘッダーをパース（例：keyId="...",algorithm="...",headers="...",signature="..."）
     const params: Record<string, string> = {};
-    signatureHeader.split(",").forEach((part) => {
-      const [key, value] = part.split("=");
-      params[key] = value.replace(/^"(.*)"$/, "$1");
-    });
+    for (const [, key, value] of signatureHeader.matchAll(/(\w+)="([^"]*)"/g)) {
+      params[key] = value;
+    }
 
-    const { keyId, algorithm, headers: signedHeaders, signature } = params;
-    if (!keyId || !algorithm || !signedHeaders || !signature) {
+    const { keyId, algorithm, headers: signedHeaderList, signature } = params;
+    if (!keyId || !algorithm || !signedHeaderList || !signature) {
       throw new Error("Invalid Signature header format");
     }
 
@@ -87,21 +91,21 @@ function parseSignatureHeader(headers: Record<string, string>, method: string, u
 
     // 署名対象の文字列を構築
     const urlObj = new URL(url);
-    const headerValues: string[] = [];
-    signedHeaders.split(" ").forEach((header: string) => {
-      if (header === "(request-target)") {
-        headerValues.push(`(request-target): ${method.toLowerCase()} ${urlObj.pathname}`);
-      } else {
-        const headerValue = headers[header] || headers[header.toLowerCase()];
+    const signedHeaders = signedHeaderList.toLowerCase().split(/\s+/);
+    const signingString = signedHeaders
+      .map((header) => {
+        if (header === "(request-target)") {
+          return `(request-target): ${method.toLowerCase()} ${urlObj.pathname}${urlObj.search}`;
+        }
+        const headerValue = headers[header];
         if (!headerValue) {
           throw new Error(`Missing header: ${header}`);
         }
-        headerValues.push(`${header}: ${headerValue}`);
-      }
-    });
-    const signingString = headerValues.join("\n");
+        return `${header}: ${headerValue}`;
+      })
+      .join("\n");
 
-    return { keyId, signature, signingString };
+    return { keyId, signature, signingString, signedHeaders };
   } catch (err: any) {
     console.error("parseSignatureHeader error:", err.message);
     throw new Error(Errors.SignatureParseFailed);
@@ -110,30 +114,51 @@ function parseSignatureHeader(headers: Record<string, string>, method: string, u
 
 /**
  * HTTP Signatureを検証！🔍
- * 受信したアクティビティの署名をチェックして安全をキラキラ確保！✨
+ * 署名だけでなく、署名が本文・時刻・送信者に結びついていることも確認する。
  * @param req Next.jsのリクエストオブジェクト
- * @param actor 受信者のアクター（appwrite/types.tsのActor）
- * @returns 署名が有効かどうか
- * @throws Error 署名検証エラー
+ * @param rawBody 受信した本文（パース前の文字列）
+ * @param actor アクティビティのactorのID
+ * @returns すべての検証に通れば true
  */
-export async function verifySignature(req: import("next/server").NextRequest, actor: string): Promise<boolean> {
+export async function verifySignature(req: import("next/server").NextRequest, rawBody: string, actor: string): Promise<boolean> {
   try {
-    // リクエストヘッダーを取得
     const headers = Object.fromEntries(req.headers);
+    const { keyId, signature, signingString, signedHeaders } = parseSignatureHeader(headers, req.method || "POST", req.url);
 
-    // Signatureヘッダーをパース
-    const {  signature, signingString } = parseSignatureHeader(headers, req.method || "POST", req.url);
-    //console.log(keyId, signature, signingString);
-    // 公開鍵を取得（actorIdからフェッチ）
-    //console.log("actor",actor);
-    const actorData = await fetch(actor, {
+    // 本文や宛先を署名の対象から外したリクエストは受け付けない
+    if (!REQUIRED_SIGNED_HEADERS.every((header) => signedHeaders.includes(header))) {
+      throw new Error("Required headers are not signed");
+    }
+
+    // 古い署名の使い回しを防ぐ
+    const signedAt = Date.parse(headers["date"]);
+    if (Number.isNaN(signedAt) || Math.abs(Date.now() - signedAt) > MAX_DATE_SKEW_MS) {
+      throw new Error("Date header is out of range");
+    }
+
+    // 署名されたDigestが、実際に受信した本文のものであることを確認する
+    const digest = headers["digest"]?.match(/SHA-256=([^,\s]+)/i)?.[1];
+    if (!digest || digest !== createHash("sha256").update(rawBody).digest("base64")) {
+      throw new Error("Digest mismatch");
+    }
+
+    // actorを取得（内部ネットワーク宛てはsafeFetchが拒否する）
+    const response = await safeFetch(actor, {
       headers: { Accept: 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"' },
-    }).then(res => res.json());
-    //console.log("actorData",actorData);
-    //console.log("actorData",actorData);
+      maxBytes: 1024 * 1024,
+    });
+    if (!response.ok) {
+      throw new Error(Errors.PublicKeyFetchFailed);
+    }
+    const actorData = JSON.parse(response.body.toString("utf-8"));
     const publicKey = actorData.publicKey?.publicKeyPem;
     if (!publicKey) {
       throw new Error(Errors.PublicKeyFetchFailed);
+    }
+
+    // 署名に使われた鍵が、そのactor自身のものであることを確認する
+    if (actorData.id !== actor || actorData.publicKey.owner !== actor || actorData.publicKey.id !== keyId) {
+      throw new Error("Signing key does not belong to actor");
     }
 
     // 署名を検証
@@ -142,6 +167,6 @@ export async function verifySignature(req: import("next/server").NextRequest, ac
     return verifier.verify(publicKey, signature, "base64");
   } catch (err: any) {
     console.error("verifySignature error:", err.message);
-    throw new Error(err.message || Errors.InvalidSignature);
+    return false;
   }
 }

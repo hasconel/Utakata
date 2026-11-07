@@ -4,6 +4,15 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
+import { BlockedUrlError, safeFetch } from "@/lib/security/safeFetch";
+
+const MAX_MEDIA_BYTES = 100 * 1024 * 1024;
+
+/** 自サイトのページとして表示されないよう、返してよい形式はメディアだけに限る（SVGはスクリプトを含めるので不可） */
+function isAllowedMediaType(contentType: string): boolean {
+  const type = contentType.split(";")[0].trim().toLowerCase();
+  return /^(image|video|audio)\//.test(type) && type !== "image/svg+xml";
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,11 +42,12 @@ export async function GET(request: NextRequest) {
         })
 
     }
-    const response = await fetch(imageUrl, {
-      method: "GET",
+    const response = await safeFetch(imageUrl, {
       headers: {
         "User-Agent": "Utakata/1.0",
       },
+      maxBytes: MAX_MEDIA_BYTES,
+      timeoutMs: 30_000,
     });
 
     if (!response.ok) {
@@ -47,14 +57,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const imageBuffer = await response.arrayBuffer();
-    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const contentType = response.contentType;
+    if (!isAllowedMediaType(contentType)) {
+      return NextResponse.json(
+        { error: "対応していない形式だよ！💦" },
+        { status: 415 }
+      );
+    }
 
     // 画像データをそのまま返す
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(new Uint8Array(response.body), {
       status: 200,
       headers: {
         "Content-Type": contentType,
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
@@ -62,6 +79,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof BlockedUrlError) {
+      return NextResponse.json({ error: "このURLは取得できないよ！💦" }, { status: 400 });
+    }
     console.error("画像プロキシエラー:", error);
     return NextResponse.json(
       { error: "画像の取得に失敗したよ！💦" },

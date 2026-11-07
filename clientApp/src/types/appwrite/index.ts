@@ -6,7 +6,6 @@ export interface Actor extends Models.Document {
   preferredUsername: string;
   actorId: string;
   publicKey: string;
-  privateKey: string;
   displayName?: string;
   mutedUsers?: string[];
   avatarUrl?: string;

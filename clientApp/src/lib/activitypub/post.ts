@@ -8,6 +8,7 @@ import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { Query, Role } from "node-appwrite";
 import { createNote, fetchActorInbox, getFollowers } from "@/lib/activitypub/utils";
 import { signRequest } from "@/lib/activitypub/crypto";
+import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { Errors } from "@/lib/activitypub/errors";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Permission } from "node-appwrite";
@@ -234,7 +235,7 @@ export async function deletePostOutbox(postId: string) {
   if(!user){
     throw new Error("公開鍵が見つからないよ！💦");
   }
-  const privateKey = user[0].privateKey;
+  const privateKey = await getEncryptedPrivateKey(user[0].$id);
 
   const activity = {
     type: "Delete",

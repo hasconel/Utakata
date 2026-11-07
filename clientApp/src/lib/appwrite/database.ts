@@ -9,7 +9,7 @@ import { generateKeyPairSync } from "crypto";
 import { Errors } from "../activitypub/errors";
 import {z} from "zod"
 import { cookies } from "next/headers";
-import { createCipheriv, randomBytes, createDecipheriv } from "crypto";
+import { savePrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { Actor } from "@/types/appwrite";
 import { ActivityPubActor } from "@/types/activitypub";
 /**
@@ -23,42 +23,12 @@ import { ActivityPubActor } from "@/types/activitypub";
  * 型安全にドキュメントを検証！✨
  */
 
-const ENCRYPTION_KEY = Buffer.from(process.env.APPWRITE_ENCRYPTION_KEY!, "hex");
-const IV_LENGTH = 16;
-
-/**
- * 暗号化（AES-256-GCM）！🔒
- * 秘密鍵をキラキラ安全に保存！✨
- */
-function encrypt(text: string): string {
-  const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
-  let encrypted = cipher.update(text, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  const authTag = cipher.getAuthTag().toString("hex");
-  return `${iv.toString("hex")}:${encrypted}:${authTag}`;
-}
-
-/**
- * 復号化（AES-256-GCM）！🔒
- * 秘密鍵をキラキラ安全に復号化！✨
- * @param text 暗号化されたテキスト
- * @returns 復号化されたテキスト
- */
-export async function decrypt(text: string): Promise<string> {
-  const [iv, encrypted, authTag] = text.split(":");
-  const decipher = createDecipheriv("aes-256-gcm", ENCRYPTION_KEY, Buffer.from(iv, "hex"));
-  decipher.setAuthTag(Buffer.from(authTag, "hex"));
-  return decipher.update(encrypted, "hex", "utf8") + decipher.final("utf8");
-}
-
 const ActorSchema = z.object({
     $id: z.string(),
     actorId: z.string(),
     preferredUsername: z.string(),
     displayName: z.string().optional(), // 既存データ対応
     followers: z.string().optional(),
-    privateKey: z.string(),
     userId: z.string(),
     mutedUsers: z.array(z.string()).optional(),
     following: z.string().optional(),
@@ -184,8 +154,8 @@ export async function createActor(userId: string, preferredUsername: string, dis
     // セッション作成
     const session = await account.createEmailPasswordSession(email, password);
 
-    // プライベートキー暗号化
-    const encryptPrivateKey = encrypt(privateKey);
+    // 秘密鍵は専用コレクションに保存（actorsコレクションには置かない）
+    await savePrivateKey(userId, privateKey);
 
     // アクター作成
     const actor  = await databases.createDocument(
@@ -196,13 +166,12 @@ export async function createActor(userId: string, preferredUsername: string, dis
         userId: userId,
         preferredUsername,
         displayName: displayName,
-        actorId: `${process.env.APPWRITE_DOMAIN}/users/${userId}`,
-        inbox: `${process.env.APPWRITE_DOMAIN}/users/${userId}/inbox`,
-        outbox: `${process.env.APPWRITE_DOMAIN}/users/${userId}/outbox`,
+        actorId: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}`,
+        inbox: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/inbox`,
+        outbox: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/outbox`,
         publicKey:publicKey,
-        privateKey: encryptPrivateKey,
-        following: `${process.env.APPWRITE_DOMAIN}/users/${userId}/following`,
-        followers: `${process.env.APPWRITE_DOMAIN}/users/${userId}/followers`,
+        following: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/following`,
+        followers: `${process.env.NEXT_PUBLIC_DOMAIN}/users/${userId}/followers`,
         avatarUrl: ``,
         bio: "",
       },

@@ -3,6 +3,7 @@
  * 外部ドメインのActorエンドポイントにキラキラアクセス！💖
  */
 import { NextRequest, NextResponse } from "next/server";
+import { BlockedUrlError, safeFetch } from "@/lib/security/safeFetch";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,12 +18,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 外部ドメインのActorエンドポイントにアクセス
-    const response = await fetch(actorUrl, {
-      method: "GET",
+    const response = await safeFetch(actorUrl, {
       headers: {
         "Accept": "application/activity+json",
         "User-Agent": "Utakata/1.0",
       },
+      maxBytes: 1024 * 1024,
     });
 
     if (!response.ok) {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
+    const data = JSON.parse(response.body.toString("utf-8"));
 
     // CORSヘッダーを設定
     return NextResponse.json(data, {
@@ -43,6 +44,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof BlockedUrlError) {
+      return NextResponse.json({ error: "このURLは取得できないよ！💦" }, { status: 400 });
+    }
     console.error("Actorプロキシエラー:", error);
     return NextResponse.json(
       { error: "Actorの取得に失敗したよ！💦" },
