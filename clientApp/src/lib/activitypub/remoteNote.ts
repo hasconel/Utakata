@@ -2,16 +2,12 @@
  * リモートサーバーから届いたNoteを、このアプリの保存形式に変換する。
  */
 import sanitizeHtml from "sanitize-html";
+import { isPublicAudience } from "@/lib/activitypub/audience";
 
 /** ローカル投稿の上限（PostSchema）に合わせる */
 const MAX_CONTENT_LENGTH = 500;
 const MAX_ATTACHMENTS = 4;
 const MAX_SUMMARY_LENGTH = 200;
-const PUBLIC_COLLECTIONS = [
-  "https://www.w3.org/ns/activitystreams#Public",
-  "as:Public",
-  "Public",
-];
 
 /** to / cc は文字列のことも配列のこともある */
 export function toArray(value: unknown): string[] {
@@ -20,7 +16,7 @@ export function toArray(value: unknown): string[] {
 }
 
 export function isPublicNote(to: string[], cc: string[]): boolean {
-  return [...to, ...cc].some((recipient) => PUBLIC_COLLECTIONS.includes(recipient));
+  return isPublicAudience(to, cc);
 }
 
 function decodeEntities(text: string): string {

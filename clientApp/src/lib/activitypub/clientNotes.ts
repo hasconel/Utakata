@@ -9,6 +9,7 @@ import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverCon
 import { fetchRemoteActorQuick } from "@/lib/activitypub/remoteActor";
 import { isInternalUrl } from "@/lib/utils";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
+import { isPublicAudience } from "@/lib/activitypub/audience";
 
 /** Appwriteの1回の問い合わせで返せる件数と、Query.equal に渡す値の上限 */
 const PAGE_LIMIT = 100;
@@ -164,11 +165,10 @@ export async function toClientNotes(posts: any[], databases: any, viewerUserId: 
   });
 }
 
-const PUBLIC = "https://www.w3.org/ns/activitystreams#Public";
 
 /** 誰でも見てよい投稿か（公開・未収載）。ログインしていない人にはこれだけ返す */
 export function isPublicDocument(post: any): boolean {
-  return [...(post?.to ?? []), ...(post?.cc ?? [])].includes(PUBLIC);
+  return isPublicAudience(post?.to, post?.cc);
 }
 
 /**

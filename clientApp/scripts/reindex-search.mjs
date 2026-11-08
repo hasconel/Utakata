@@ -88,7 +88,7 @@ function toDocument(post) {
     attributedTo: post.attributedTo,
     content: post.content || "",
     publishedAt: Number.isFinite(publishedAt) ? publishedAt : Date.now(),
-    isPublic: Array.isArray(post.to) && post.to.includes(PUBLIC),
+    isPublic: [...(post.to ?? []), ...(post.cc ?? [])].some((r) => [PUBLIC, "as:Public", "Public"].includes(r)),
   };
 }
 

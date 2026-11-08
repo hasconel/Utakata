@@ -14,9 +14,9 @@
  */
 import { MeiliSearch } from "meilisearch";
 import { isInternalUrl } from "@/lib/utils";
+import { isPublicAudience } from "@/lib/activitypub/audience";
 
 export const SEARCH_INDEX = "notes";
-const PUBLIC = "https://www.w3.org/ns/activitystreams#Public";
 
 const host = () => process.env.MEILISEARCH_HOST || process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "";
 
@@ -56,7 +56,7 @@ export function toSearchDocument(post: any): SearchDocument | null {
     attributedTo: post.attributedTo,
     content: post.content || "",
     publishedAt: Number.isFinite(publishedAt) ? publishedAt : Date.now(),
-    isPublic: Array.isArray(post.to) && post.to.includes(PUBLIC),
+    isPublic: isPublicAudience(post.to, post.cc),
   };
 }
 

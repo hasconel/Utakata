@@ -210,7 +210,7 @@ export default function PostDetailCard({
         return [];
       }
     }) || [];
-  const isPublic = isPublicPost(postData.to);
+  const isPublic = isPublicPost(postData.to, postData.cc);
 
   return (
     <div className="flex flex-col">
@@ -229,7 +229,7 @@ export default function PostDetailCard({
           </div>
           <Link href={href} className="flex min-w-0 flex-col hover:underline">
             <span className="truncate font-semibold text-foreground"><EmojiText text={user?.displayName || user?.preferredUsername} emojis={user?.emojis} /></span>
-            <span className="truncate text-sm text-muted-foreground">@{user?.preferredUsername}</span>
+            <span className="truncate text-sm text-muted-foreground">@{actorHandle(user?.id || postData.attributedTo, user?.preferredUsername || "")}</span>
           </Link>
         </header>
 

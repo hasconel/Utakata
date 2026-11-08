@@ -4,7 +4,7 @@
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { Avatar, } from "@/components/ui/Avatar";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { actorHandle, formatDate } from "@/lib/utils";
 import { getShortRelativeTime } from "@/lib/utils/date";
 import { postHref } from "./PostReplies";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
@@ -50,7 +50,7 @@ export default function ReplyToPost({ note: postData }: ReplyToPostProps) {
               <EmojiText text={postData?._user?.displayName || postData?._user?.preferredUsername} emojis={postData?._user?.emojis} />
             </p>
             <p className="truncate text-muted-foreground">
-              @{postData?._user?.preferredUsername}
+              @{actorHandle(postData?._user?.id || "", postData?._user?.preferredUsername || "")}
             </p>
             <time dateTime={postData?.published} title={formatDate(postData?.published)} className="ml-auto shrink-0 text-muted-foreground tabular-nums">
               {getShortRelativeTime(postData?.published)}

@@ -1,3 +1,4 @@
+import { isPublicAudience } from "@/lib/activitypub/audience";
 /**
  * 保存済みのローカル投稿を、外部サーバーへ返すActivityPubの形にする。
  * 配信時（createNote）と同じIDと形にすること。違うと相手側で別の投稿として扱われる。
@@ -48,8 +49,7 @@ export function textToHtml(text: string): string {
 }
 
 export function isPublicPost(post: any): boolean {
-  const recipients = [post?.to, post?.cc].flatMap((value) => (Array.isArray(value) ? value : []));
-  return recipients.includes(PUBLIC_COLLECTION);
+  return isPublicAudience(post?.to, post?.cc);
 }
 
 /** 添付はJSON文字列で保存されているので、オブジェクトに戻す。読めないものは外す。 */

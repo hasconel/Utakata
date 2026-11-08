@@ -1,9 +1,9 @@
 import { Globe } from "lucide-react";
+import { isPublicAudience } from "@/lib/activitypub/audience";
 
-const PUBLIC = "https://www.w3.org/ns/activitystreams#Public";
 
-/** 公開投稿（連合の誰でも見られる）かどうか */
-export const isPublicPost = (to?: string[] | null) => !!to?.includes(PUBLIC);
+/** 公開投稿（連合の誰でも見られる）かどうか。cc に Public があっても公開 */
+export const isPublicPost = (to?: string[] | null, cc?: string[] | null) => isPublicAudience(to, cc);
 
 /**
  * アイコンの右下に付ける、公開投稿のしるし🌐

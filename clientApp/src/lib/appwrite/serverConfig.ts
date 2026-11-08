@@ -3,6 +3,7 @@ import { Client, Account, Databases, Storage, Users, Query, ID, Models } from "n
 import { cookies } from "next/headers";
 import { after } from "next/server";
 import { prepareProfileUpdate } from "../activitypub/profileUpdate";
+import { makeFilesPublic } from "./filePermissions";
 import { removePostFromIndex } from "@/lib/search/meili";
 import { Actor, Post  } from "@/types/appwrite";
 import { signRequest } from "../activitypub/crypto";
@@ -582,6 +583,8 @@ export async function saveProfile(input: {
       session.$id,
       update
     );
+    // アイコンと背景は、ログインしていない人や外のサーバーからも見えるようにする
+    await makeFilesPublic([input.avatarUrl, input.backgroundUrl], session.$id);
     // フォロワーのサーバーにも知らせる。配信は返事のあとに行うので、保存は待たせない
     try {
       const deliver = await prepareProfileUpdate(session.$id);

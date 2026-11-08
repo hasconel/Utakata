@@ -10,6 +10,7 @@ import { savePost, deliverActivity, validatePostInput } from "@/lib/activitypub/
 import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
 import { isPublicDocument, postWindowStart, toClientNotes, viewerClient } from "@/lib/activitypub/clientNotes";
 import { ENV } from "@/lib/api/config";
+import { makeFilesPublic } from "@/lib/appwrite/filePermissions";
 import { Post } from "@/types/appwrite";
 import { Models } from "node-appwrite";
 
@@ -72,6 +73,10 @@ export async function POST(request: Request) {
       images,
       databases
     );
+    // 公開の投稿の画像は、誰でも読めるようにしておく（外のサーバーが取りに来る前に）
+    if (visibility === "public") {
+      await makeFilesPublic(images.map((image) => image.url), user.$id);
+    }
     // ActivityPubで配信
     await deliverActivity(activity, {
       id: user.actorId,

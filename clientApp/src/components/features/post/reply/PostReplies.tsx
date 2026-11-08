@@ -11,7 +11,7 @@ import PostContent from "@/components/features/post/PostContent";
 import { EmojiText } from "@/components/features/post/EmojiText";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
-import { isInternalUrl } from "@/lib/utils";
+import { actorHandle, isInternalUrl } from "@/lib/utils";
 import { formatDate, getShortRelativeTime } from "@/lib/utils/date";
 
 /** 投稿を開くときのリンク先（ローカルの投稿はサイト内のページ） */
@@ -42,7 +42,7 @@ export default function PostReplies({ note }: { note: ActivityPubNoteInClient | 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-baseline gap-1.5 text-sm">
           <span className="truncate font-semibold text-foreground"><EmojiText text={user?.displayName || user?.preferredUsername} emojis={user?.emojis} /></span>
-          <span className="truncate text-muted-foreground">@{user?.preferredUsername}</span>
+          <span className="truncate text-muted-foreground">@{actorHandle(user?.id || "", user?.preferredUsername || "")}</span>
           <time dateTime={note.published} title={formatDate(note.published)} className="ml-auto shrink-0 text-muted-foreground tabular-nums">
             {getShortRelativeTime(note.published)}
           </time>

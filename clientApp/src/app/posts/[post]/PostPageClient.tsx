@@ -6,6 +6,7 @@ import PostForm from "@/components/features/post/form/PostForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { FEED_SURFACE } from "@/components/features/timeline/TimelineContent";
+import { actorHandle } from "@/lib/utils";
 
 /**
  * 投稿のページ🫧
@@ -51,7 +52,7 @@ export default function PostPageClient({ postId }: { postId: string }) {
           <PostForm
             post={{
               activityId: post.id,
-              preferredUsername: post._user?.preferredUsername || "",
+              preferredUsername: actorHandle(post._user?.id || post.attributedTo || "", post._user?.preferredUsername || ""),
               attributedTo: post._user?.id || "",
             }}
             isReplyDisplay={false}

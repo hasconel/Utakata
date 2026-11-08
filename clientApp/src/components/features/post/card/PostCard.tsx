@@ -5,7 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { formatDate, getShortRelativeTime } from "@/lib/utils/date";
 import { MessageCircle, Sparkles } from "lucide-react";
 import { PublicMark, isPublicPost } from "@/components/features/post/PublicMark";
-import { profileHref } from "@/lib/utils";
+import { actorHandle, profileHref } from "@/lib/utils";
 import { POST_WINDOW_HOURS, remainingLife } from "@/lib/postWindow";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
@@ -158,7 +158,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
 
   const user = post._user;
   const href = profileHref(user?.id || post.attributedTo, user?.preferredUsername);
-  const isPublic = isPublicPost(post.to);
+  const isPublic = isPublicPost(post.to, post.cc);
 
   return (
     <>
@@ -184,7 +184,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
               className="flex min-w-0 items-baseline gap-1.5 hover:underline"
             >
               <span className="truncate font-semibold text-foreground"><EmojiText text={user?.displayName || user?.preferredUsername} emojis={user?.emojis} /></span>
-              <span className="truncate text-muted-foreground">@{user?.preferredUsername}</span>
+              <span className="truncate text-muted-foreground">@{actorHandle(user?.id || post.attributedTo, user?.preferredUsername || "")}</span>
             </Link>
             <span className="ml-auto flex shrink-0 items-center gap-1.5 text-muted-foreground">
               <time dateTime={post.published} title={formatDate(post.published)} className="tabular-nums">
@@ -257,7 +257,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         <Modal isOpen={isReplyOpen} onClose={() => setIsReplyOpen(false)} className="max-w-xl">
           <div className="p-4 pt-14">
             <PostForm
-              post={{ activityId: post.id, preferredUsername: user?.preferredUsername || "", attributedTo: user?.id || "", note: post }}
+              post={{ activityId: post.id, preferredUsername: actorHandle(user?.id || post.attributedTo, user?.preferredUsername || ""), attributedTo: user?.id || "", note: post }}
               onClose={() => setIsReplyOpen(false)}
             />
           </div>
