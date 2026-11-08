@@ -69,11 +69,12 @@ export interface ActivityPubNote extends ActivityPubObject {
     first: string,
     last: string,
   } | string,
-  repost?: {
+  /** ブースト（Announce）したアクティビティのコレクション */
+  shares?: {
     totalItems: number,
-    first: string,
-    last: string,
-  } ,
+    first?: string,
+    last?: string,
+  } | string,
 }
 
 /**
@@ -93,6 +94,12 @@ export interface ActivityPubNoteInClient extends ActivityPubNote {
     last: string,
   } ,
   _isLiked: boolean,
+  /** 閲覧者がブースト済みか */
+  _isShared?: boolean,
+  /** タイムラインでブーストとして出すとき、ブーストした人 */
+  _boostedBy?: ActivityPubActor | null,
+  /** ブーストした時刻 */
+  _boostedAt?: string,
   _user: ActivityPubActor,
   _canDelete: boolean,
 }

@@ -17,7 +17,7 @@ import PostReplies from "@/components/features/post/reply/PostReplies";
 import PostContent from "@/components/features/post/PostContent";
 import { EmojiText } from "@/components/features/post/EmojiText";
 import { ContentWarning } from "@/components/features/post/ContentWarning";
-import { LikeButton } from "./PostCard";
+import { LikeButton, ShareButton } from "./PostCard";
 import { fetchActors } from "@/lib/api/actors";
 import { getLikedActivities } from "@/lib/appwrite/serverConfig";
 import { formatDate } from "@/lib/utils/date";
@@ -273,6 +273,12 @@ export default function PostDetailCard({
             <MessageCircle className="h-[18px] w-[18px]" />
             {replies.length > 0 && <span className="tabular-nums">{replies.length}</span>}
           </button>
+          <ShareButton
+            postId={postData.id || ""}
+            isPublic={isPublic}
+            initialShares={postData.shares && typeof postData.shares === "object" ? postData.shares.totalItems : 0}
+            isPostShared={postData._isShared || false}
+          />
           <LikeButton
             postId={postData.id || ""}
             isPostLiked={isLiked}

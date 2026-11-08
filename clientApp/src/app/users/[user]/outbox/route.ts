@@ -1,7 +1,7 @@
 import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from "next/server";
 import { Client, Databases, Query } from "node-appwrite";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
+import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverConfig";
 import { isPublicPost, postToCreate } from "@/lib/activitypub/localNote";
 import { postWindowStart } from "@/lib/activitypub/clientNotes";
 
@@ -27,7 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
   const databases = guestDatabases();
   // URLのユーザー部分はactorsのドキュメントID（ユーザーID）
-  const actor = await databases.getDocument(
+  // actors はゲストでは読めないので管理者で読む（使うのはactorのURLだけ）。投稿はゲストのまま読む
+  const actor = await (await createAdminClient()).databases.getDocument(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_ACTORS_COLLECTION_ID!,
     user

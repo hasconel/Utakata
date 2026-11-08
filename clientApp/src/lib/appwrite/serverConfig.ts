@@ -1,5 +1,5 @@
 "use server";
-import { Client, Account, Databases, Storage, Users, Query, ID, Models } from "node-appwrite";
+import { Client, Account, Databases, Storage, Users, Query, ID, Models, Permission, Role } from "node-appwrite";
 import { cookies } from "next/headers";
 import { after } from "next/server";
 import { prepareProfileUpdate } from "../activitypub/profileUpdate";
@@ -10,6 +10,8 @@ import { signRequest } from "../activitypub/crypto";
 import { getEncryptedPrivateKey } from "../activitypub/privateKeyStore";
 import { fetchActivityDocument, fetchRemoteActor } from "../activitypub/remoteActor";
 import { isInternalUrl } from "../utils";
+import { isPublicAudience, PUBLIC_COLLECTION } from "../activitypub/audience";
+import { postWindowStart } from "../postWindow";
 import { ActivityPubNote, ActivityPubNoteInClient } from "@/types/activitypub";
 
 /**
@@ -104,11 +106,25 @@ export async function createAdminClient() {
 
 
 
+/*
+ * コレクション全体の権限は付けていない（ブラウザやセッションから直接は書けない）。
+ * 共有の記録（follows / actors_sub / likes / shares）は、ログイン中の人をセッションで確かめてから、
+ * 管理者の権限で読み書きする。誰が何をしてよいかは、ここで確かめること。
+ * 自分のものだけを変える処理（プロフィール・ミュート・自分の投稿の削除・通知の既読）は、
+ * ドキュメントごとの「本人だけ」の権限があるので、セッションのままにしている。
+ */
+
+/** 作った本人だけが読める・変えられる・消せる権限（以前セッションで作ったときと同じ） */
+function ownerPermissions(userId: string) {
+  return [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))];
+}
+
 // フォロー
 export async function followUser(userId: string){
   try {
-    const { account, databases } = await createSessionClient();
+    const { account } = await createSessionClient();
     const session = await account.get();
+    const { databases } = await createAdminClient();
     const currentUser: Actor = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_COLLECTION_ID!,
@@ -168,7 +184,8 @@ export async function followUser(userId: string){
         "id": activity.id,
         "actor": currentUser.actorId,
         "object": userId,
-      }
+      },
+      ownerPermissions(session.$id)
     )
     if(!newFollow){
       throw new Error("フォローの作成に失敗したわ！💦");
@@ -183,8 +200,9 @@ export async function followUser(userId: string){
 // フォロー解除
 export async function unfollowUser(activityId: string){
   try {
-    const { account, databases } = await createSessionClient();
+    const { account } = await createSessionClient();
     const session = await account.get();
+    const { databases } = await createAdminClient();
     const currentUser : Actor = await databases.getDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_COLLECTION_ID!,
@@ -200,6 +218,10 @@ export async function unfollowUser(activityId: string){
     );
     if(!follow){
       throw new Error("フォローが見つからないわ！💦");
+    }
+    // 解除できるのは自分のフォローだけ（管理者の権限で消すので、ここで確かめる）
+    if(follow.actor !== currentUser.actorId){
+      throw new Error("自分のフォローじゃないわ！💦");
     }
     const actorInbox = follow.object+"/inbox";
     const activity = {
@@ -425,7 +447,8 @@ export async function likePost(postId: string ,actorInbox: string) {
       "object": postId,
       "published": new Date().toISOString()
     };
-    const newLike = await databases.createDocument(
+    const { databases: adminDatabases } = await createAdminClient();
+    const newLike = await adminDatabases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_LIKES_COLLECTION_ID!,
       ID.unique(),
@@ -433,7 +456,8 @@ export async function likePost(postId: string ,actorInbox: string) {
         "id": activity.id,
         "actor": currentUser.actorId,
         "object": postId,
-      }
+      },
+      ownerPermissions(session.$id)
     )
     if(!newLike){
       throw new Error("ライクの作成に失敗したわ！💦");  
@@ -543,6 +567,151 @@ export async function unlikePost(postId: string, actorInbox: string) {
     return false;
   }
 } 
+
+/**
+ * ブーストする投稿の投稿者と、公開かどうかを調べる。
+ * 画面から受け取った値は使わない（非公開の投稿をブーストして広められないように）。
+ */
+async function shareTarget(databases: Databases, postId: string, signerUserId: string): Promise<{ author: string; isPublic: boolean; published: string } | null> {
+  const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [
+    Query.equal("activityId", postId),
+    Query.limit(1),
+  ]);
+  const post = documents[0] as any;
+  if (typeof post?.attributedTo === "string") {
+    return { author: post.attributedTo, isPublic: isPublicAudience(post.to, post.cc), published: post.published || post.$createdAt };
+  }
+  // 保存していない投稿（外部のユーザーのページから見たもの）は、投稿そのものを読んで調べる
+  if (isInternalUrl(postId)) return null;
+  const response = await fetchActivityDocument(postId, { signer: signerUserId, timeoutMs: 5_000 }).catch(() => null);
+  const note = response?.ok ? JSON.parse(response.body.toString("utf-8")) : null;
+  const author = typeof note?.attributedTo === "string" ? note.attributedTo : note?.attributedTo?.id;
+  // 投稿と投稿者が同じサーバーのときだけ信用する
+  if (note?.id !== postId || typeof author !== "string" || new URL(author).origin !== new URL(postId).origin) return null;
+  return { author, isPublic: isPublicAudience(note.to, note.cc), published: typeof note.published === "string" ? note.published : "" };
+}
+
+/** ブーストを届ける先。投稿者と自分のフォロワー（Mastodonと同じ宛先） */
+function shareAudience(actorId: string, author: string) {
+  return {
+    to: [PUBLIC_COLLECTION],
+    cc: [...new Set([author, `${actorId}/followers`])],
+  };
+}
+
+/** ブーストやその取り消しを、裏で配信する（フォロワーが多いと時間がかかるので、ボタンは待たせない） */
+async function deliverInBackground(activity: any, actor: Actor) {
+  const { deliverActivity } = await import("../activitypub/post");
+  const privateKey = await getEncryptedPrivateKey(actor.$id);
+  after(() =>
+    deliverActivity(activity, { id: actor.actorId, privateKey, followers: `${actor.actorId}/followers` })
+      .catch((e) => console.error("ブーストの配信に失敗したわ！💦", e?.message))
+  );
+}
+
+/**
+ * ブースト（リノート）する。
+ * @param postId ブーストする投稿のactivityId
+ * @returns ブースト成功かどうか（すでにブースト済みなら成功として扱う）
+ */
+export async function sharePost(postId: string) {
+  try {
+    const sharesCollection = process.env.APPWRITE_SHARES_COLLECTION_ID;
+    if (!sharesCollection) throw new Error("APPWRITE_SHARES_COLLECTION_ID が設定されていないわ！💦");
+    const { account } = await createSessionClient();
+    const session = await account.get();
+    const { databases } = await createAdminClient();
+    const currentUser: Actor = await databases.getDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+      session.$id
+    );
+    const target = await shareTarget(databases, postId, session.$id);
+    if (!target) throw new Error("ブーストする投稿が見つからないわ！💦");
+    if (!target.isPublic) throw new Error("公開の投稿しかブーストできないわ！💦");
+    // 表示期間（84時間）を過ぎた投稿はブーストしない（古い投稿を掘り返さない）
+    if (!(Date.parse(target.published) >= Date.parse(postWindowStart()))) throw new Error("古い投稿はブーストできないわ！💦");
+
+    const { total: alreadyShared } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, sharesCollection, [
+      Query.equal("actor", currentUser.actorId),
+      Query.equal("object", postId),
+      Query.limit(1),
+    ]);
+    if (alreadyShared > 0) return true;
+
+    const activity = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      type: "Announce",
+      id: `${currentUser.actorId}/announces/${ID.unique()}`,
+      actor: currentUser.actorId,
+      object: postId,
+      published: new Date().toISOString(),
+      ...shareAudience(currentUser.actorId, target.author),
+    };
+    // 先に保存しておく（このサーバーの投稿者のinboxに届いたとき、二重に数えないように）
+    await databases.createDocument(process.env.APPWRITE_DATABASE_ID!, sharesCollection, ID.unique(), {
+      id: activity.id,
+      actor: currentUser.actorId,
+      object: postId,
+    }, ownerPermissions(session.$id));
+    await deliverInBackground(activity, currentUser);
+    return true;
+  } catch (error) {
+    console.error("ブーストに失敗したわ！💦", error);
+    return false;
+  }
+}
+
+/**
+ * ブーストを取り消す。
+ * @param postId 取り消す投稿のactivityId
+ * @returns 取り消し成功かどうか
+ */
+export async function unsharePost(postId: string) {
+  try {
+    const sharesCollection = process.env.APPWRITE_SHARES_COLLECTION_ID;
+    if (!sharesCollection) throw new Error("APPWRITE_SHARES_COLLECTION_ID が設定されていないわ！💦");
+    const { account } = await createSessionClient();
+    const session = await account.get();
+    const { databases } = await createAdminClient();
+    const currentUser: Actor = await databases.getDocument(
+      process.env.APPWRITE_DATABASE_ID!,
+      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
+      session.$id
+    );
+    const { documents: shares } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, sharesCollection, [
+      Query.equal("actor", currentUser.actorId),
+      Query.equal("object", postId),
+    ]);
+    if (shares.length === 0) return true;
+    // 投稿が消えていて投稿者がわからないときも、取り消しはフォロワーにだけは届ける
+    const target = await shareTarget(databases, postId, session.$id).catch(() => null);
+    for (const share of shares) {
+      const audience = shareAudience(currentUser.actorId, target?.author ?? `${currentUser.actorId}/followers`);
+      const activity = {
+        "@context": "https://www.w3.org/ns/activitystreams",
+        type: "Undo",
+        id: `${share.id}#undo`,
+        actor: currentUser.actorId,
+        object: {
+          type: "Announce",
+          id: share.id,
+          actor: share.actor,
+          object: share.object,
+          ...audience,
+        },
+        published: new Date().toISOString(),
+        ...audience,
+      };
+      await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, sharesCollection, share.$id);
+      await deliverInBackground(activity, currentUser);
+    }
+    return true;
+  } catch (error) {
+    console.error("ブーストの取り消しに失敗したわ！💦", error);
+    return false;
+  }
+}
 
 /**
  * プロフィールを保存する。
@@ -656,6 +825,21 @@ export async function readNotification(notificationId: string) {
 }
 
 /**
+ * 投稿がブーストされた回数。shares コレクションがまだ無いときは0。
+ * @param noteId 投稿のactivityId
+ */
+async function countShares(databases: Databases, noteId: string): Promise<number> {
+  const sharesCollection = process.env.APPWRITE_SHARES_COLLECTION_ID;
+  if (!sharesCollection || !noteId) return 0;
+  const { total } = await databases.listDocuments(
+    process.env.APPWRITE_DATABASE_ID!,
+    sharesCollection,
+    [Query.equal("object", noteId), Query.limit(1)]
+  ).catch(() => ({ total: 0 }));
+  return total;
+}
+
+/**
  * 投稿を生のActivityPubNoteで取得！✨
  * @param postId 投稿の$id
  * @param databases データベース
@@ -696,10 +880,8 @@ async function getPost(postId: string, databases: Databases) : Promise<ActivityP
         first: document.id + "/likes?page=1",
         last: document.id + "/likes?page=" + Math.ceil(likeCount / 20),
       },
-      repost: {
-        totalItems: document.repost?.totalItems || 0,
-        first: document.id + "/repost?page=1",
-        last: document.id + "/repost?page=" + Math.ceil(document.repost?.totalItems / 20),
+      shares: {
+        totalItems: await countShares(databases, document.activityId),
       },
     }   
     return note;
@@ -818,7 +1000,8 @@ export async function getInternalPostWithActor(postId: string) : Promise<Activit
 }
 
 export async function getLikedActivities(postId: string) {
-  const { databases } = await createSessionClient();
+  // いいねした人は誰でも見られる情報（いいねのドキュメントは本人しか読めないので、管理者で読む）
+  const { databases } = await createAdminClient();
   //console.log("postId",postId);
   const { documents } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,

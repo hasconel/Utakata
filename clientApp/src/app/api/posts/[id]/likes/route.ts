@@ -3,7 +3,7 @@
 
 import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
+import { createAdminClient } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +25,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: "Configuration error" }, { status: 500 });
         }
         
-        const { databases } = await createSessionClient();
+        // いいねは公開の情報。外のサーバー（ログインなし）から呼ばれるので管理者で読む
+        const { databases } = await createAdminClient();
         
         // いいねデータを取得
         const likes = await databases.listDocuments(

@@ -1,7 +1,8 @@
 import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { postToNote } from "@/lib/activitypub/localNote";
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
+import { Query } from "node-appwrite";
+import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverConfig";
 import { deletePostOutbox } from "@/lib/activitypub/post";
 import { Post as AppwritePost} from "@/types/appwrite";
 /**
@@ -50,9 +51,20 @@ export async function GET(
 
       // ここで投稿データをActivityPubのNote形式に変換するよ！💖
       // 配信時やoutboxと同じ形で返す
+      const note = postToNote({ ...post, activityId: post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`, attributedTo: post.attributedTo || post.username });
+      // ブースト数。Mastodonなどは shares.totalItems を読んで件数を表示する
+      const sharesCollection = process.env.APPWRITE_SHARES_COLLECTION_ID;
+      const shareCount = sharesCollection
+        ? await (await createAdminClient()).databases.listDocuments(
+            process.env.APPWRITE_DATABASE_ID!,
+            sharesCollection,
+            [Query.equal("object", note.id), Query.limit(1)]
+          ).then(({ total }) => total).catch(() => null)
+        : null;
       const postData = {
         "@context": ["https://www.w3.org/ns/activitystreams"],
-        ...postToNote({ ...post, activityId: post.activityId || `${process.env.NEXT_PUBLIC_DOMAIN}/posts/${id}`, attributedTo: post.attributedTo || post.username }),
+        ...note,
+        ...(shareCount !== null ? { shares: { id: `${note.id}#shares`, type: "Collection", totalItems: shareCount } } : {}),
       };
 
       return NextResponse.json(postData, {

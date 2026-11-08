@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionClient } from "../../../../lib/appwrite/serverConfig";
+import { createAdminClient } from "../../../../lib/appwrite/serverConfig";
 import { Actor } from "../../../../types/appwrite";
 import { Query } from "node-appwrite";
 
@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
   // ホスト名だけで比べる（NEXT_PUBLIC_DOMAINは開発環境だけポート指定がある）
   if (host.toLowerCase() !== new URL(process.env.NEXT_PUBLIC_DOMAIN!).hostname) return notFound();
   try {
-    const { databases } = await createSessionClient(request);
+    // 外のサーバー（ログインなし）から呼ばれる。actors はゲストでは読めないので管理者で読む（返すのはactorのURLだけ）
+    const { databases } = await createAdminClient();
     const { documents: [actorData] }: { documents: Actor[] } = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_COLLECTION_ID!,

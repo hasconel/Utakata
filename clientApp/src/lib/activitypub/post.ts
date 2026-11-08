@@ -241,11 +241,17 @@ export async function deliverActivity(
  * @returns 削除の結果
  */
 export async function deletePostOutbox(postId: string) {
-  const { databases } = await createSessionClient();
+  const { databases, account } = await createSessionClient();
+  const session = await account.get();
   const {documents: post} = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [Query.equal("activityId", postId)]);
   const {documents: postsub} = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!, [Query.equal("activityId", postId)]);
-  if(!post){
+  if(post.length === 0){
     throw new Error("投稿が見つからないよ！💦");
+  }
+  // 消せるのは自分の投稿だけ。Delete は投稿者の鍵で署名して配信するので、配信する前に確かめる
+  // （以前はドキュメントの削除権限に任せていたので、他人の投稿でも Delete だけは配信されてしまっていた）
+  if(post[0].attributedTo !== `${process.env.NEXT_PUBLIC_DOMAIN}/users/${session.$id}`){
+    throw new Error("自分の投稿じゃないよ！💦");
   }
   const actor = await getActorById(post[0].attributedTo);
   if(!actor){

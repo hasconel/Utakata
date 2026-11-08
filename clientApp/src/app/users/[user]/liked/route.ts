@@ -3,7 +3,7 @@
 
 import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from "next/server";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
+import { createAdminClient } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
@@ -13,7 +13,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const url = new URL(request.url);
     const page = url.searchParams.get("page") || "1";
     const { user } = await params;
-    const { databases } = await createSessionClient();
+    // 外のサーバー（ログインなし）から呼ばれるので管理者で読む（いいねは公開の情報）
+    const { databases } = await createAdminClient();
     const likes = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_LIKES_COLLECTION_ID!, [Query.equal("actor", process.env.NEXT_PUBLIC_DOMAIN + "/users/" + user), Query.offset((parseInt(page) - 1) * 10), Query.limit(10)]);
     const orderedCollectionPage = {
         "@context": "https://www.w3.org/ns/activitystreams",

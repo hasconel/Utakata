@@ -69,7 +69,8 @@ export async function getPreferredUsernameByUserId(userId: string): Promise<stri
  */
   export async function getActorByUserId(userId: string): Promise<ActivityPubActor | null> {
     try {
-        const {databases} = await createSessionClient();
+        // 返すのは外のサーバーにも見せる公開の項目だけ。外のサーバー（ログインなし）からも呼ばれるので管理者で読む
+        const {databases} = await createAdminClient();
       // actorsコレクションからuserIdで検索
       const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, [
         Query.equal("userId", userId),
@@ -134,7 +135,8 @@ export async function getPreferredUsernameByUserId(userId: string): Promise<stri
  * @throws Error データベースエラー
  */
 export async function getActorById(actorId: string): Promise<ActivityPubActor | null> {
-  const {databases} = await createSessionClient();
+  // getActorByUserId と同じく、公開の項目だけを返すので管理者で読む
+  const {databases} = await createAdminClient();
   const {documents} = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_ACTORS_COLLECTION_ID!,

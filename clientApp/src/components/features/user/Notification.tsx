@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, Sparkles, UserPlus } from "lucide-react";
+import { MessageCircle, Repeat2, Sparkles, UserPlus } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import PostContent from "@/components/features/post/PostContent";
 import { EmojiText } from "@/components/features/post/EmojiText";
@@ -30,6 +30,7 @@ const KINDS: Record<string, { icon: typeof Sparkles; label: string; className: s
   Like: { icon: Sparkles, label: "いいね", className: "bg-primary text-primary-foreground" },
   Reply: { icon: MessageCircle, label: "リプライ", className: "bg-secondary text-accent-foreground" },
   Follow: { icon: UserPlus, label: "フォロー", className: "bg-success text-white" },
+  Announce: { icon: Repeat2, label: "ブースト", className: "bg-accent text-accent-foreground" },
 };
 
 /**

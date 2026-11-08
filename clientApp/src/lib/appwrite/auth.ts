@@ -107,10 +107,11 @@ export async function deleteAccount(): Promise<ActionResult> {
       }
     }
     await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_COLLECTION_ID!, targetActor.$id);
-    await databases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!, targetActor.$id);
+    // actors_sub はドキュメントごとの権限を使わないコレクションなので、管理者の権限で消す（消すのはログイン中の本人の分だけ）
+    const { users, databases: adminDatabases } = await createAdminClient();
+    await adminDatabases.deleteDocument(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!, targetActor.$id);
     await deletePrivateKey(targetUser);
     await account.deleteSession("current");
-    const { users } = await createAdminClient();
     await users.delete(targetUser);
     await clearSessionCookie();
     return { ok: true };

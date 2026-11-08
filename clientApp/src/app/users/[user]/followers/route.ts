@@ -1,6 +1,6 @@
 import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import {NextRequest, NextResponse } from "next/server";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
+import { createAdminClient } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ user: string }> }) {
@@ -24,7 +24,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!username) {
     return NextResponse.json({ error: "Username parameter is required" }, { status: 400 });
   }
-  const { databases } = await createSessionClient();
+  // 外のサーバー（ログインなし）から呼ばれる。配信のときに自分のフォロワーを調べるのにも使う。
+  // follows / actors_sub はセッションでは読めないので管理者で読む（返すのは公開のフォロー関係だけ）
+  const { databases } = await createAdminClient();
   const { documents: actorSubList } = await databases.listDocuments(
     process.env.APPWRITE_DATABASE_ID!,
     process.env.APPWRITE_ACTORS_SUB_COLLECTION_ID!,

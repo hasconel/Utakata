@@ -1,6 +1,6 @@
 /**
  * 保存済みの投稿を、画面で使う形（ActivityPubNoteInClient）にまとめて変換する。
- * 投稿者といいねは、投稿の件数に関係なくまとめて問い合わせる（1件ずつ問い合わせると遅い）。
+ * 投稿者・いいね・ブーストは、投稿の件数に関係なくまとめて問い合わせる（1件ずつ問い合わせると遅い）。
  *
  * サーバー専用。"use server" を付けないこと（外部から呼べる関数として公開されてしまう）。
  */
@@ -18,6 +18,8 @@ const env = () => ({
   db: process.env.APPWRITE_DATABASE_ID!,
   actors: process.env.APPWRITE_ACTORS_COLLECTION_ID!,
   likes: process.env.APPWRITE_LIKES_COLLECTION_ID!,
+  /** まだ作っていないときは空（ブースト数は0として扱う） */
+  shares: process.env.APPWRITE_SHARES_COLLECTION_ID || "",
 });
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -105,17 +107,21 @@ export async function resolveActors(
   return actors;
 }
 
-/** 投稿ごとのいいね数と、閲覧者がいいね済みかをまとめて数える */
-async function countLikes(activityIds: string[], databases: any, viewerActorId: string) {
-  const counts = new Map<string, { total: number; liked: boolean }>();
-  for (const id of activityIds) counts.set(id, { total: 0, liked: false });
+/**
+ * 投稿ごとの件数と、閲覧者が押したかをまとめて数える（いいね・ブーストで共通）
+ * @param collectionId likes か shares（どちらも actor / object を持つ）
+ */
+async function countReactions(collectionId: string, activityIds: string[], databases: any, viewerActorId: string) {
+  const counts = new Map<string, { total: number; mine: boolean }>();
+  for (const id of activityIds) counts.set(id, { total: 0, mine: false });
+  if (!collectionId) return counts;
   for (const ids of chunk([...new Set(activityIds)], PAGE_LIMIT)) {
-    const likes = await listAll(databases, env().likes, [Query.equal("object", ids)]);
-    for (const like of likes) {
-      const count = counts.get(like.object);
+    const reactions = await listAll(databases, collectionId, [Query.equal("object", ids)]);
+    for (const reaction of reactions) {
+      const count = counts.get(reaction.object);
       if (!count) continue;
       count.total++;
-      if (like.actor === viewerActorId) count.liked = true;
+      if (reaction.actor === viewerActorId) count.mine = true;
     }
   }
   return counts;
@@ -128,12 +134,18 @@ async function countLikes(activityIds: string[], databases: any, viewerActorId: 
 export async function toClientNotes(posts: any[], databases: any, viewerUserId: string): Promise<ActivityPubNoteInClient[]> {
   if (posts.length === 0) return [];
   const viewerActorId = `${process.env.NEXT_PUBLIC_DOMAIN}/users/${viewerUserId}`;
-  const [actors, likes] = await Promise.all([
+  const activityIds = posts.map((post) => post.activityId).filter(Boolean);
+  // いいね・ブーストのドキュメントは本人しか読めない権限なので、数えるのは管理者で（件数は誰でも見てよい情報）
+  const { databases: adminDatabases } = await createAdminClient();
+  const [actors, likes, shares] = await Promise.all([
     resolveActors(posts.map((post) => post.attributedTo), databases, viewerUserId),
-    countLikes(posts.map((post) => post.activityId).filter(Boolean), databases, viewerActorId),
+    countReactions(env().likes, activityIds, adminDatabases, viewerActorId),
+    // shares を読めなくても（作る前など）、投稿は表示する
+    countReactions(env().shares, activityIds, adminDatabases, viewerActorId).catch(() => new Map<string, { total: number; mine: boolean }>()),
   ]);
   return posts.map((post) => {
-    const like = likes.get(post.activityId) ?? { total: 0, liked: false };
+    const like = likes.get(post.activityId) ?? { total: 0, mine: false };
+    const share = shares.get(post.activityId) ?? { total: 0, mine: false };
     return {
       "@context": ["https://www.w3.org/ns/activitystreams"],
       type: "Note",
@@ -158,7 +170,9 @@ export async function toClientNotes(posts: any[], databases: any, viewerUserId: 
         first: post.activityId + "/replies?page=1",
         last: post.activityId + "/replies?page=0",
       },
-      _isLiked: like.liked,
+      shares: { totalItems: share.total },
+      _isLiked: like.mine,
+      _isShared: share.mine,
       _user: actors.get(post.attributedTo) ?? null,
       _canDelete: post.attributedTo === viewerActorId,
     } as ActivityPubNoteInClient;
