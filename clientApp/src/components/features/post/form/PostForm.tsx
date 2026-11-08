@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReplyToPost from "../reply/ReplyToPost";
 import { Textarea } from "@/components/ui/Textarea";
-import { ImagePlus, X, Loader2, Globe, Lock, SendHorizontal } from "lucide-react";
+import { ImagePlus, X, Loader2, Globe, Lock, SendHorizontal, Captions } from "lucide-react";
 
 const MAX_LENGTH = 500;
 import { ActivityPubImage } from "@/types/activitypub/collections";
+import { compressImage, UPLOAD_LIMIT_BYTES } from "@/lib/media/compress";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 
 /**
@@ -34,6 +35,24 @@ type FileType = "image" | "video" | "audio" | "unknown";
 interface PreviewUrl {
   url: string;
   type: FileType;
+  /** 画像の説明文（他のサーバーでは alt として使われる） */
+  alt: string;
+}
+
+const ALT_MAX = 1500;
+const VISIBILITY_KEY = "utakata:post-visibility";
+
+/** 画像の縦横の大きさ（タイムラインで元の形のまま表示するため） */
+async function imageSize(file: File): Promise<{ width: number; height: number }> {
+  if (!file.type.startsWith("image/")) return { width: 0, height: 0 };
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return { width: 0, height: 0 };
+  }
 }
 
 /**
@@ -46,6 +65,15 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
   const [content, setContent] = useState(post ? `@${post.preferredUsername} ` : "");
   // 公開範囲の状態！✨
   const [visibility, setVisibility] = useState<"public" | "followers">("followers");
+  // 説明文を書いている画像の番号
+  const [editingAlt, setEditingAlt] = useState<number | null>(null);
+  // 前回選んだ公開範囲を覚えておく
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VISIBILITY_KEY);
+      if (saved === "public" || saved === "followers") setVisibility(saved);
+    } catch {}
+  }, []);
   // エラーメッセージの状態！✨
   const [error, setError] = useState<string | null>(null);
   // リプライ先の投稿の状態！✨
@@ -91,12 +119,12 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // ファイルサイズチェック（10MB制限）
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const oversizedFiles = files.filter(file => file.size > maxSize);
-    
-    if (oversizedFiles.length > 0) {
-      setError("ファイルサイズが大きすぎます！10MB以下にしてください💦");
+    // 大きさのチェック：写真は送る前に縮めるので20MBまで、動画・音声は縮められないので3MBまで
+    const tooLarge = files.find((file) =>
+      file.type.startsWith("image/") && file.type !== "image/gif" ? file.size > 20 * 1024 * 1024 : file.size > UPLOAD_LIMIT_BYTES
+    );
+    if (tooLarge) {
+      setError(tooLarge.type.startsWith("image/") ? "画像は20MBまでだよ💦" : "動画・音声・GIFは3MBまでだよ💦");
       return;
     }
 
@@ -116,7 +144,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
     
     const urls: PreviewUrl[] = validFiles.map(file => {
       const url = URL.createObjectURL(file);
-      return { url, type: getFileType(file) };
+      return { url, type: getFileType(file), alt: "" };
     });
     
     setPreviewUrls(urls);
@@ -132,6 +160,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
     setImages(prev => prev.filter((_, i) => i !== index));
     URL.revokeObjectURL(previewUrls[index].url);
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    setEditingAlt(null);
   }, [previewUrls]);
 
   /**
@@ -149,8 +178,13 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
    * @param image - アップロードする画像ファイル
    * @returns アップロードされた画像情報
    */
-  const uploadImage = async (image: File ,visibility: "public" | "followers"): Promise<ActivityPubImage> => {
-    const base64ImageString = await fileToBase64(image);
+  const uploadImage = async (original: File, visibility: "public" | "followers", alt: string): Promise<ActivityPubImage> => {
+    // 写真は送る前に縮める（速くなるし、大きな写真でも送れる）
+    const image = await compressImage(original);
+    if (image.size > UPLOAD_LIMIT_BYTES) {
+      throw new Error(image.type.startsWith("image/") ? "画像が大きすぎるわ💦" : "動画・音声は3MBまでだよ💦");
+    }
+    const [base64ImageString, size] = await Promise.all([fileToBase64(image), imageSize(image)]);
     //console.log("visibility", visibility);
     const response = await fetch("/api/files", {
       method: "POST",
@@ -177,9 +211,9 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
       type: uploadedFile.type,
       mediaType: uploadedFile.mediaType,
       url: uploadedFile.url,
-      name: uploadedFile.name,
-      width: uploadedFile.width,
-      height: uploadedFile.height,
+      name: alt.trim().slice(0, ALT_MAX),
+      width: size.width,
+      height: size.height,
       blurhash: uploadedFile.blurhash,
     };
   };
@@ -204,7 +238,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
     try {
       // 画像をアップロードするよ！✨
       const imageData = images.length > 0 
-        ? await Promise.all(images.map(image => uploadImage(image, visibility)))
+        ? await Promise.all(images.map((image, i) => uploadImage(image, visibility, previewUrls[i]?.alt ?? "")))
         : [];
 
       // 投稿を送信するよ！✨
@@ -229,6 +263,7 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
       setContent(isReply ? `@${post.preferredUsername} ` : "");
       setImages([]);
       setPreviewUrls([]);
+      setEditingAlt(null);
       setError(null);
 
       if (isReply && onClose) {
@@ -250,7 +285,13 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
    * 公開範囲を切り替える関数！✨
    */
   const toggleVisibility = useCallback(() => {
-    setVisibility(prev => prev === "public" ? "followers" : "public");
+    setVisibility((prev) => {
+      const next = prev === "public" ? "followers" : "public";
+      try {
+        localStorage.setItem(VISIBILITY_KEY, next);
+      } catch {}
+      return next;
+    });
   }, []);
 
   /**
@@ -304,6 +345,40 @@ export default function PostForm({ post, onClose, isReplyDisplay = true ,refresh
               {url.type === "image" && <img src={url.url} alt="" className="h-36 w-full object-cover" />}
               {url.type === "video" && <video src={url.url} className="h-36 w-full object-cover" controls />}
               {url.type === "audio" && <audio src={url.url} className="w-full p-2" controls />}
+              {url.type === "image" && (
+                <button
+                  type="button"
+                  onClick={() => setEditingAlt(editingAlt === index ? null : index)}
+                  className={`absolute left-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors ${
+                    url.alt ? "bg-primary" : "bg-black/55 hover:bg-black/75"
+                  }`}
+                  aria-label={url.alt ? "画像の説明を直す" : "画像の説明を書く"}
+                  aria-pressed={editingAlt === index}
+                  title="説明"
+                >
+                  <Captions className="h-4 w-4" />
+                </button>
+              )}
+              {editingAlt === index && (
+                <textarea
+                  autoFocus
+                  value={url.alt}
+                  maxLength={ALT_MAX}
+                  onChange={(e) => {
+                    const alt = e.target.value;
+                    setPreviewUrls((prev) => prev.map((p, i) => (i === index ? { ...p, alt } : p)));
+                  }}
+                  onKeyDown={(e) => {
+                    // Esc は説明文を閉じるだけ（モーダルは閉じない）
+                    if (e.key !== "Escape") return;
+                    e.stopPropagation();
+                    setEditingAlt(null);
+                  }}
+                  aria-label="画像の説明"
+                  rows={3}
+                  className="absolute inset-x-1.5 bottom-1.5 resize-none rounded-lg bg-black/70 p-2 text-xs text-white backdrop-blur-sm placeholder:text-white/60 focus:outline-none"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => handleRemoveImage(index)}

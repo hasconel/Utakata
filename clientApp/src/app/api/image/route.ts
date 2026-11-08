@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { BlockedUrlError, safeFetch } from "@/lib/security/safeFetch";
+import { rangeResponse } from "@/lib/media/range";
 
 const MAX_MEDIA_BYTES = 100 * 1024 * 1024;
 
@@ -73,18 +74,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 画像データをそのまま返す
-    return new NextResponse(new Uint8Array(response.body), {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "X-Content-Type-Options": "nosniff",
-        "Content-Security-Policy": "default-src 'none'; sandbox",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Cache-Control": "public, max-age=3600", // 1時間キャッシュ
-      },
+    // そのまま返す。外部の画像は変わらないことが多いので、CDN に1週間覚えてもらう（同じ画像で関数を動かさない）
+    // 動画のために Range（一部だけ）にも応える
+    return rangeResponse(new Uint8Array(response.body), request, {
+      "Content-Type": contentType,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400",
     });
   } catch (error) {
     if (error instanceof BlockedUrlError) {

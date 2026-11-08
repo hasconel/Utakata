@@ -50,7 +50,6 @@ export default function BroadcasterPage() {
   useEffect(() => {
     if(!user){
       if(!isLoading){
-        console.log('user not found');
         router.push('/login');
       }
       return ;
@@ -58,9 +57,7 @@ export default function BroadcasterPage() {
     // Socket.io接続
     const signalingUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL ;
     socketRef.current = io(signalingUrl!);
-    console.log('signalingUrl',signalingUrl);
     socketRef.current.on('connect', async () => {
-      console.log('Connected to signaling server');
       setIsConnected(true);
       // 既存のbroadcasterをチェック（本人確認用のトークンを添えて参加する）
       try {
@@ -75,19 +72,16 @@ export default function BroadcasterPage() {
     
 
     socketRef.current.on('broadcaster-confirmed', () => {
-      console.log('Broadcaster role confirmed');
       setIsBroadcasterActive(true);
       setError(null);
     });
 
     socketRef.current.on('rejected-password', (reason: string) => {
-      console.log('Rejected password:', reason);
       setError(`管理者パスワードが間違っています: ${reason}`);
       setIsBroadcasterActive(false);
     });
 
     socketRef.current.on('broadcaster-rejected', (reason: string) => {
-      console.log('Broadcaster role rejected:', reason);
       setError(`配信者として接続できません: ${reason}`);
       stopStreaming();
       socketRef.current?.disconnect();
@@ -96,19 +90,16 @@ export default function BroadcasterPage() {
     });
 
     socketRef.current.on('broadcaster-exists', (userId: string) => {
-      console.log('Another broadcaster already exists');
       setIsBroadcasterActive(false);
       fetchBroadcaster(userId);
        });
 
     socketRef.current.on('new-listener', (listenerId: string) => {
-      console.log('New listener:', listenerId);
       setListenerCount(prev => prev + 1);
       createPeerConnection(listenerId);
     });
 
     socketRef.current.on('listener-disconnected', (listenerId: string) => {
-      console.log('Listener disconnected:', listenerId);
       setListenerCount(prev => prev - 1);
       peerConnectionsRef.current.delete(listenerId);
     });
@@ -191,7 +182,6 @@ export default function BroadcasterPage() {
       setIsStreaming(true);
       setError(null);
       
-      console.log('Streaming started');
     } catch (err) {
       console.error('Error accessing microphone:', err);
       setError('Failed to access microphone. Please check permissions.');
@@ -216,7 +206,7 @@ export default function BroadcasterPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -230,13 +220,13 @@ export default function BroadcasterPage() {
   if(user && !isLoading && isConnected){
     return (
       <div className="flex items-center  min-h-screen flex-col">
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800 dark:text-pink-500">ラジオ配信<span className="text-transparent bg-clip-text bg-purple-500 dark:bg-pink-500">✨️</span></h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-foreground">ラジオ配信<span className="text-transparent bg-clip-text bg-primary">✨️</span></h1>
 
 {isBroadcasterActive && 
 <div className="flex items-center p-4 rounded-lg">
               {isStreaming ? 
             <button onClick={stopStreaming}>
-              <ToggleRight className="w-10 h-10 text-green-500" /> 
+              <ToggleRight className="w-10 h-10 text-success" /> 
               </button> : 
               <button onClick={startStreaming}>
                 <ToggleLeft className="w-10 h-10 text-orange-500" /> 
@@ -251,12 +241,12 @@ export default function BroadcasterPage() {
 }
 
                 {error && (
-                  <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                  <div className="p-4 bg-destructive/10 border border-destructive/40 text-destructive rounded-lg">
                     {error}
 
                   </div>
                 )}
-                {broadcaster && (                         <div className="flex gap-4 flex-col"> <div className="flex items-center gap-2 p-2 min-w-64 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500/50">
+                {broadcaster && (                         <div className="flex gap-4 flex-col"> <div className="flex items-center gap-2 p-2 min-w-64 rounded-lg hover:bg-secondary/50">
              
              <Avatar
                src={broadcaster.icon?.url || ""}
@@ -266,8 +256,8 @@ export default function BroadcasterPage() {
                variant="outline"
              />
              <div className="flex flex-col">
-               <span className="text-gray-900 dark:text-gray-100">{broadcaster.displayName}</span>
-               <span className="text-gray-500 dark:text-gray-400">@{broadcaster.preferredUsername}</span>
+               <span className="text-foreground">{broadcaster.displayName}</span>
+               <span className="text-muted-foreground">@{broadcaster.preferredUsername}</span>
              </div>
          </div>
 
@@ -275,8 +265,8 @@ export default function BroadcasterPage() {
               
          <div className="flex gap-4">
                   <form onSubmit={handleKillBroadcaster} className="flex gap-2 justify-between">
-                    <textarea id="password" className="w-full p-2 border border-gray-300 rounded-lg" placeholder="管理者パスワード" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    <button className="bg-red-500 text-white p-2 rounded-lg" type="submit">配信者切断</button>
+                    <textarea id="password" className="w-full p-2 border border-border rounded-lg" placeholder="管理者パスワード" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <button className="bg-destructive text-white p-2 rounded-lg" type="submit">配信者切断</button>
                   </form>
                 </div>  
                 </div>)}

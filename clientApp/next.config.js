@@ -32,15 +32,7 @@ const nextConfig = {
           },
         ],
       },
-      {
-        source: '/files/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+      // /files/* のキャッシュは route.ts で決める（フォロワー限定のファイルを public にしないため）
     ];
   },
 

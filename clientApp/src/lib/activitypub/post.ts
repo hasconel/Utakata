@@ -23,11 +23,26 @@ import { Databases } from "node-appwrite";
  * 投稿入力のスキーマ！💎
  * zodで厳格にバリデーション、ギャル風エラーで親しみやすく！💦
  */
-const PostSchema = z.object({
-  content: z.string().min(1, Errors.InvalidInput("コンテンツ")).max(500, Errors.InvalidInput("コンテンツは500文字以内")),
-  visibility: z.enum(["public", "followers"]),
-  inReplyTo: z.object({ id: z.string(), to: z.string() }).optional(),
+/** 添付は、このサーバーにアップロードしたファイルだけ。説明文（name）は他のサーバーで alt として使われる */
+const ImageSchema = z.object({
+  type: z.enum(["Image", "Video", "Audio"]),
+  mediaType: z.string().max(100),
+  url: z.string().refine((url) => url.startsWith(`${process.env.NEXT_PUBLIC_DOMAIN}/files/`), "添付のURLが正しくないよ"),
+  name: z.string().max(1500).default(""),
+  width: z.number().int().min(0).max(100000).optional(),
+  height: z.number().int().min(0).max(100000).optional(),
+  blurhash: z.string().max(100).optional(),
 });
+
+const PostSchema = z
+  .object({
+    content: z.string().max(500, Errors.InvalidInput("コンテンツは500文字以内")),
+    visibility: z.enum(["public", "followers"]),
+    inReplyTo: z.object({ id: z.string().url(), to: z.string().url() }).optional(),
+    images: z.array(ImageSchema).max(4).default([]),
+  })
+  // 本文が空でも、画像があれば投稿できる
+  .refine((input) => input.content.trim().length > 0 || input.images.length > 0, Errors.InvalidInput("コンテンツ"));
 
 /**
  * 投稿入力の型！型安全でキラキラ！✨
@@ -45,8 +60,8 @@ export interface PostInput {
  * @returns 検証済みのPostInput
  * @throws ZodError 無効な入力でエラー（Errors.InvalidInput）
  */
-export async function validatePostInput(input: unknown): Promise<PostInput> {
-  return PostSchema.parse(input);
+export function validatePostInput(input: unknown): PostInput & { images: ActivityPubImage[] } {
+  return PostSchema.parse(input) as PostInput & { images: ActivityPubImage[] };
 }
 
 

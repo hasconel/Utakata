@@ -1,31 +1,48 @@
-"use client"
+"use client";
+
 import { useState } from "react";
 import { changePassword } from "@/lib/appwrite/auth";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { FEED_SURFACE } from "@/components/features/timeline/TimelineContent";
 import { showToast } from "@/components/ui/Toast";
 
 export default function PasswordPage() {
-    const [password, setPassword] = useState("");
-    const [oldPassword, setOldPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const handleChangePassword = async () => {
-        setIsLoading(true);
-        const result = await changePassword(password, oldPassword).catch(() => ({ ok: false as const, error: "通信に失敗したわ！💦" }));
-        setIsLoading(false);
-        if (result.ok) {
-            showToast("パスワードを変更したわ！🫧", "success");
-            setPassword("");
-            setOldPassword("");
-        } else {
-            showToast(result.error);
-        }
+  const [password, setPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const result = await changePassword(password, oldPassword).catch(() => ({ ok: false as const, error: "通信に失敗したわ！💦" }));
+    setIsLoading(false);
+    if (result.ok) {
+      showToast("パスワードを変更したわ！🫧", "success");
+      setPassword("");
+      setOldPassword("");
+    } else {
+      showToast(result.error);
     }
-    return (
-        <div className="m-5 justify-center  items-center flex flex-col max-w-md mx-auto">
-            <h1 className="text-2xl font-bold">パスワードの変更</h1>
-            <input type="password" autoComplete="new-password" placeholder="新しいパスワード" value={password} onChange={(e) => setPassword(e.target.value)} className="m-4 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
-            <input type="password" autoComplete="current-password" placeholder="古いパスワード" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="m-4 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
-            <Button onClick={handleChangePassword} isLoading={isLoading} disabled={!password || !oldPassword} className="m-4">パスワードを変更</Button>
+  };
+
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
+      <PageHeader backHref="/settings" title="パスワード" />
+      <form onSubmit={handleSubmit} className={`${FEED_SURFACE} flex flex-col gap-4 p-4`}>
+        <div>
+          <label htmlFor="old-password" className="mb-1.5 block text-sm font-medium text-muted-foreground">いまのパスワード</label>
+          <Input id="old-password" type="password" autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required />
         </div>
-    )
+        <div>
+          <label htmlFor="new-password" className="mb-1.5 block text-sm font-medium text-muted-foreground">新しいパスワード（8文字以上）</label>
+          <Input id="new-password" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        <Button type="submit" isLoading={isLoading} disabled={!password || !oldPassword} className="self-end">
+          変更
+        </Button>
+      </form>
+    </div>
+  );
 }

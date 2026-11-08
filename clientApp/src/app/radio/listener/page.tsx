@@ -36,18 +36,15 @@ export default function ListenerPage() {
     socketRef.current = io(signalingUrl);
     
     socketRef.current.on('connect', () => {
-      console.log('Connected to signaling server');
       setIsConnected(true);
       socketRef.current?.emit('listener');  
     });
 
     socketRef.current.on('broadcaster-id', (id: string) => {
-      console.log('Broadcaster ID:', id);
       fetchBroadcaster(id);
     });
 
     socketRef.current.on('offer', async (data: { offer: RTCSessionDescriptionInit, from: string }) => {
-      console.log('Received offer from:', data.from);
       await handleOffer(data.offer, data.from);
     });
 
@@ -58,7 +55,6 @@ export default function ListenerPage() {
     });
 
     socketRef.current.on('broadcaster-disconnected', () => {
-      console.log('Broadcaster disconnected');
       setIsListening(false);
       setError('配信が終了しました');
     });
@@ -78,7 +74,6 @@ export default function ListenerPage() {
 
       // 音声トラックを受信
       peerConnectionRef.current.ontrack = (event) => {
-        console.log('Received audio track');
         if (audioRef.current) {
           audioRef.current.srcObject = event.streams[0];
           audioRef.current.play().catch(console.error);
@@ -133,17 +128,17 @@ export default function ListenerPage() {
   return (
     
     <div className="min-h-screen">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6 dark:bg-gray-800">
-        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800 dark:text-pink-500">
-          ラジオを聞く<span className="text-transparent bg-clip-text bg-purple-500 dark:bg-pink-500">✨️</span>
+      <div className="max-w-2xl mx-auto bg-card rounded-3xl shadow-soft p-6">
+        <h1 className="text-3xl font-bold text-center mb-8 text-foreground">
+          ラジオを聞く<span className="text-transparent bg-clip-text bg-primary">✨️</span>
         </h1>
         
         <div className="space-y-6">
           {/* 接続状態 */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
+          <div className="flex items-center justify-between p-4 bg-secondary rounded-lg">
             <span className="font-medium">接続状態:</span>
             <span className={`px-3 py-1 rounded-full w-18 text-center text-sm ${
-              isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              isConnected ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
             }`}>
               {isConnected ? '接続中' : '未接続'}
             </span>
@@ -152,14 +147,14 @@ export default function ListenerPage() {
 
           {/* エラー表示 */}
           {error && (
-            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg dark:bg-gray-700">
+            <div className="p-4 bg-destructive/10 border border-destructive/40 text-destructive rounded-lg">
               {error}
             </div>
           )}
 
           {/* 音声プレーヤー */}
-          <div className="p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
-            <h3 className="font-medium mb-2 text-gray-800 dark:text-gray-200 ">現在の配信者<span className="text-transparent bg-clip-text bg-gray-800 dark:bg-gray-200">✨️</span></h3>
+          <div className="p-4 bg-secondary rounded-lg">
+            <h3 className="font-medium mb-2 text-foreground ">現在の配信者<span className="text-transparent bg-clip-text bg-muted">✨️</span></h3>
             <div className="flex items-center w-full justify-between gap-2 xl:flex-row flex-col">
               <div className="flex justify-start w-full items-center gap-2 ">
             <audio
@@ -183,12 +178,12 @@ export default function ListenerPage() {
                 }
               }
             }}
-            className="flex items-center justify-center w-10 h-10 bg-pink-500 dark:bg-pink-400 p-2 rounded-full disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="flex items-center justify-center w-10 h-10 bg-primary p-2 rounded-full disabled:bg-muted disabled:cursor-not-allowed"
             >
-              {!isPlaying ? <Play className="w-10 h-10 text-pink-500 dark:text-pink-100 disabled:text-gray-400 disabled:cursor-not-allowed" /> : <Pause className="w-10 h-10 text-pink-500 dark:text-pink-100 disabled:text-gray-400 disabled:cursor-not-allowed" />}
+              {!isPlaying ? <Play className="w-10 h-10 text-primary disabled:text-muted-foreground disabled:cursor-not-allowed" /> : <Pause className="w-10 h-10 text-primary disabled:text-muted-foreground disabled:cursor-not-allowed" />}
             </button>
             {broadcaster && (
-                          <div className="flex items-center gap-2 p-2 min-w-64 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500/50">
+                          <div className="flex items-center gap-2 p-2 min-w-64 rounded-lg hover:bg-secondary/50">
              
                           <Avatar
                             src={broadcaster.icon?.url || ""}
@@ -198,13 +193,13 @@ export default function ListenerPage() {
                             variant="outline"
                           />
                           <div className="flex flex-col">
-                            <span className="text-gray-900 dark:text-gray-100">{broadcaster.displayName}</span>
-                            <span className="text-gray-500 dark:text-gray-400">@{broadcaster.preferredUsername}</span>
+                            <span className="text-foreground">{broadcaster.displayName}</span>
+                            <span className="text-muted-foreground">@{broadcaster.preferredUsername}</span>
                           </div>
                       </div>
             )}</div>
             <span className={`px-3 py-1 rounded-full w-18 text-center text-sm shrink-0 ${
-              isListening ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              isListening ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
             }`}>
               {isListening ? '配信中' : '待機中'}
             </span></div>
@@ -215,7 +210,7 @@ export default function ListenerPage() {
             <button
               onClick={stopListening}
               disabled={!isListening}
-              className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 bg-destructive text-white py-3 px-6 rounded-lg font-medium hover:bg-destructive/90 disabled:bg-muted disabled:cursor-not-allowed transition-colors"
             >
               聴取停止
             </button>

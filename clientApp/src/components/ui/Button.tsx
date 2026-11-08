@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 // キラキラなボタンのバリエーション！✨
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'gradient' | 'destructive';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'destructive';
 export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type ButtonShape = 'default' | 'pill' | 'square';
 
@@ -39,7 +39,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ghost: 'bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
       link: 'bg-transparent text-primary underline-offset-4 hover:underline',
       // ブランドのグラデーション。目立たせたい1か所（新規登録など）だけに使う
-      gradient: 'bg-linear-to-r from-purple-600 to-pink-500 text-white hover:brightness-110',
       destructive: 'bg-destructive text-destructive-foreground hover:brightness-110',
     };
 

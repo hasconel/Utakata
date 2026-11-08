@@ -5,7 +5,8 @@
  * サーバー専用。"use server" を付けないこと（外部から呼べる関数として公開されてしまう）。
  */
 import { Query } from "node-appwrite";
-import { fetchRemoteActor } from "@/lib/activitypub/remoteActor";
+import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverConfig";
+import { fetchRemoteActorQuick } from "@/lib/activitypub/remoteActor";
 import { isInternalUrl } from "@/lib/utils";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 
@@ -57,6 +58,24 @@ function localActorToClient(doc: any) {
   };
 }
 
+/** 相手のサーバーが遅いときの仮の表示（URLの最後を名前にする。アイコンは無し） */
+function placeholderActor(id: string) {
+  let name = id;
+  try {
+    const url = new URL(id);
+    name = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || url.hostname).replace(/^@/, "");
+  } catch {}
+  return {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    type: "Person",
+    id,
+    preferredUsername: name,
+    displayName: name,
+    icon: { type: "Image", url: "" },
+    _placeholder: true,
+  };
+}
+
 /**
  * actorのURLから、画面用のactorをまとめて取得する。
  * ローカルは1回の問い合わせで、外部は並列で取得する（外部はremoteActor側で10分キャッシュされる）。
@@ -77,8 +96,9 @@ export async function resolveActors(
     unique
       .filter((id) => !actors.has(id) && !isInternalUrl(id))
       .map(async (id) => {
-        const actor = await fetchRemoteActor(id, signerUserId);
-        if (actor) actors.set(id, actor);
+        // 遅いサーバーは待たずに、URLから作った仮の表示にしておく（裏で取得してキャッシュする）
+        const actor = await fetchRemoteActorQuick(id, signerUserId);
+        actors.set(id, actor ?? placeholderActor(id));
       })
   );
   return actors;
@@ -125,6 +145,8 @@ export async function toClientNotes(posts: any[], databases: any, viewerUserId: 
       cc: post.cc ?? [],
       inReplyTo: post.inReplyTo ?? "",
       attachment: post.attachment ?? [],
+      summary: post.summary || "",
+      emojis: post.emojis ?? [],
       likes: {
         totalItems: like.total,
         first: post.activityId + "/likes?page=1",
@@ -140,6 +162,25 @@ export async function toClientNotes(posts: any[], databases: any, viewerUserId: 
       _canDelete: post.attributedTo === viewerActorId,
     } as ActivityPubNoteInClient;
   });
+}
+
+const PUBLIC = "https://www.w3.org/ns/activitystreams#Public";
+
+/** 誰でも見てよい投稿か（公開・未収載）。ログインしていない人にはこれだけ返す */
+export function isPublicDocument(post: any): boolean {
+  return [...(post?.to ?? []), ...(post?.cc ?? [])].includes(PUBLIC);
+}
+
+/**
+ * 閲覧者のDBクライアント。
+ * ログイン中はその人のセッション、ログインしていなければ管理用（呼ぶ側で必ず公開投稿だけに絞ること）。
+ */
+export async function viewerClient(request: Request): Promise<{ databases: any; userId: string | null }> {
+  const session = await createSessionClient(request);
+  const user = await session.account.get().catch(() => null);
+  if (user) return { databases: session.databases, userId: user.$id };
+  const { databases } = await createAdminClient();
+  return { databases, userId: null };
 }
 
 /** 表示期間は lib/postWindow.ts で決めている（画面からも使うため） */

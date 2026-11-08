@@ -16,6 +16,8 @@ export interface ActivityPubActor extends ActivityPubObject {
   type: "Person" | "Service" | "Organization";
   preferredUsername: string;
   name?: string;
+  /** 表示名・自己紹介のカスタム絵文字（{name,url} のJSON文字列） */
+  emojis?: string[];
   displayName?: string;
   summary?: string;
   icon?: {
@@ -53,6 +55,10 @@ export interface ActivityPubNote extends ActivityPubObject {
   cc: string[],
   inReplyTo: string ,
   attachment: string[],
+  /** 閲覧注意（CW）の説明文。あれば本文と画像は最初たたんでおく */
+  summary?: string,
+  /** カスタム絵文字（JSON文字列 {name,url}） */
+  emojis?: string[],
   likes?: {
     totalItems: number,
     first: string,

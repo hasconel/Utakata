@@ -18,7 +18,8 @@ interface DialogProps {
 export function Dialog({ isOpen, onClose, title, description, children }: DialogProps) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <HeadlessDialog as="div" className="relative z-50" onClose={onClose}>
+      {/* Modal（z-[10000]）の上にも出せるように、それより上に置く */}
+      <HeadlessDialog as="div" className="relative z-[10050]" onClose={onClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -28,7 +29,7 @@ export function Dialog({ isOpen, onClose, title, description, children }: Dialog
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/25 dark:bg-black/50" />
+          <div className="fixed inset-0 bg-black/40" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -42,12 +43,12 @@ export function Dialog({ isOpen, onClose, title, description, children }: Dialog
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <HeadlessDialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl transition-all">
-                <HeadlessDialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+              <HeadlessDialog.Panel className="w-full max-w-sm transform overflow-hidden rounded-2xl bg-card p-5 text-card-foreground shadow-float transition-all">
+                <HeadlessDialog.Title as="h3" className="text-base font-semibold leading-6 text-foreground">
                   {title}
                 </HeadlessDialog.Title>
                 {description && (
-                  <HeadlessDialog.Description className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  <HeadlessDialog.Description className="mt-1.5 text-sm text-muted-foreground">
                     {description}
                   </HeadlessDialog.Description>
                 )}

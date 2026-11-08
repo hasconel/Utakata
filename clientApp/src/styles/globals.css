@@ -1,6 +1,8 @@
 @import "tailwindcss";
 /* animate-in / fade-in / slide-in-from-* など（Toast・Sheet・Dialogで使っている） */
 @plugin "tailwindcss-animate";
+/* 利用規約・プライバシーポリシーの本文（prose） */
+@plugin "@tailwindcss/typography";
 
 /*
  * ダークモードは <html class="dark">（next-themes が付ける）で切り替える。
@@ -232,4 +234,26 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * 背景画像があるとき（BackdropProvider が <html data-backdrop> を付ける）。
+ * カードはすりガラスにして後ろの画像をうっすら見せ、カードの外に置いた見出しやボタンには小さなすりガラスを敷く。
+ * Tailwind の bg-card より優先させるため、レイヤーの外に書いている。
+ */
+html[data-backdrop] .surface {
+  background-color: color-mix(in oklch, var(--card) 80%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+html[data-backdrop] .glass-chip {
+  background-color: color-mix(in oklch, var(--card) 70%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* ロゴのグラデーション（ピンク → 紫）。テーマの色を変えるときはここも合わせる */
+:root {
+  --brand-from: oklch(0.656 0.241 354.308);
+  --brand-to: oklch(0.627 0.265 303.9);
 }

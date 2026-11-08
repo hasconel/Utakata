@@ -6,6 +6,7 @@ import sanitizeHtml from "sanitize-html";
 /** ローカル投稿の上限（PostSchema）に合わせる */
 const MAX_CONTENT_LENGTH = 500;
 const MAX_ATTACHMENTS = 4;
+const MAX_SUMMARY_LENGTH = 200;
 const PUBLIC_COLLECTIONS = [
   "https://www.w3.org/ns/activitystreams#Public",
   "as:Public",
@@ -45,13 +46,30 @@ export function htmlToText(html: unknown): string {
   return decodeEntities(text).trim();
 }
 
-/** 本文を保存できる形にする。閲覧注意の説明文があれば先頭に付ける。 */
-export function buildContent(note: { content?: unknown; summary?: unknown }): string {
+const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
+
+/** 本文を保存できる形にする（閲覧注意の説明文は buildSummary で別に持つ） */
+export function buildContent(note: { content?: unknown }): string {
+  return clip(htmlToText(note.content), MAX_CONTENT_LENGTH);
+}
+
+/** 閲覧注意（CW）の説明文。無ければ空 */
+export function buildSummary(note: { summary?: unknown }): string {
+  return clip(htmlToText(note.summary), MAX_SUMMARY_LENGTH);
+}
+
+/**
+ * 以前の形（説明文を本文の先頭に [ ] で付ける）。
+ * posts コレクションに summary の項目がまだ無いときの保存に使う。
+ */
+export function buildLegacyContent(note: { content?: unknown; summary?: unknown }): string {
   const summary = htmlToText(note.summary);
   const body = htmlToText(note.content);
-  const content = summary ? `[${summary}]\n${body}` : body;
-  return content.length > MAX_CONTENT_LENGTH ? `${content.slice(0, MAX_CONTENT_LENGTH - 1)}…` : content;
+  return clip(summary ? `[${summary}]\n${body}` : body, MAX_CONTENT_LENGTH);
 }
+
+/** カスタム絵文字は emoji.ts にある（画面からも使うため） */
+export { buildEmojis } from "@/lib/activitypub/emoji";
 
 function attachmentUrl(attachment: any): string | null {
   const candidate = Array.isArray(attachment?.url) ? attachment.url[0] : attachment?.url;
@@ -66,7 +84,7 @@ function attachmentUrl(attachment: any): string | null {
 }
 
 /** 画面は attachment の各要素を JSON.parse して読むので、JSON文字列で保存する */
-export function buildAttachments(attachments: unknown): string[] {
+export function buildAttachments(attachments: unknown, sensitive = false): string[] {
   const list = Array.isArray(attachments) ? attachments : attachments ? [attachments] : [];
   const results: string[] = [];
   for (const attachment of list) {
@@ -81,9 +99,11 @@ export function buildAttachments(attachments: unknown): string[] {
         mediaType,
         url,
         name: typeof attachment.name === "string" ? attachment.name.slice(0, 100) : "",
-        width: 0,
-        height: 0,
-        blurhash: "",
+        width: Number.isFinite(attachment.width) ? attachment.width : 0,
+        height: Number.isFinite(attachment.height) ? attachment.height : 0,
+        blurhash: typeof attachment.blurhash === "string" ? attachment.blurhash.slice(0, 100) : "",
+        // 閲覧注意の画像。画面では最初ぼかしておく
+        ...(sensitive || attachment.sensitive === true ? { sensitive: true } : {}),
       })
     );
   }

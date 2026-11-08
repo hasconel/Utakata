@@ -6,9 +6,9 @@
 import {  NextResponse } from "next/server";
 import { createSessionClient,  } from "@/lib/appwrite/serverConfig";
 import { Query } from "node-appwrite";
-import {  savePost, deliverActivity } from "@/lib/activitypub/post";
+import { savePost, deliverActivity, validatePostInput } from "@/lib/activitypub/post";
 import { getEncryptedPrivateKey } from "@/lib/activitypub/privateKeyStore";
-import { postWindowStart, toClientNotes } from "@/lib/activitypub/clientNotes";
+import { isPublicDocument, postWindowStart, toClientNotes, viewerClient } from "@/lib/activitypub/clientNotes";
 import { ENV } from "@/lib/api/config";
 import { Post } from "@/types/appwrite";
 import { Models } from "node-appwrite";
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       throw new Error("セッションが見つからないよ！💦");
     }
 
+    const body = await request.json().catch(() => null);
     // ログインユーザーを取得
     const userId = await account.get();
     if (!userId) {
@@ -50,10 +51,21 @@ export async function POST(request: Request) {
     if (!user) {
       throw new Error("ユーザーが見つからないよ！💦");
     }
-    const { content, visibility, images, inReplyTo, attributedTo } = await request.json();
+    // 本文の長さ・公開範囲・添付（このサーバーのファイルだけ）を確かめる
+    const parsed = (() => {
+      try {
+        return { ok: true as const, value: validatePostInput(body) };
+      } catch {
+        return { ok: false as const };
+      }
+    })();
+    if (!parsed.ok) {
+      return NextResponse.json({ error: "投稿の内容が正しくないみたい💦" }, { status: 400 });
+    }
+    const { content, visibility, images, inReplyTo } = parsed.value;
     // 投稿を保存
     const { document, activity } = await savePost(
-      { content, visibility, inReplyTo, attributedTo },
+      { content: content.trim(), visibility, inReplyTo },
       {
         userId: user.$id,
       },
@@ -93,7 +105,7 @@ export async function POST(request: Request) {
  * 投稿一覧を取得するAPIエンドポイント！✨
  * ActivityPubのNote形式で投稿データを返すよ〜💖
  *
- * クエリ: limit, attributedTo, inReplyTo（投稿の$id）, lastId（続きを取得するときのカーソル）
+ * クエリ: limit, attributedTo, inReplyTo（投稿の$id）, lastId（続きを取得するときのカーソル）, scope（local で自サーバーの投稿だけ）
  * 返り値: { notes, total, nextCursor }。nextCursor が null なら続きはない。
  * 表示するのは直近84時間の投稿だけ（意図的な仕様）。
  */
@@ -104,6 +116,8 @@ export async function GET(request: Request) {
   const inReplyTo = url.searchParams.get("inReplyTo");
   const attributedTo = url.searchParams.get("attributedTo");
   const lastId = url.searchParams.get("lastId");
+  // local: このサーバーの投稿だけ / それ以外: 連合（届いた投稿もすべて）
+  const scope = url.searchParams.get("scope");
 
   const queries = [
     Query.orderDesc("$createdAt"),
@@ -111,21 +125,25 @@ export async function GET(request: Request) {
     Query.greaterThan("$createdAt", postWindowStart()),
     ...(inReplyTo ? [Query.equal("inReplyTo", `${ENV.DOMAIN}/posts/${inReplyTo}`)] : []),
     ...(attributedTo ? [Query.equal("attributedTo", attributedTo)] : []),
+    ...(scope === "local" ? [Query.startsWith("activityId", `${ENV.DOMAIN}/`)] : []),
     // カーソルがあればそれを使う（件数のずらし方式は、新しい投稿が来ると重複やずれが出る）
     ...(lastId ? [Query.cursorAfter(lastId)] : offset > 0 ? [Query.offset(offset)] : []),
   ];
 
   try {
-    const { databases, account } = await createSessionClient(request);
-    const user = await account.get();
+    const { databases, userId } = await viewerClient(request);
+    // ログインしていない人に見せるのは、ユーザーページの公開投稿とリプライだけ（タイムラインは見せない）
+    if (!userId && !attributedTo && !inReplyTo) throw Object.assign(new Error("unauthorized"), { code: 401 });
     const [posts, viewer] = await Promise.all([
       databases.listDocuments(ENV.DATABASE_ID, ENV.POSTS_COLLECTION_ID, queries) as Promise<Models.DocumentList<Post>>,
-      databases.getDocument(ENV.DATABASE_ID, actorsId(), user.$id).catch(() => null),
+      userId ? databases.getDocument(ENV.DATABASE_ID, actorsId(), userId).catch(() => null) : Promise.resolve(null),
     ]);
     // ミュートしたユーザーの投稿は返さない
     const muted = new Set<string>(viewer?.mutedUsers ?? []);
-    const visible = posts.documents.filter((post: any) => !muted.has(post.attributedTo));
-    const notes = await toClientNotes(visible, databases, user.$id);
+    const visible = posts.documents.filter(
+      (post: any) => !muted.has(post.attributedTo) && (userId || isPublicDocument(post))
+    );
+    const notes = await toClientNotes(visible, databases, userId ?? "");
     const last = posts.documents[posts.documents.length - 1];
     return NextResponse.json({
       notes,

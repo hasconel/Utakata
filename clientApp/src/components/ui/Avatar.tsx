@@ -1,5 +1,5 @@
 import { HTMLAttributes, forwardRef, useEffect, useState } from 'react';
-import { cn, convertToInternalUrl, isInternalUrl } from '@/lib/utils';
+import { cn, convertToInternalUrl, isInternalUrl, mediaUrl } from '@/lib/utils';
 import React from 'react';
 import Link from 'next/link';
 import Modal from './Modal';
@@ -13,6 +13,8 @@ interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   attributedTo?: string;
   /** リンク先を直接指定する（attributedTo より優先） */
   href?: string;
+  /** false にすると、押してもリンクにも拡大表示にもならない（リンクの中に置くとき用） */
+  interactive?: boolean;
   size?: AvatarSize;
   variant?: AvatarVariant;
   fallback?: string;
@@ -21,7 +23,7 @@ interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
 
 // キラキラなアバターコンポーネント！✨
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, src, alt = 'Avatar', size = 'md', variant = 'default', fallback, isOnline, attributedTo, href, ...props }, ref) => {
+  ({ className, src, alt = 'Avatar', size = 'md', variant = 'default', fallback, isOnline, attributedTo, href, interactive = true, ...props }, ref) => {
     const sizes = {
       xs: 'w-6 h-6',
       sm: 'w-8 h-8',
@@ -32,7 +34,9 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
     };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [hasError, setHasError] = useState(false);
-    const imageSrc = src ? convertToInternalUrl(src) : '';
+    // 一覧のアイコンは縮めた画像（画面の2倍の解像度）、押して拡大したときは元の画像
+    const imageSrc = src ? mediaUrl(src, size === 'xl' || size === '2xl' ? 192 : 96) : '';
+    const fullSrc = src ? convertToInternalUrl(src) : '';
 
     // 画像が変わったら、読み込み失敗の状態をリセットする
     useEffect(() => {
@@ -75,12 +79,13 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
         <span
           className={cn(
             'absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full border-2 border-card',
-            isOnline ? 'bg-green-500' : 'bg-gray-400'
+            isOnline ? 'bg-green-500' : 'bg-muted-foreground'
           )}
         />
       )}
     </div>
     );
+    if (!interactive) return avatarIcon;
     if (href || attributedTo) {
     return (
       <Link
@@ -100,7 +105,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
     {isModalOpen && imageSrc && !hasError && (
       <div >
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-          <img src={imageSrc} alt={alt} />
+          <img src={fullSrc} alt={alt} />
         </Modal>
       </div>
     )}
@@ -131,12 +136,12 @@ export const AvatarGroup = forwardRef<HTMLDivElement, AvatarGroupProps>(
         {...props}
       >
         {visibleChildren.map((child, index) => (
-          <div key={index} className="ring-2 ring-white dark:ring-gray-800">
+          <div key={index} className="ring-2 ring-card">
             {child}
           </div>
         ))}
         {hiddenCount > 0 && (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-pink-100 text-purple-600 dark:text-pink-600 font-semibold ring-2 ring-white dark:ring-gray-800">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground font-semibold ring-2 ring-card">
             +{hiddenCount}
           </div>
         )}

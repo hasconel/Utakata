@@ -4,7 +4,7 @@ import { ID, Query } from "node-appwrite";
 import { createAdminClient, createSessionClient } from "@/lib/appwrite/serverConfig";
 import { verifySignature } from "@/lib/activitypub/crypto";
 import { Permission, Role } from "node-appwrite";
-import { buildAttachments, buildContent, isPublicNote, toArray } from "@/lib/activitypub/remoteNote";
+import { buildAttachments, buildContent, buildEmojis, buildLegacyContent, buildSummary, isPublicNote, toArray } from "@/lib/activitypub/remoteNote";
 import { sendAccept } from "@/lib/activitypub/remoteActor";
 import { removePostFromIndex } from "@/lib/search/meili";
 
@@ -265,23 +265,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return ignored();
     }
     const postId = ID.unique();
-    await adminDatabases.createDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_POSTS_COLLECTION_ID!,
-      postId,
-      {
-        "activityId": NoteId,
-        "username": ActorId,
-        "content": buildContent(object),
-        "published": object.published || new Date().toISOString(),
-        "cc": cc,
-        "to": to,
-        "inReplyTo": typeof object.inReplyTo === "string" ? object.inReplyTo : null,
-        "attributedTo": ActorId,
-        "attachment": buildAttachments(object.attachment),
-      },
-      [Permission.read(Role.any())]
-    );
+    const base = {
+      "activityId": NoteId,
+      "username": ActorId,
+      "published": object.published || new Date().toISOString(),
+      "cc": cc,
+      "to": to,
+      "inReplyTo": typeof object.inReplyTo === "string" ? object.inReplyTo : null,
+      "attributedTo": ActorId,
+      "attachment": buildAttachments(object.attachment, object.sensitive === true),
+    };
+    const createPost = (data: Record<string, unknown>) =>
+      adminDatabases.createDocument(
+        process.env.APPWRITE_DATABASE_ID!,
+        process.env.APPWRITE_POSTS_COLLECTION_ID!,
+        postId,
+        data,
+        [Permission.read(Role.any())]
+      );
+    try {
+      await createPost({ ...base, "content": buildContent(object), "summary": buildSummary(object), "emojis": buildEmojis(object.tag) });
+    } catch (error: any) {
+      // posts に summary / emojis の項目がまだ無いとき（scripts/add-post-attributes.mjs の実行前）は、以前の形で保存する
+      if (error?.type !== "document_invalid_structure") throw error;
+      await createPost({ ...base, "content": buildLegacyContent(object) });
+    }
     await adminDatabases.createDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_POSTS_SUB_COLLECTION_ID!,

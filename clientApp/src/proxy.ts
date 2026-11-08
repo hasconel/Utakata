@@ -2,11 +2,11 @@ import { wantsActivityJson } from "@/lib/activitypub/contentNegotiation";
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * ミドルウェア！✨
+ * プロキシ（旧 middleware）！✨
  * Acceptヘッダーをチェックして、ActivityPubリクエストを適切にルーティングするよ！💖
  * ※ Edge Runtime のため database（crypto 使用）は import せず、API を fetch するよ！🔒
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // request.nextUrlがundefinedの場合はスキップ！✨
   if (!request.nextUrl) {
     //console.log("request.nextUrl is undefined, skipping middleware");

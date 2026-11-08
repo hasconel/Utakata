@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import Notification, { NotificationWithData } from "@/components/features/user/Notification";
 import { showToast } from "@/components/ui/Toast";
 import { NOTIFICATIONS_READ_EVENT } from "@/lib/events";
+import { Bell } from "lucide-react";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { FEED_SURFACE } from "@/components/features/timeline/TimelineContent";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationWithData[]>([]);
@@ -13,6 +16,11 @@ export default function NotificationsPage() {
       try {
         // 相手のユーザーと対象の投稿も、1回でまとめて取得する
         const res = await fetch("/api/notifications", { cache: "no-store" });
+        // ログインしていなければログイン画面へ
+        if (res.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
         if (!res.ok) throw new Error(String(res.status));
         const { notifications } = (await res.json()) as { notifications: NotificationWithData[] };
         if (cancelled) return;
@@ -38,40 +46,26 @@ export default function NotificationsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600 dark:border-pink-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-2xl mx-auto px-2 py-4">
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-2 md:p-6 mb-8 border border-purple-100 dark:border-purple-900">
-        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4">
-          通知 ✨
-        </h1>
-        {notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="text-6xl mb-4 animate-bounce">💫</div>
-            <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-2">
-              通知はまだないよ！✨
-            </p>
-            <p className="text-gray-600 dark:text-gray-400">
-              みんなと交流してみよう！💖
-            </p>
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
+      <section className={FEED_SURFACE} aria-busy={isLoading || undefined}>
+        {isLoading ? (
+          <LoadingSkeleton count={5} />
+        ) : notifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+            <Bell aria-hidden className="h-10 w-10 opacity-40" strokeWidth={1.5} />
+            <p className="text-sm">通知はまだないよ🫧</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {notifications
-              .sort((a,b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime())
+          <div className="divide-y divide-border">
+            {[...notifications]
+              .sort((a, b) => new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime())
               .map((notification) => (
                 <Notification key={notification.$id} notification={notification} />
               ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

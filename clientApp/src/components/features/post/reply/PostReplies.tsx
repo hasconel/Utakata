@@ -1,99 +1,55 @@
 "use client";
 
-//import { Post } from "@/lib/appwrite/posts";
 /**
- * リプライを表示するコンポーネント！✨
- * 投稿についたリプライをキラキラに表示するよ！💖
+ * 投稿詳細の下に並べるリプライ1件🫧
+ * タイムラインの1件を少し小さくした形。押すとそのリプライのページへ。
  */
-
-import { ActivityPubImage } from "@/types/activitypub/collections";
-import { Avatar } from "@/components/ui/Avatar";
-import Image from "next/image";
 import Link from "next/link";
-import { convertToInternalUrl, formatDate } from "@/lib/utils";
-import { getRelativeTime } from "@/lib/utils/date";
-import { ActivityPubNoteInClient } from "@/types/activitypub";
+import { Avatar } from "@/components/ui/Avatar";
+import { Thumbnails, compactText } from "@/components/features/post/Thumbnails";
 import PostContent from "@/components/features/post/PostContent";
-interface PostRepliesProps {
-  /** 表示するリプライ（取得は呼び出し側でまとめて行う） */
-  note: ActivityPubNoteInClient | null;
+import { EmojiText } from "@/components/features/post/EmojiText";
+import { ActivityPubImage } from "@/types/activitypub/collections";
+import { ActivityPubNoteInClient } from "@/types/activitypub";
+import { isInternalUrl } from "@/lib/utils";
+import { formatDate, getShortRelativeTime } from "@/lib/utils/date";
+
+/** 投稿を開くときのリンク先（ローカルの投稿はサイト内のページ） */
+export function postHref(id: string) {
+  return isInternalUrl(id) ? `/posts/${id.split("/").pop()}` : id;
 }
 
-
-/**
- * リプライを表示するコンポーネント！✨
- * かわいいデザインでリプライを表示するよ！💖
- */
-export default function PostReplies({ note: postData }: PostRepliesProps) {
-  const images: ActivityPubImage[] = (postData?.attachment ?? []).flatMap((image: any) => {
-    try { return [JSON.parse(image) as ActivityPubImage]; } catch { return []; }
+export default function PostReplies({ note }: { note: ActivityPubNoteInClient | null }) {
+  if (!note?.id) return null;
+  const user = note._user;
+  const images: ActivityPubImage[] = (note.attachment ?? []).flatMap((image: any) => {
+    try {
+      return [JSON.parse(image) as ActivityPubImage];
+    } catch {
+      return [];
+    }
   });
 
-  if(!postData?.id){
-    return <div className="flex items-center justify-center h-40">
-      <p className="text-gray-500 dark:text-gray-400">投稿が見つかりません</p>
-    </div>
-  }else{
   return (
-    <Link href={`${postData?.id}`}>  
-    <div className="flex flex-col pl-8 space-y-4 border-l-2 border-purple-200 dark:border-pink-900 bg-white dark:bg-gray-800 rounded-lg p-4 hover:bg-purple-50 dark:hover:bg-gray-900/50 transition-all duration-200">
-      <div className="flex items-center">
-        <Avatar
-          src={postData?._user?.icon?.url}
-          alt={postData?._user?.preferredUsername || ""}
-          fallback={postData?._user?.preferredUsername?.charAt(0)}
-          size="sm"
-          variant="outline"
-          className="bg-gradient-to-br from-purple-600 to-pink-600 dark:from-pink-600 dark:to-purple-600"
-        />
-        <div className="flex flex-col items-start justify-start w-full ml-2">
-        <div className="flex flex-row items-start justify-start w-full gap-1">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            {postData?._user?.displayName || postData?._user?.preferredUsername}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            @{postData?._user?.preferredUsername}
-          </p>
+    <Link href={postHref(note.id)} className="flex gap-3 px-4 py-3 transition-colors hover:bg-accent/40">
+      <Avatar
+        src={user?.icon?.url}
+        alt={user?.preferredUsername || ""}
+        interactive={false}
+        fallback={user?.preferredUsername?.charAt(0)}
+        size="sm"
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-baseline gap-1.5 text-sm">
+          <span className="truncate font-semibold text-foreground"><EmojiText text={user?.displayName || user?.preferredUsername} emojis={user?.emojis} /></span>
+          <span className="truncate text-muted-foreground">@{user?.preferredUsername}</span>
+          <time dateTime={note.published} title={formatDate(note.published)} className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+            {getShortRelativeTime(note.published)}
+          </time>
         </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {postData?.published ? formatDate(postData?.published) : "Unknown"}
-          </div>
-          </div>
-          <div className="ml-auto">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {getRelativeTime(postData?.published || "")}
-            </span>  
-          </div>
+        <PostContent content={compactText(note)} emojis={note.emojis} className="text-[15px] leading-relaxed text-foreground" />
+        {!note.summary && <Thumbnails images={images} />}
       </div>
-      <PostContent content={postData?.content} className="text-gray-700 dark:text-gray-300 text-sm" />
-      {images.length > 0 && (
-        <div className="flex justify-left grid-cols-4 gap-2">
-          {images.map((image, index) => (
-            index < 3 && (
-              <div key={index} className="aspect-square relative rounded-lg overflow-hidden">
-                <Image src={convertToInternalUrl(image.url)} alt={image.name} width={100} height={100} style={{objectFit: "cover"}}/>
-              </div>
-            )
-          ))}
-          {images.length === 4 && (
-            <div className="aspect-square relative rounded-lg overflow-hidden">
-              <Image src={convertToInternalUrl(images[3].url)} alt={images[3].name} width={100} height={100} style={{objectFit: "cover"}}/>
-            </div>
-          )}
-          {images.length > 4 && (
-            <div className="aspect-square relative rounded-lg overflow-hidden">
-              <div className="flex items-center justify-center relative rounded-xl overflow-hidden">
-                <div className="absolute bg-pink-500/50 dark:bg-pink-900/50 w-full h-full mx-auto flex items-center justify-center ">
-                <p className="text-white text-xl font-bold mx-auto">+{images.length - 3}</p>
-                </div>
-                <Image src={convertToInternalUrl(images[3].url)} alt={images[3].name} width={100} height={100} className="rounded-xl" />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
     </Link>
-    );
-  }
-} 
+  );
+}

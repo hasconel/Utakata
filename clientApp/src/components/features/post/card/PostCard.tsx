@@ -3,17 +3,21 @@
 import { useState, useEffect } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatDate, getShortRelativeTime } from "@/lib/utils/date";
-import { Lock, MessageCircle, Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles } from "lucide-react";
+import { PublicMark, isPublicPost } from "@/components/features/post/PublicMark";
 import { profileHref } from "@/lib/utils";
 import { POST_WINDOW_HOURS, remainingLife } from "@/lib/postWindow";
 import { ActivityPubImage } from "@/types/activitypub/collections";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
 import PostContent from "@/components/features/post/PostContent";
+import { EmojiText } from "@/components/features/post/EmojiText";
+import { ContentWarning } from "@/components/features/post/ContentWarning";
 import { showToast } from "@/components/ui/Toast";
 import ContentsCard from "@/components/ui/ContentsCard";
 import { likePost, unlikePost } from "@/lib/appwrite/serverConfig";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import Link from "next/link";
+import { useAuth } from "@/hooks/auth/useAuth";
 import ImageModal from "@/components/features/post/modal/ImageModal";
 import Modal from "@/components/ui/Modal";
 import PostDetailCard from "@/components/features/post/card/PostDetailCard";
@@ -38,6 +42,7 @@ export const LikeButton = ({
   const [isLiked, setIsLiked] = useState(isPostLiked);
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [isAnimating, setIsAnimating] = useState(false);
+  const { user } = useAuth();
   
   // 親の状態が変わったら同期
   useEffect(() => {
@@ -49,6 +54,8 @@ export const LikeButton = ({
   }, [initialLikes]);
   
   const handleLike = async () => {
+    // ログインしていない人は、ログインしてから
+    if (!user) return void (window.location.href = "/login");
     if (isAnimating) return;
     
     const newIsLiked = !isLiked;
@@ -102,8 +109,6 @@ export const LikeButton = ({
   );
 };
 
-const PUBLIC = "https://www.w3.org/ns/activitystreams#Public";
-
 /**
  * 表示期間（84時間）の残りを表す小さな泡。投稿したばかりは満ちていて、だんだん欠けていく。
  */
@@ -136,7 +141,14 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
   setModalIndex: (index: number) => void 
 }) => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [isReplyOpenState, setIsReplyOpenState] = useState(false);
+  const { user: viewer } = useAuth();
+  const isReplyOpen = isReplyOpenState && !!viewer;
+  // ログインしていない人がリプライしようとしたら、ログイン画面へ
+  const setIsReplyOpen = (open: boolean) => {
+    if (open && !viewer) return void (window.location.href = "/login");
+    setIsReplyOpenState(open);
+  };
   const images: ActivityPubImage[] = post?.attachment?.flatMap((image: any) => {
     try { return [JSON.parse(image) as ActivityPubImage]; } catch { return []; }
   }) || [];
@@ -146,7 +158,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
 
   const user = post._user;
   const href = profileHref(user?.id || post.attributedTo, user?.preferredUsername);
-  const isPublic = post.to?.includes(PUBLIC);
+  const isPublic = isPublicPost(post.to);
 
   return (
     <>
@@ -154,13 +166,16 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
         className="flex cursor-pointer gap-3 px-4 py-3.5 transition-colors hover:bg-accent/40"
         onClick={() => setIsDetailOpen(true)}
       >
-        <Avatar
-          src={user?.icon?.url}
-          alt={user?.preferredUsername}
-          href={href}
-          fallback={user?.preferredUsername?.charAt(0)}
-          size="md"
-        />
+        <div className="relative h-fit shrink-0">
+          <Avatar
+            src={user?.icon?.url}
+            alt={user?.preferredUsername}
+            href={href}
+            fallback={user?.preferredUsername?.charAt(0)}
+            size="md"
+          />
+          {isPublic && <PublicMark />}
+        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <header className="flex items-center gap-1.5 text-sm">
             <Link
@@ -168,11 +183,10 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
               onClick={(e) => e.stopPropagation()}
               className="flex min-w-0 items-baseline gap-1.5 hover:underline"
             >
-              <span className="truncate font-semibold text-foreground">{user?.displayName || user?.preferredUsername}</span>
+              <span className="truncate font-semibold text-foreground"><EmojiText text={user?.displayName || user?.preferredUsername} emojis={user?.emojis} /></span>
               <span className="truncate text-muted-foreground">@{user?.preferredUsername}</span>
             </Link>
             <span className="ml-auto flex shrink-0 items-center gap-1.5 text-muted-foreground">
-              {!isPublic && <Lock className="h-3.5 w-3.5" aria-label="フォロワー限定" />}
               <time dateTime={post.published} title={formatDate(post.published)} className="tabular-nums">
                 {getShortRelativeTime(post.published)}
               </time>
@@ -180,7 +194,8 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
             </span>
           </header>
 
-          <PostContent content={post.content} className="text-[15px] leading-relaxed text-foreground" />
+          <ContentWarning summary={post.summary}>
+          <PostContent content={post.content} emojis={post.emojis} className="text-[15px] leading-relaxed text-foreground" />
 
           {images.length > 0 ? (
             <div onClick={(e) => e.stopPropagation()} className="mt-1">
@@ -196,6 +211,7 @@ const PostCard = ({ post, setIsModalOpen, isModalOpen, setModalImages, setModalI
           ) : (
             <ContentsCard arg={post.content || ""} />
           )}
+          </ContentWarning>
 
           <footer className="mt-0.5 flex items-center gap-4">
             <button

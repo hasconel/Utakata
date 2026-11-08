@@ -10,7 +10,8 @@ import { ActivityPubNoteInClient } from "@/types/activitypub";
 import { ApiError } from "@/lib/api/client";
 
 /** 投稿リストを載せる面（タイムラインとプロフィールで共通） */
-export const FEED_SURFACE = "overflow-hidden rounded-2xl border border-border bg-card shadow-soft";
+// surface: 背景画像があるときはすりガラスになる（globals.css）
+export const FEED_SURFACE = "surface overflow-hidden rounded-2xl border border-border bg-card shadow-soft";
 
 /** 「もっと見る」ボタン。押す代わりに、画面の下まで来たら自動で読み込む */
 const LoadMoreButton = ({ onLoadMore, isLoading = false }: { onLoadMore: () => void; isLoading?: boolean }) => {
@@ -42,7 +43,7 @@ const LoadMoreButton = ({ onLoadMore, isLoading = false }: { onLoadMore: () => v
         disabled={isLoading}
         aria-label="続きを読み込む"
         title="続きを読み込む"
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none"
+        className="glass-chip flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none"
       >
         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
       </button>
@@ -106,14 +107,7 @@ const TimelineContent = ({
   return (
     <>
       {isModalOpen && (
-        <div className="fixed inset-0 z-50">
-          <ImageModalContent
-            imagesTable={modalImages}
-            isModalOpen={isModalOpen}
-            setIsModalOpen={setIsModalOpen}
-            index={modalIndex}
-          />
-        </div>
+        <ImageModalContent imagesTable={modalImages} isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen} index={modalIndex} />
       )}
       <div className="divide-y divide-border">
         {posts.map((post) => (

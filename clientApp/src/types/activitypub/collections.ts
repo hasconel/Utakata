@@ -39,6 +39,8 @@ export interface ActivityPubImage {
   width?: number;
   height?: number;
   blurhash?: string;
+  /** 閲覧注意（最初はぼかして表示する） */
+  sensitive?: boolean;
 }
 
 export interface ActivityPubNote {

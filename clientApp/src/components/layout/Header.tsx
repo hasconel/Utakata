@@ -3,10 +3,8 @@
 import { Bell, Home, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getUnreadNotifications } from "@/lib/appwrite/serverConfig";
 import { useAuth } from "@/hooks/auth/useAuth";
-import { NOTIFICATIONS_READ_EVENT, TIMELINE_REFRESH_EVENT } from "@/lib/events";
+import { TIMELINE_REFRESH_EVENT } from "@/lib/events";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,46 +13,16 @@ import { cn } from "@/lib/utils";
  * パソコンではヘッダーの右、スマホでは画面の下に同じアイコンを並べる。
  */
 
-/** 未読通知の数。開いたとき・画面に戻ってきたとき・通知を既読にしたときに数え直す */
-function useUnreadCount(enabled: boolean) {
-  const [count, setCount] = useState(0);
-  const lastFetchedRef = useRef(0);
-
-  const refresh = useCallback(() => {
-    if (!enabled) return;
-    // 画面を行き来するたびに問い合わせないよう、30秒はあける
-    if (Date.now() - lastFetchedRef.current < 30_000) return;
-    lastFetchedRef.current = Date.now();
-    getUnreadNotifications().then(setCount).catch(() => {});
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    refresh();
-    const onFocus = () => refresh();
-    const onRead = () => setCount(0);
-    window.addEventListener("focus", onFocus);
-    window.addEventListener(NOTIFICATIONS_READ_EVENT, onRead);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener(NOTIFICATIONS_READ_EVENT, onRead);
-    };
-  }, [enabled, refresh]);
-
-  return count;
-}
-
 type NavItem = { href: string; label: string; icon: typeof Home; match: (path: string) => boolean; badge?: number };
 
 function useNavItems(): NavItem[] | null {
-  const { user, isLoading } = useAuth();
-  const unread = useUnreadCount(!!user);
+  const { user, isLoading, unread } = useAuth();
   if (isLoading || !user) return null;
   return [
     { href: "/timeline", label: "ホーム", icon: Home, match: (p) => p === "/timeline" },
     { href: "/search", label: "検索", icon: Search, match: (p) => p.startsWith("/search") },
     { href: "/notifications", label: "通知", icon: Bell, match: (p) => p.startsWith("/notifications"), badge: unread },
-    { href: `/users/${user.$id}`, label: "プロフィール", icon: User, match: (p) => p === `/@${user.name}` || p === `/users/${user.$id}` },
+    { href: user.name ? `/@${user.name}` : `/users/${user.$id}`, label: "プロフィール", icon: User, match: (p) => p === `/@${user.name}` || p === `/users/${user.$id}` },
     { href: "/settings", label: "設定", icon: Settings, match: (p) => p.startsWith("/settings") },
   ];
 }
@@ -102,7 +70,7 @@ export function Header() {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link
           href={user ? "/timeline" : "/"}
-          className="bg-linear-to-r from-pink-500 to-purple-500 bg-clip-text text-2xl font-bold text-transparent"
+          className="bg-linear-to-r from-(--brand-from) to-(--brand-to) bg-clip-text text-2xl font-bold text-transparent"
         >
           Utakata
         </Link>

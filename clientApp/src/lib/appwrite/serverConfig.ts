@@ -1,11 +1,13 @@
 "use server";
 import { Client, Account, Databases, Storage, Users, Query, ID, Models } from "node-appwrite";
 import { cookies } from "next/headers";
+import { after } from "next/server";
+import { prepareProfileUpdate } from "../activitypub/profileUpdate";
 import { removePostFromIndex } from "@/lib/search/meili";
 import { Actor, Post  } from "@/types/appwrite";
 import { signRequest } from "../activitypub/crypto";
 import { getEncryptedPrivateKey } from "../activitypub/privateKeyStore";
-import { fetchRemoteActor } from "../activitypub/remoteActor";
+import { fetchActivityDocument, fetchRemoteActor } from "../activitypub/remoteActor";
 import { isInternalUrl } from "../utils";
 import { ActivityPubNote, ActivityPubNoteInClient } from "@/types/activitypub";
 
@@ -375,6 +377,32 @@ export async function deletePost(postId: string) {
  * @param postId ライクする投稿の$id
  * @returns ライク成功かどうか
  */
+/**
+ * いいねを届ける先（投稿者の inbox）を、サーバー側で投稿から調べる。
+ * 画面から受け取った inbox は使わない（好きなURLに、署名付きで送らせることができてしまうため）。
+ */
+async function inboxForPost(databases: Databases, postId: string, signerUserId: string): Promise<string | null> {
+  const { documents } = await databases.listDocuments(process.env.APPWRITE_DATABASE_ID!, process.env.APPWRITE_POSTS_COLLECTION_ID!, [
+    Query.equal("activityId", postId),
+    Query.limit(1),
+  ]);
+  let author = (documents[0] as any)?.attributedTo;
+  // 保存していない投稿（外部のユーザーのページから見たもの）は、投稿そのものを読んで投稿者を調べる
+  if (typeof author !== "string" && !isInternalUrl(postId)) {
+    const response = await fetchActivityDocument(postId, { signer: signerUserId, timeoutMs: 5_000 }).catch(() => null);
+    const note = response?.ok ? JSON.parse(response.body.toString("utf-8")) : null;
+    const attributedTo = typeof note?.attributedTo === "string" ? note.attributedTo : note?.attributedTo?.id;
+    // 投稿と投稿者が同じサーバーのときだけ信用する
+    if (note?.id === postId && typeof attributedTo === "string" && new URL(attributedTo).origin === new URL(postId).origin) {
+      author = attributedTo;
+    }
+  }
+  if (typeof author !== "string") return null;
+  if (isInternalUrl(author)) return `${author}/inbox`;
+  const actor = await fetchRemoteActor(author, signerUserId);
+  return typeof actor?.inbox === "string" ? actor.inbox : null;
+}
+
 export async function likePost(postId: string ,actorInbox: string) {
   try {
     const { databases ,account} = await createSessionClient();
@@ -409,8 +437,11 @@ export async function likePost(postId: string ,actorInbox: string) {
     if(!newLike){
       throw new Error("ライクの作成に失敗したわ！💦");  
     }
-    const headers = await signRequest(actorInbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
-    const response = await fetch(actorInbox, {
+    void actorInbox; // 画面からの値は使わない
+    const inbox = await inboxForPost(databases, postId, currentUser.$id);
+    if (!inbox) throw new Error("いいねを届ける先が見つからないわ！💦");
+    const headers = await signRequest(inbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
+    const response = await fetch(inbox, {
       method: "POST",
       headers: headers.headers,
       body: JSON.stringify(activity)
@@ -484,8 +515,11 @@ export async function unlikePost(postId: string, actorInbox: string) {
         },
         "published": new Date().toISOString()
       };
-      const headers = await signRequest(actorInbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
-      const response = await fetch(actorInbox, {
+      void actorInbox; // 画面からの値は使わない
+      const inbox = await inboxForPost(databases, postId, currentUser.$id);
+      if (!inbox) throw new Error("いいねを届ける先が見つからないわ！💦");
+      const headers = await signRequest(inbox, activity, await getEncryptedPrivateKey(currentUser.$id), `${currentUser.actorId}#main-key`)
+      const response = await fetch(inbox, {
         method: "POST",
         headers: headers.headers,
         body: JSON.stringify(activity)
@@ -510,60 +544,55 @@ export async function unlikePost(postId: string, actorInbox: string) {
 } 
 
 /**
- * プロフィールの更新
- * @param actorId プロフィールを更新するユーザーのactorId
- * @param displayName 表示名
- * @param bio 自己紹介
- * @param avatarUrl アバターのURL
- * @param backgroundUrl 背景画像のURL
- * @returns プロフィールの更新成功かどうか
+ * プロフィールを保存する。
+ * 渡さなかった項目（undefined）は変えない。backgroundUrl / avatarUrl に null を渡すと消す。
+ * 以前の updateProfile は、保存するたびにヘッダー画像を消してしまい、自己紹介を空にもできなかった。
  */
-export async function updateProfile( displayName?: string, bio?: string, avatarUrl?: string,backgroundUrl?: string) {
-  if(!displayName && !bio && !avatarUrl){
-    throw new Error("更新する内容がないわ！💦");
+export async function saveProfile(input: {
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string | null;
+  backgroundUrl?: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const displayName = input.displayName?.trim();
+  const bio = input.bio?.trim();
+  if (displayName !== undefined && (displayName.length === 0 || displayName.length > 100)) {
+    return { ok: false, error: "表示名は1〜100文字にしてね💦" };
+  }
+  if (bio !== undefined && bio.length > 500) {
+    return { ok: false, error: "自己紹介は500文字までだよ💦" };
+  }
+  // 画像は、このサーバーにアップロードしたものだけ受け付ける
+  const isOwnFile = (url: string) => url.startsWith(`${process.env.NEXT_PUBLIC_DOMAIN}/files/`);
+  for (const url of [input.avatarUrl, input.backgroundUrl]) {
+    if (typeof url === "string" && !isOwnFile(url)) return { ok: false, error: "画像を保存できなかったわ💦" };
   }
   try {
-    const {account, databases } = await createSessionClient();
+    const { account, databases } = await createSessionClient();
     const session = await account.get();
-    const currentUser : Actor = await databases.getDocument(
-      process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      session.$id
-    );
-    if (!currentUser) {
-      throw new Error("ユーザーが見つからないわ！💦");
-    }
-    const updateData = {
-      displayName: currentUser.displayName,
-      bio: currentUser.bio,
-      avatarUrl: currentUser.avatarUrl,
-      backgroundUrl: currentUser.backgroundUrl || null
-    };
-    if(displayName){
-      updateData.displayName = displayName;
-    }
-    if(bio){
-      updateData.bio = bio;
-    }
-    if(avatarUrl){
-      updateData.avatarUrl = avatarUrl;
-    }
-    if(backgroundUrl && backgroundUrl !== ""){
-      updateData.backgroundUrl = backgroundUrl;
-    }
-    if(backgroundUrl === ""){
-      updateData.backgroundUrl = null;
-    }
+    const update: Record<string, string | null> = {};
+    if (displayName !== undefined) update.displayName = displayName;
+    if (bio !== undefined) update.bio = bio;
+    if (input.avatarUrl !== undefined) update.avatarUrl = input.avatarUrl ?? "";
+    if (input.backgroundUrl !== undefined) update.backgroundUrl = input.backgroundUrl;
+    if (Object.keys(update).length === 0) return { ok: true };
     await databases.updateDocument(
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_ACTORS_COLLECTION_ID!,
-      currentUser.$id,
-      updateData
+      session.$id,
+      update
     );
-    return true;
-  } catch (error) {
-    console.error("プロフィールの更新に失敗したわ！💦", error);
-    return false;
+    // フォロワーのサーバーにも知らせる。配信は返事のあとに行うので、保存は待たせない
+    try {
+      const deliver = await prepareProfileUpdate(session.$id);
+      if (deliver) after(() => deliver().catch((e) => console.error("プロフィールの配信に失敗:", e?.message)));
+    } catch (e: any) {
+      console.error("プロフィールの配信の準備に失敗:", e?.message);
+    }
+    return { ok: true };
+  } catch (error: any) {
+    console.error("プロフィールの更新に失敗:", error?.message);
+    return { ok: false, error: "プロフィールを保存できなかったわ💦" };
   }
 }
 

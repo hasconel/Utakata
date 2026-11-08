@@ -1,152 +1,108 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { unmuteUser } from "@/lib/appwrite/serverConfig";
-import { UserCard } from "@/components/features/user/UserCard";
-import { Button } from "@/components/ui/Button";
-import { getActorById, getMutedUsers } from "@/lib/appwrite/database";
+import Link from "next/link";
+import { Loader2, VolumeX } from "lucide-react";
+import { Avatar } from "@/components/ui/Avatar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { FEED_SURFACE } from "@/components/features/timeline/TimelineContent";
+import { showToast } from "@/components/ui/Toast";
 import { useAuth } from "@/hooks/auth/useAuth";
-interface User {
+import { getMutedUsers } from "@/lib/appwrite/database";
+import { fetchActors } from "@/lib/api/actors";
+import { EmojiText } from "@/components/features/post/EmojiText";
+import { unmuteUser } from "@/lib/appwrite/serverConfig";
+import { actorHandle, profileHref } from "@/lib/utils";
+
+interface MutedUser {
+  actorId: string;
   preferredUsername: string;
   displayName?: string;
   avatarUrl?: string;
-  actorId: string;
+  emojis?: string[];
 }
 
-/**
- * ミュートリストページ！✨
- * ミュートしたユーザーを管理できるよ！💖
- */
+/** ミュートしている人の一覧🫧 右のアイコンで解除 */
 export default function MutesPage() {
-  const [mutedUsers, setMutedUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const { user, isLoading: isAuthLoading } = useAuth();
+  const [users, setUsers] = useState<MutedUser[] | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
 
-  const checkSession = async () => {
-    if (user && !isAuthLoading) {
-      setCurrentUserId(user.$id);
-      loadMutedUsers(user.$id);
-    }
-    setIsLoading(false);
-  };
   useEffect(() => {
-    if (!user && !isAuthLoading) {
-      window.location.href = "/login";
-    }
-    checkSession();
+    if (!user && !isAuthLoading) window.location.href = "/login";
   }, [user, isAuthLoading]);
 
-
-  const loadMutedUsers = async (userId?:string) => {
-    try {
-      if(!userId){
-        throw new Error("ユーザーIDが取得できないよ！💦");
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        // 外のサーバーの人もまとめて読む（以前はこのサーバーの人しか出ていなかった）
+        const ids = await getMutedUsers();
+        const actors = await fetchActors(ids);
+        setUsers(
+          actors.map((a) => ({
+            actorId: a.id,
+            preferredUsername: a.preferredUsername,
+            displayName: a.displayName || a.name,
+            avatarUrl: a.icon?.url,
+            emojis: a.emojis,
+          }))
+        );
+      } catch {
+        setUsers([]);
+        showToast("ミュートの一覧を読めなかったわ💦");
       }
-      const data = await getMutedUsers();
-      
-      // 並列処理で高速化！✨
-      const mutedUsersPromises = (data || []).map(async (actorId) => {
-        try {
-          const user = await getActorById(actorId);
-          if(user){
-            return {
-              preferredUsername: user.preferredUsername,
-              displayName: user.name,
-              avatarUrl: user.icon?.url || "",
-              actorId: user.id,
-            };
-          }
-          return null;
-        } catch (error) {
-          console.error(`ユーザー ${actorId} の取得に失敗:`, error);
-          return null;
-        }
-      });
-      
-      // Promise.allで並列実行
-      const mutedUsersResults = await Promise.allSettled(mutedUsersPromises);
-      const mutedUsers = mutedUsersResults
-        .filter((result): result is PromiseFulfilledResult<any> => 
-          result.status === 'fulfilled' && result.value !== null
-        )
-        .map(result => result.value);
-      
-      setMutedUsers(mutedUsers);
-    } catch (error) {
-      console.error("ミュートリストの取得に失敗したよ！💦", error);
-      setError("ミュートリストの取得に失敗したよ！");
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+  }, [user]);
+
+  const handleUnmute = async (actorId: string) => {
+    setPending(actorId);
+    const response: any = await unmuteUser(actorId).catch(() => null);
+    setPending(null);
+    if (response && !response.error) setUsers((prev) => prev?.filter((u) => u.actorId !== actorId) ?? null);
+    else showToast("ミュート解除できなかったの…💦");
   };
-
-  const handleUnmute = async (userId: string) => {
-    try {
-      await unmuteUser(userId);
-      setMutedUsers(prev => prev.filter(user => user.actorId !== userId));
-    } catch (error) {
-      console.error("ミュート解除に失敗したよ！💦", error);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <span className="animate-spin text-2xl">💫</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={() => loadMutedUsers(currentUserId)}>再読み込み</Button>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">ミュートリスト ✨</h1>
-      
-      {mutedUsers.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">
-            ミュートしているユーザーはいないよ！💫
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {mutedUsers.map(user => (
-            <div
-              key={user.actorId}
-              className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg shadow"
-            >
-              <UserCard
-                username={user.preferredUsername}
-                displayName={user.displayName}
-                avatarUrl={user.avatarUrl}
-              />
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleUnmute(`${user.actorId}`)}
-                  className="text-blue-500 hover:text-blue-700"
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
+      <PageHeader backHref="/settings" title="ミュート" />
+      <section className={FEED_SURFACE}>
+        {users === null ? (
+          <LoadingSkeleton count={3} />
+        ) : users.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-14 text-muted-foreground">
+            <VolumeX aria-hidden className="h-9 w-9 opacity-40" strokeWidth={1.5} />
+            <p className="text-sm">ミュートしている人はいないよ🫧</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {users.map((u) => (
+              <li key={u.actorId} className="flex items-center gap-3 px-4 py-3">
+                <Link href={profileHref(u.actorId, u.preferredUsername)} className="flex min-w-0 flex-1 items-center gap-3">
+                  <Avatar src={u.avatarUrl} alt={u.preferredUsername} fallback={u.preferredUsername?.charAt(0)} size="md" interactive={false} />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-semibold text-foreground">
+                      <EmojiText text={u.displayName || u.preferredUsername} emojis={u.emojis} />
+                    </span>
+                    <span className="truncate text-sm text-muted-foreground">@{actorHandle(u.actorId, u.preferredUsername)}</span>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleUnmute(u.actorId)}
+                  disabled={pending === u.actorId}
+                  aria-label={`@${u.preferredUsername} のミュートを解除`}
+                  title="ミュート解除"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
                 >
-                  <span className="flex items-center">
-                    <span className="mr-2">🔊</span>
-                    ミュート解除
-                  </span>
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                  {pending === u.actorId ? <Loader2 className="h-5 w-5 animate-spin" /> : <VolumeX className="h-5 w-5" />}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
-} 
+}

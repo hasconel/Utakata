@@ -51,9 +51,6 @@ export default function ImageModalContent({ imagesTable, isModalOpen, setIsModal
         case "ArrowRight":
           handleNext(e as any);
           break;
-        case "Escape":
-          setIsModalOpen(false);
-          break;
       }
     };
 
@@ -61,71 +58,45 @@ export default function ImageModalContent({ imagesTable, isModalOpen, setIsModal
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen, handlePrev, handleNext, setIsModalOpen]);
 
+  const current = imagesTable[currentImageIndex];
+  const src = current ? convertToInternalUrl(current.url) : "";
+  // 画面に収まる大きさまで（細い画像・横長の画像でも、元の比のまま真ん中に置く）
+  const fit = "block h-auto w-auto max-h-[calc(100dvh-7rem)] max-w-[calc(100vw-2rem)] object-contain";
+  const navButton =
+    "absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20";
+
   return (
-    <div>
-      <Modal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)}
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm"
-        >
-          <div 
-            className="relative w-full h-full max-h-[90vh] p-4"
+    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} label="画像" fullscreen>
+      <div className="flex h-full w-full items-center justify-center p-4">
+        {current?.type === "Video" || current?.mediaType?.startsWith("video") ? (
+          <video key={src} src={src} controls autoPlay playsInline onClick={(e) => e.stopPropagation()} className={`${fit} rounded-lg`} />
+        ) : current ? (
+          <img
+            key={src}
+            src={src}
+            alt={current.name || ""}
             onClick={(e) => e.stopPropagation()}
-          >
-            {/* ナビゲーションボタン！✨ */}
-            {imagesTable.length > 1 && (
-              <>
-                <button
-                  onClick={handlePrev}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg hover:shadow-xl backdrop-blur-sm"
-                  aria-label="前の画像"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg hover:shadow-xl backdrop-blur-sm"
-                  aria-label="次の画像"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
+            className={`${fit} rounded-lg animate-in fade-in duration-150`}
+          />
+        ) : null}
+      </div>
 
-            {/* 画像！✨ */}
-            <div className="w-full h-full flex items-center justify-center">
-              {imagesTable[currentImageIndex]?.mediaType.startsWith("image") ? (
-                <img
-                  src={convertToInternalUrl(imagesTable[currentImageIndex].url)}
-                  alt={imagesTable[currentImageIndex].name || "画像"}
-                  className="max-w-full max-h-full object-contain rounded-xl shadow-lg transition-all duration-300"
-                  loading="lazy"
-                />
-              ) : imagesTable[currentImageIndex]?.mediaType.startsWith("video") ? (
-                <video
-                  src={convertToInternalUrl(imagesTable[currentImageIndex].url)}
-                  controls
-                  autoPlay
-                  className="max-w-full max-h-full object-contain rounded-xl shadow-lg transition-all duration-300"
-                >
-                  お使いのブラウザは動画の再生に対応していないみたいだよ！💦
-                </video>
-              ) : imagesTable[currentImageIndex]?.mediaType.startsWith("audio") ? (
-                <audio
-                  src={convertToInternalUrl(imagesTable[currentImageIndex].url)}
-                  controls
-                />
-              ) : null}
-            </div>
-
-            {/* 画像カウンター！✨ */}
-            {imagesTable.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-medium transition-all duration-300 hover:bg-white/20 backdrop-blur-sm">
-                {currentImageIndex + 1} / {imagesTable.length}
-              </div>
-            )}
+      {imagesTable.length > 1 && (
+        <>
+          <button type="button" onClick={handlePrev} className={`${navButton} left-3`} aria-label="前の画像" title="前へ">
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button type="button" onClick={handleNext} className={`${navButton} right-3`} aria-label="次の画像" title="次へ">
+            <ChevronRight className="h-6 w-6" />
+          </button>
+          {/* 何枚目か（点で） */}
+          <div className="pointer-events-none absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-1.5" aria-label={`${currentImageIndex + 1} / ${imagesTable.length}`}>
+            {imagesTable.map((_, i) => (
+              <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === currentImageIndex ? "bg-white" : "bg-white/35"}`} />
+            ))}
           </div>
-        </Modal>
-    </div>
+        </>
+      )}
+    </Modal>
   );
-  };
+}

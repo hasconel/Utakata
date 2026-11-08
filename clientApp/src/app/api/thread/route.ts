@@ -6,8 +6,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { Query } from "node-appwrite";
-import { createSessionClient } from "@/lib/appwrite/serverConfig";
-import { postWindowStart, toClientNotes } from "@/lib/activitypub/clientNotes";
+import { isPublicDocument, postWindowStart, toClientNotes, viewerClient } from "@/lib/activitypub/clientNotes";
 import { isInternalUrl } from "@/lib/utils";
 
 const MAX_REPLIES = 50;
@@ -35,17 +34,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "投稿のIDが必要だよ！💦" }, { status: 400 });
   }
   try {
-    const { databases, account } = await createSessionClient(request);
-    const user = await account.get().catch(() => null);
-    if (!user) {
-      return NextResponse.json({ error: "ログインしてないよ！💦" }, { status: 401 });
-    }
+    // ログインしていない人には、公開投稿だけを見せる（共有されたリンクから開けるように）
+    const { databases, userId } = await viewerClient(request);
+    const canSee = (doc: any) => !!doc && (!!userId || isPublicDocument(doc));
 
     const post = await findPost(databases, id);
-    if (!post) {
+    if (!canSee(post)) {
       return NextResponse.json({ error: "投稿が見つからなかったよ！💦" }, { status: 404 });
     }
-    const [parent, { documents: replies }] = await Promise.all([
+    const [foundParent, { documents: foundReplies }] = await Promise.all([
       post.inReplyTo ? findPost(databases, post.inReplyTo) : Promise.resolve(null),
       // リプライも、タイムラインと同じく直近の投稿だけ
       databases.listDocuments(dbId(), postsId(), [
@@ -56,7 +53,9 @@ export async function GET(request: NextRequest) {
       ]),
     ]);
 
-    const [postNote, ...rest] = await toClientNotes([post, ...(parent ? [parent] : []), ...replies], databases, user.$id);
+    const parent = canSee(foundParent) ? foundParent : null;
+    const replies = foundReplies.filter(canSee);
+    const [postNote, ...rest] = await toClientNotes([post, ...(parent ? [parent] : []), ...replies], databases, userId ?? "");
     return NextResponse.json({
       post: postNote,
       parent: parent ? rest[0] : null,

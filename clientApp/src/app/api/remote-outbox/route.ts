@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BlockedUrlError } from "@/lib/security/safeFetch";
 import { fetchActivityDocument, fetchRemoteActor } from "@/lib/activitypub/remoteActor";
-import { buildAttachments, buildContent, isPublicNote, toArray } from "@/lib/activitypub/remoteNote";
+import { buildAttachments, buildContent, buildEmojis, buildSummary, isPublicNote, toArray } from "@/lib/activitypub/remoteNote";
 import { createSessionClient } from "@/lib/appwrite/serverConfig";
 import { isInternalUrl } from "@/lib/utils";
 import { ActivityPubNoteInClient } from "@/types/activitypub";
@@ -56,12 +56,14 @@ function toClientNote(item: any, actor: any): ActivityPubNoteInClient | null {
     id: note.id,
     attributedTo: actor.id,
     content: buildContent(note),
+    summary: buildSummary(note),
+    emojis: buildEmojis(note.tag),
     published: typeof note.published === "string" ? note.published : "",
     url: typeof note.url === "string" ? note.url : note.id,
     to,
     cc,
     inReplyTo: idOf(note.inReplyTo) ?? "",
-    attachment: buildAttachments(note.attachment),
+    attachment: buildAttachments(note.attachment, note.sensitive === true),
     _isLiked: false,
     _user: actor,
     _canDelete: false,

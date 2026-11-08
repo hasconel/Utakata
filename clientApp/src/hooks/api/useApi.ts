@@ -112,10 +112,8 @@ export function useApi<T>(
     } catch (err) {
       //console.log("err", err);
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log("キャンセルされたよ");
         return; // キャンセルされた場合は何もしない
       }
-      console.log("エラーが発生したよ", err);
       const apiError = err instanceof ApiError ? err : new ApiError('エラーが発生したよ！💦');
       setError(apiError);
       optionsRef.current.onError?.(apiError);
@@ -164,7 +162,6 @@ return useApi(() =>{
   ).then(res => res.status === 200 ? res.json() : null);
   });
 }catch(error){
-  console.log("usePost error", error);
   return {
     data: null,
     isLoading: false,
@@ -191,7 +188,6 @@ export function useUser(userId: string) : UseApiResult<ActivityPubActor> {
     }
   ).then(res => res.json()));
   }catch(error){
-    console.log("useUser error", error);
     return {
       data: null,
       isLoading: false,
@@ -210,7 +206,9 @@ export function useUser(userId: string) : UseApiResult<ActivityPubActor> {
  * @param actor アクターID(https://example.com/users/123)。指定するとその人の投稿だけ
  * @returns タイムラインの結果
  */
-export function useTimelineManager(user: string, actor?: string) {
+export type TimelineScope = "local" | "federated";
+
+export function useTimelineManager(user: string, actor?: string, scope?: TimelineScope) {
   const [posts, setPosts] = useState<ActivityPubNoteInClient[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [fetchMore, setFetchMore] = useState(false);
@@ -229,8 +227,14 @@ export function useTimelineManager(user: string, actor?: string) {
       const url = new URL("/api/posts", window.location.origin);
       url.searchParams.set("limit", "10");
       if (actor) url.searchParams.set("attributedTo", actor);
+      if (scope) url.searchParams.set("scope", scope);
       if (after) url.searchParams.set("lastId", after);
       const response = await fetch(url, { cache: "no-store" });
+      // タイムラインでログインが切れていたら、ログイン画面へ
+      if (response.status === 401 && !actor) {
+        window.location.href = "/login";
+        return;
+      }
       if (!response.ok) {
         throw new Error("投稿が読み込めなかったの…💦");
       }
@@ -253,15 +257,15 @@ export function useTimelineManager(user: string, actor?: string) {
         setIsLoadingMore(false);
       }
     }
-  }, [actor]);
+  }, [actor, scope]);
 
-  // 初期化とuser/actorの変更時の処理
+  // 初期化とuser/actor/scopeの変更時の処理
   useEffect(() => {
     if (!user) return;
     setPosts([]);
     setCursor(null);
     fetchPosts(null);
-  }, [user, actor, fetchPosts]);
+  }, [user, actor, scope, fetchPosts]);
 
   // 投稿を削除したら一覧からも消す（PostDetailCard が postDeleted を送る）
   useEffect(() => {
