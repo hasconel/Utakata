@@ -48,31 +48,46 @@ function toEmbed(raw: string): Embed {
 const frame = "aspect-video w-full rounded-xl border-0";
 const allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
 
-/** X の埋め込み。widgets.js は1回だけ読み込み、読み込み済みなら描き直してもらう */
+/**
+ * X の埋め込み。
+ * widgets.js は中身を勝手に iframe に差し替えるので、React には空の箱だけを渡して、中身はここで作って片付ける。
+ * （React が描いた要素を差し替えられると、投稿が画面から消えるときに React が消す要素を見失って、画面全体が落ちる）
+ */
 function XEmbed({ path }: { path: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
   useEffect(() => {
-    const render = () => (window as any).twttr?.widgets?.load(ref.current);
-    if ((window as any).twttr?.widgets) return render();
+    const box = ref.current;
+    if (!box) return;
+    const quote = document.createElement("blockquote");
+    quote.className = "twitter-tweet";
+    quote.dataset.theme = resolvedTheme === "dark" ? "dark" : "light";
+    quote.dataset.dnt = "true";
+    const link = document.createElement("a");
+    link.href = `https://twitter.com${path}`;
+    link.textContent = `https://x.com${path}`;
+    quote.appendChild(link);
+    box.replaceChildren(quote);
+
+    const render = () => (window as any).twttr?.widgets?.load(box);
     let script = document.getElementById("x-widgets") as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement("script");
-      script.id = "x-widgets";
-      script.async = true;
-      script.src = "https://platform.twitter.com/widgets.js";
-      document.body.appendChild(script);
+    if ((window as any).twttr?.widgets) render();
+    else {
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "x-widgets";
+        script.async = true;
+        script.src = "https://platform.twitter.com/widgets.js";
+        document.body.appendChild(script);
+      }
+      script.addEventListener("load", render);
     }
-    script.addEventListener("load", render);
-    return () => script?.removeEventListener("load", render);
+    return () => {
+      script?.removeEventListener("load", render);
+      box.replaceChildren();
+    };
   }, [path, resolvedTheme]);
-  return (
-    <div ref={ref} key={resolvedTheme} onClick={(e) => e.stopPropagation()}>
-      <blockquote className="twitter-tweet" data-theme={resolvedTheme === "dark" ? "dark" : "light"} data-dnt="true">
-        <a href={`https://twitter.com${path}`}>{`https://x.com${path}`}</a>
-      </blockquote>
-    </div>
-  );
+  return <div ref={ref} onClick={(e) => e.stopPropagation()} />;
 }
 
 function EmbedView({ embed }: { embed: Embed }) {

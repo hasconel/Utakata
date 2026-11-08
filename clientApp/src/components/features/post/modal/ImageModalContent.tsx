@@ -60,8 +60,18 @@ export default function ImageModalContent({ imagesTable, isModalOpen, setIsModal
 
   const current = imagesTable[currentImageIndex];
   const src = current ? convertToInternalUrl(current.url) : "";
-  // 画面に収まる大きさまで（細い画像・横長の画像でも、元の比のまま真ん中に置く）
-  const fit = "block h-auto w-auto max-h-[calc(100dvh-7rem)] max-w-[calc(100vw-2rem)] object-contain";
+  // 縦横の比。投稿に書いてあればそれを、なければ読み込んだあとの実際の大きさを使う
+  const [loadedRatio, setLoadedRatio] = useState<{ src: string; ratio: number } | null>(null);
+  const ratio =
+    loadedRatio?.src === src ? loadedRatio.ratio : current?.width && current?.height ? current.width / current.height : null;
+  const remember = (width: number, height: number) => {
+    if (width && height) setLoadedRatio({ src, ratio: width / height });
+  };
+  // 画面に収まるいちばん大きい大きさにする（小さい画像も引き伸ばす）。元の比のまま真ん中に置く
+  const fit = "block max-h-[calc(100dvh-7rem)] max-w-[calc(100vw-2rem)] object-contain";
+  const fitStyle = ratio
+    ? { aspectRatio: String(ratio), width: `min(calc(100vw - 2rem), calc((100dvh - 7rem) * ${ratio}))`, height: "auto" }
+    : undefined;
   const navButton =
     "absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20";
 
@@ -69,14 +79,26 @@ export default function ImageModalContent({ imagesTable, isModalOpen, setIsModal
     <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} label="画像" fullscreen>
       <div className="flex h-full w-full items-center justify-center p-4">
         {current?.type === "Video" || current?.mediaType?.startsWith("video") ? (
-          <video key={src} src={src} controls autoPlay playsInline onClick={(e) => e.stopPropagation()} className={`${fit} rounded-lg`} />
+          <video
+            key={src}
+            src={src}
+            controls
+            autoPlay
+            playsInline
+            onClick={(e) => e.stopPropagation()}
+            onLoadedMetadata={(e) => remember(e.currentTarget.videoWidth, e.currentTarget.videoHeight)}
+            className={`${fit} rounded-lg`}
+            style={fitStyle}
+          />
         ) : current ? (
           <img
             key={src}
             src={src}
             alt={current.name || ""}
             onClick={(e) => e.stopPropagation()}
+            onLoad={(e) => remember(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
             className={`${fit} rounded-lg animate-in fade-in duration-150`}
+            style={fitStyle}
           />
         ) : null}
       </div>

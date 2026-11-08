@@ -288,6 +288,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     } catch (error: any) {
       // posts に summary / emojis の項目がまだ無いとき（scripts/add-post-attributes.mjs の実行前）は、以前の形で保存する
       if (error?.type !== "document_invalid_structure") throw error;
+      // ここに来ると絵文字とCWが分かれずに保存されるので、ログで気づけるようにする
+      console.warn("投稿を以前の形で保存しました（summary / emojis を保存できませんでした）:", error?.message);
       await createPost({ ...base, "content": buildLegacyContent(object) });
     }
     await adminDatabases.createDocument(

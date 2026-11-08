@@ -28,7 +28,10 @@ export function BackdropProvider({ children }: { children: React.ReactNode }) {
   const url = mediaUrl(raw, 1920);
 
   useEffect(() => {
-    if (!url) return setShown("");
+    if (!url) {
+      setShown("");
+      return;
+    }
     let cancelled = false;
     const img = new Image();
     img.onload = () => !cancelled && setShown(url);
