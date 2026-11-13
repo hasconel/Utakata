@@ -4,7 +4,7 @@ import { LegalPage } from "@/components/features/legal/LegalPage";
 
 export const metadata = { title: "プライバシーポリシー" };
 
-/** キミの情報を守る約束💖 */
+/** プライバシーポリシー */
 export default function PrivacyPage() {
-  return <LegalPage title="プライバシーポリシー 💖" content={readFileSync(join(process.cwd(), "src/app/privacy/privacy.md"), "utf-8")} />;
+  return <LegalPage title="プライバシーポリシー" content={readFileSync(join(process.cwd(), "src/app/privacy/privacy.md"), "utf-8")} />;
 }
