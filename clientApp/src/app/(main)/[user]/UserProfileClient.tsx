@@ -241,7 +241,7 @@ export default function UserProfileClient({ userParam }: { userParam: string }) 
         </div>
 
         <div className="flex flex-col gap-3 px-4 pb-4">
-          <div className="-mt-10 flex items-end justify-between gap-3">
+          <div className="relative z-10 -mt-10 flex items-end justify-between gap-3">
             <Avatar
               src={targetActor.icon?.url}
               alt={name}
